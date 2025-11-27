@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { NaiteTracker } from './naite-tracker';
 import { NaiteCompletionProvider } from './naite-completion-provider';
 import { NaiteDefinitionProvider } from './naite-definition-provider';
+import { NaiteReferenceProvider } from './naite-reference-provider';
 import { NaiteHoverProvider } from './naite-hover-provider';
 import { NaiteCodeLensProvider, showNaiteLocations } from './naite-codelens-provider';
 import { NaiteDiagnosticProvider } from './naite-diagnostic-provider';
@@ -79,6 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(selector, new NaiteCompletionProvider(tracker), '"', "'"),
     vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider(tracker)),
+    vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider(tracker)),
     vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider(tracker)),
     vscode.languages.registerCodeLensProvider(selector, new NaiteCodeLensProvider(tracker))
   );

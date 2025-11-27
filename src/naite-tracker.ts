@@ -192,6 +192,24 @@ export class NaiteTracker {
   }
 
   /**
+   * 특정 파일의 모든 Naite 호출을 반환합니다 (CodeLens/Decorator용)
+   */
+  getEntriesForFile(uri: vscode.Uri): NaiteKey[] {
+    const uriString = uri.toString();
+    const entries: NaiteKey[] = [];
+
+    for (const naiteKeys of this.keys.values()) {
+      for (const entry of naiteKeys) {
+        if (entry.location.uri.toString() === uriString) {
+          entries.push(entry);
+        }
+      }
+    }
+
+    return entries;
+  }
+
+  /**
    * 특정 위치의 Naite 호출에서 키를 추출합니다
    */
   getKeyAtPosition(document: vscode.TextDocument, position: vscode.Position): string | null {

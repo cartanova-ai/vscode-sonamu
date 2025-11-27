@@ -7,25 +7,20 @@ export class NaiteCodeLensProvider implements vscode.CodeLensProvider {
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     if (document.languageId !== 'typescript') return [];
 
-    const text = document.getText();
-    const pattern = this.tracker.buildRegexPattern();
+    // tracker에서 스캔된 데이터 사용 (주석 자동 제외)
+    const entries = this.tracker.getEntriesForFile(document.uri);
     const lenses: vscode.CodeLens[] = [];
 
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      // 마지막 캡처 그룹이 키 (패턴 구조상)
-      const key = match[match.length - 1];
+    for (const entry of entries) {
+      const range = new vscode.Range(entry.location.range.start, entry.location.range.start);
 
-      const pos = document.positionAt(match.index);
-      const range = new vscode.Range(pos, pos);
-
-      const setLocs = this.tracker.getKeyLocations(key, 'set');
-      const getLocs = this.tracker.getKeyLocations(key, 'get');
+      const setLocs = this.tracker.getKeyLocations(entry.key, 'set');
+      const getLocs = this.tracker.getKeyLocations(entry.key, 'get');
 
       lenses.push(new vscode.CodeLens(range, {
         title: `정의 ${setLocs.length} | 사용 ${getLocs.length}`,
         command: 'sonamu.showNaiteLocations',
-        arguments: [key, setLocs, getLocs]
+        arguments: [entry.key, setLocs, getLocs]
       }));
     }
 
