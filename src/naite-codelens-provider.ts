@@ -18,7 +18,7 @@ export class NaiteCodeLensProvider implements vscode.CodeLensProvider {
       const getLocs = this.tracker.getKeyLocations(entry.key, 'get');
 
       lenses.push(new vscode.CodeLens(range, {
-        title: `정의 ${setLocs.length} | 사용 ${getLocs.length}`,
+        title: `정의 ${setLocs.length} | 참조 ${getLocs.length}`,
         command: 'sonamu.showNaiteLocations',
         arguments: [entry.key, setLocs, getLocs]
       }));
@@ -43,7 +43,7 @@ export function showNaiteLocations(key: string, setLocs: vscode.Location[], getL
   }
 
   if (getLocs.length > 0) {
-    items.push({ label: '── 사용 ──', kind: vscode.QuickPickItemKind.Separator });
+    items.push({ label: '── 참조 ──', kind: vscode.QuickPickItemKind.Separator });
     for (const loc of getLocs) {
       items.push({
         label: `$(symbol-variable) ${vscode.workspace.asRelativePath(loc.uri)}`,
