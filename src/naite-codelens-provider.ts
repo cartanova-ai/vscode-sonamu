@@ -8,15 +8,13 @@ export class NaiteCodeLensProvider implements vscode.CodeLensProvider {
     if (document.languageId !== 'typescript') return [];
 
     const text = document.getText();
-    const pattern = /Naite\.(t|get)\s*\(\s*["'`]([^"'`]+)["'`]/g;
+    const pattern = this.tracker.buildRegexPattern();
     const lenses: vscode.CodeLens[] = [];
-    const seenKeys = new Set<string>();
 
     let match;
     while ((match = pattern.exec(text)) !== null) {
-      const key = match[2];
-      if (seenKeys.has(key)) continue;
-      seenKeys.add(key);
+      // 마지막 캡처 그룹이 키 (패턴 구조상)
+      const key = match[match.length - 1];
 
       const pos = document.positionAt(match.index);
       const range = new vscode.Range(pos, pos);
@@ -39,7 +37,7 @@ export function showNaiteLocations(key: string, setLocs: vscode.Location[], getL
   const items: vscode.QuickPickItem[] = [];
 
   if (setLocs.length > 0) {
-    items.push({ label: '── 정의 (Naite.t) ──', kind: vscode.QuickPickItemKind.Separator });
+    items.push({ label: '── 정의 ──', kind: vscode.QuickPickItemKind.Separator });
     for (const loc of setLocs) {
       items.push({
         label: `$(symbol-method) ${vscode.workspace.asRelativePath(loc.uri)}`,
@@ -50,7 +48,7 @@ export function showNaiteLocations(key: string, setLocs: vscode.Location[], getL
   }
 
   if (getLocs.length > 0) {
-    items.push({ label: '── 사용 (Naite.get) ──', kind: vscode.QuickPickItemKind.Separator });
+    items.push({ label: '── 사용 ──', kind: vscode.QuickPickItemKind.Separator });
     for (const loc of getLocs) {
       items.push({
         label: `$(symbol-variable) ${vscode.workspace.asRelativePath(loc.uri)}`,

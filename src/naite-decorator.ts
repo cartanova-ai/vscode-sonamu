@@ -9,13 +9,15 @@ export function updateDecorations(editor: vscode.TextEditor, tracker: NaiteTrack
   if (editor.document.languageId !== 'typescript') return;
 
   const text = editor.document.getText();
-  const pattern = /Naite\.(t|get)\s*\(\s*["'`]([^"'`]+)["'`]/g;
+  const pattern = tracker.buildRegexPattern();
   const decorations: vscode.DecorationOptions[] = [];
 
   let match;
   while ((match = pattern.exec(text)) !== null) {
-    const keyStart = match.index + match[0].indexOf(match[2]);
-    const keyEnd = keyStart + match[2].length;
+    // 마지막 캡처 그룹이 키
+    const key = match[match.length - 1];
+    const keyStart = match.index + match[0].indexOf(key);
+    const keyEnd = keyStart + key.length;
     const startPos = editor.document.positionAt(keyStart);
     const endPos = editor.document.positionAt(keyEnd);
     decorations.push({ range: new vscode.Range(startPos, endPos) });

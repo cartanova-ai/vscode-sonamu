@@ -2,12 +2,23 @@ import * as vscode from 'vscode';
 import * as ts from 'typescript';
 
 /**
- * Naite.t() 호출에서 키와 위치 정보를 추출합니다
+ * Naite 호출에서 키와 위치 정보를 추출합니다
  */
 export interface NaiteKey {
   key: string;
   location: vscode.Location;
-  type: 'set' | 'get'; // Naite.t는 'set', Naite.get은 'get'
+  type: 'set' | 'get';
+  pattern: string; // 매칭된 패턴 (예: "Naite.t", "Naite.get")
+}
+
+/**
+ * 패턴 설정
+ */
+export interface NaitePatternConfig {
+  // 정의 패턴 (예: ["Naite.t"])
+  setPatterns: string[];
+  // 사용 패턴 (예: ["Naite.get", "Naite.safeGet", "Naite.expect", "Naite.expectWithSnapshot"])
+  getPatterns: string[];
 }
 
 /**
@@ -18,10 +29,54 @@ function isStringLiteralLike(node: ts.Node): node is ts.StringLiteral | ts.NoSub
 }
 
 /**
- * TypeScript 파일을 파싱하여 Naite.t와 Naite.get 호출을 찾습니다
+ * 패턴 문자열을 파싱합니다 (예: "Naite.t" → { object: "Naite", method: "t" })
+ */
+function parsePattern(pattern: string): { object: string; method: string } | null {
+  const parts = pattern.split('.');
+  if (parts.length !== 2) return null;
+  return { object: parts[0], method: parts[1] };
+}
+
+/**
+ * TypeScript 파일을 파싱하여 Naite 호출을 찾습니다
  */
 export class NaiteTracker {
   private keys: Map<string, NaiteKey[]> = new Map();
+  private config: NaitePatternConfig = {
+    setPatterns: ['Naite.t'],
+    getPatterns: ['Naite.get', 'Naite.safeGet', 'Naite.expect', 'Naite.expectWithSnapshot']
+  };
+
+  /**
+   * 패턴 설정을 변경합니다
+   */
+  setConfig(config: Partial<NaitePatternConfig>): void {
+    if (config.setPatterns) this.config.setPatterns = config.setPatterns;
+    if (config.getPatterns) this.config.getPatterns = config.getPatterns;
+  }
+
+  /**
+   * 현재 패턴 설정을 반환합니다
+   */
+  getConfig(): NaitePatternConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * 모든 패턴을 반환합니다 (set + get)
+   */
+  getAllPatterns(): string[] {
+    return [...this.config.setPatterns, ...this.config.getPatterns];
+  }
+
+  /**
+   * 패턴의 메서드 이름만 추출합니다 (예: ["t", "get", "safeGet", ...])
+   */
+  getAllMethods(): { setMethods: string[]; getMethods: string[] } {
+    const setMethods = this.config.setPatterns.map(p => parsePattern(p)?.method).filter(Boolean) as string[];
+    const getMethods = this.config.getPatterns.map(p => parsePattern(p)?.method).filter(Boolean) as string[];
+    return { setMethods, getMethods };
+  }
 
   /**
    * 워크스페이스의 모든 TypeScript 파일에서 Naite 호출을 스캔합니다
@@ -68,44 +123,46 @@ export class NaiteTracker {
   }
 
   private visitNode(node: ts.Node, sourceFile: ts.SourceFile, document: vscode.TextDocument): void {
-    // Naite.t("key", value) 또는 Naite.get("key") 패턴 찾기
+    // 설정된 패턴들 찾기
     if (ts.isCallExpression(node)) {
       const callExpr = node as ts.CallExpression;
 
-      // Naite.t 또는 Naite.get 체크
       if (ts.isPropertyAccessExpression(callExpr.expression)) {
         const propAccess = callExpr.expression;
 
-        // 객체가 'Naite'이고 메서드가 't' 또는 'get'인지 확인
-        if (
-          ts.isIdentifier(propAccess.expression) &&
-          propAccess.expression.text === 'Naite' &&
-          ts.isIdentifier(propAccess.name) &&
-          (propAccess.name.text === 't' || propAccess.name.text === 'get')
-        ) {
+        if (ts.isIdentifier(propAccess.expression) && ts.isIdentifier(propAccess.name)) {
+          const objectName = propAccess.expression.text;
           const methodName = propAccess.name.text;
+          const fullPattern = `${objectName}.${methodName}`;
 
-          // 첫 번째 인자가 문자열 리터럴인지 확인
-          if (callExpr.arguments.length > 0) {
-            const firstArg = callExpr.arguments[0];
+          // 패턴 매칭 확인
+          const { setMethods, getMethods } = this.getAllMethods();
+          const isSetPattern = this.config.setPatterns.includes(fullPattern);
+          const isGetPattern = this.config.getPatterns.includes(fullPattern);
 
-            if (isStringLiteralLike(firstArg)) {
-              const keyValue = firstArg.text;
-              const type = methodName === 't' ? 'set' : 'get';
+          if (isSetPattern || isGetPattern) {
+            // 첫 번째 인자가 문자열 리터럴인지 확인
+            if (callExpr.arguments.length > 0) {
+              const firstArg = callExpr.arguments[0];
 
-              // 위치 정보 생성 (전체 호출문 위치)
-              const start = document.positionAt(node.getStart(sourceFile));
-              const end = document.positionAt(node.getEnd());
-              const range = new vscode.Range(start, end);
-              const location = new vscode.Location(document.uri, range);
+              if (isStringLiteralLike(firstArg)) {
+                const keyValue = firstArg.text;
+                const type = isSetPattern ? 'set' : 'get';
 
-              // 키 정보 저장
-              const naiteKey: NaiteKey = { key: keyValue, location, type };
+                // 위치 정보 생성 (전체 호출문 위치)
+                const start = document.positionAt(node.getStart(sourceFile));
+                const end = document.positionAt(node.getEnd());
+                const range = new vscode.Range(start, end);
+                const location = new vscode.Location(document.uri, range);
 
-              if (!this.keys.has(keyValue)) {
-                this.keys.set(keyValue, []);
+                // 키 정보 저장
+                const naiteKey: NaiteKey = { key: keyValue, location, type, pattern: fullPattern };
+
+                if (!this.keys.has(keyValue)) {
+                  this.keys.set(keyValue, []);
+                }
+                this.keys.get(keyValue)!.push(naiteKey);
               }
-              this.keys.get(keyValue)!.push(naiteKey);
             }
           }
         }
@@ -149,6 +206,7 @@ export class NaiteTracker {
     );
 
     let foundKey: string | null = null;
+    const allPatterns = this.getAllPatterns();
 
     const visit = (node: ts.Node): void => {
       if (ts.isCallExpression(node)) {
@@ -157,22 +215,21 @@ export class NaiteTracker {
         if (ts.isPropertyAccessExpression(callExpr.expression)) {
           const propAccess = callExpr.expression;
 
-          if (
-            ts.isIdentifier(propAccess.expression) &&
-            propAccess.expression.text === 'Naite' &&
-            ts.isIdentifier(propAccess.name) &&
-            (propAccess.name.text === 't' || propAccess.name.text === 'get')
-          ) {
-            if (callExpr.arguments.length > 0) {
-              const firstArg = callExpr.arguments[0];
+          if (ts.isIdentifier(propAccess.expression) && ts.isIdentifier(propAccess.name)) {
+            const fullPattern = `${propAccess.expression.text}.${propAccess.name.text}`;
 
-              if (isStringLiteralLike(firstArg)) {
-                // 커서가 따옴표 안에 있는지 확인 (따옴표/백틱 포함 범위)
-                const start = firstArg.getStart(sourceFile);
-                const end = firstArg.getEnd();
+            if (allPatterns.includes(fullPattern)) {
+              if (callExpr.arguments.length > 0) {
+                const firstArg = callExpr.arguments[0];
 
-                if (offset >= start && offset <= end) {
-                  foundKey = firstArg.text;
+                if (isStringLiteralLike(firstArg)) {
+                  // 커서가 따옴표 안에 있는지 확인 (따옴표/백틱 포함 범위)
+                  const start = firstArg.getStart(sourceFile);
+                  const end = firstArg.getEnd();
+
+                  if (offset >= start && offset <= end) {
+                    foundKey = firstArg.text;
+                  }
                 }
               }
             }
@@ -187,5 +244,32 @@ export class NaiteTracker {
 
     visit(sourceFile);
     return foundKey;
+  }
+
+  /**
+   * regex 패턴 생성 (다른 provider들에서 사용)
+   */
+  buildRegexPattern(): RegExp {
+    const allPatterns = this.getAllPatterns();
+    // "Naite.t", "Naite.get" 등을 "Naite\.(t|get|...)" 형태로 변환
+    const methodsByObject = new Map<string, string[]>();
+
+    for (const pattern of allPatterns) {
+      const parsed = parsePattern(pattern);
+      if (!parsed) continue;
+      if (!methodsByObject.has(parsed.object)) {
+        methodsByObject.set(parsed.object, []);
+      }
+      methodsByObject.get(parsed.object)!.push(parsed.method);
+    }
+
+    // 여러 객체가 있을 수 있으므로 OR로 연결
+    const parts: string[] = [];
+    for (const [obj, methods] of methodsByObject) {
+      parts.push(`${obj}\\.(${methods.join('|')})`);
+    }
+
+    const patternStr = `(${parts.join('|')})\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`;
+    return new RegExp(patternStr, 'g');
   }
 }

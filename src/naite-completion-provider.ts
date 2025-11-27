@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NaiteTracker } from './naite-tracker';
 
 /**
- * Naite.get() 호출에서 자동완성을 제공합니다
+ * Naite 호출에서 자동완성을 제공합니다
  */
 export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
   constructor(private tracker: NaiteTracker) {}
@@ -15,8 +15,31 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
   ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
     const linePrefix = document.lineAt(position).text.substring(0, position.character);
 
-    // Naite.get(" 또는 Naite.t(" 패턴 체크
-    if (!linePrefix.match(/Naite\.(get|t)\(["']$/)) {
+    // 설정된 모든 패턴에 대해 체크
+    const config = this.tracker.getConfig();
+    const allPatterns = [...config.setPatterns, ...config.getPatterns];
+
+    // 패턴 매칭 regex 생성 (예: /Naite\.(t|get|safeGet|expect|expectWithSnapshot)\(["']$/)
+    const methodsByObject = new Map<string, string[]>();
+    for (const pattern of allPatterns) {
+      const [obj, method] = pattern.split('.');
+      if (!obj || !method) continue;
+      if (!methodsByObject.has(obj)) {
+        methodsByObject.set(obj, []);
+      }
+      methodsByObject.get(obj)!.push(method);
+    }
+
+    let matched = false;
+    for (const [obj, methods] of methodsByObject) {
+      const regex = new RegExp(`${obj}\\.(${methods.join('|')})\\(["'\`]$`);
+      if (regex.test(linePrefix)) {
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
       return undefined;
     }
 
@@ -36,13 +59,13 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
 
       // 상세 정보
       const md = new vscode.MarkdownString();
-      md.appendMarkdown(`**정의** (Naite.t): ${setLocs.length}개\n\n`);
+      md.appendMarkdown(`**정의**: ${setLocs.length}개\n\n`);
       for (const loc of setLocs.slice(0, 3)) {
         md.appendMarkdown(`- ${vscode.workspace.asRelativePath(loc.uri)}:${loc.range.start.line + 1}\n`);
       }
       if (setLocs.length > 3) md.appendMarkdown(`- ... 외 ${setLocs.length - 3}개\n`);
 
-      md.appendMarkdown(`\n**사용** (Naite.get): ${getLocs.length}개\n\n`);
+      md.appendMarkdown(`\n**사용**: ${getLocs.length}개\n\n`);
       for (const loc of getLocs.slice(0, 3)) {
         md.appendMarkdown(`- ${vscode.workspace.asRelativePath(loc.uri)}:${loc.range.start.line + 1}\n`);
       }

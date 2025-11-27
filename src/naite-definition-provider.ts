@@ -3,7 +3,8 @@ import { NaiteTracker } from './naite-tracker';
 
 interface NaiteCallInfo {
   key: string;
-  type: 'set' | 'get'; // Naite.t = set, Naite.get = get
+  type: 'set' | 'get';
+  pattern: string; // 매칭된 패턴 (예: "Naite.t")
 }
 
 export class NaiteDefinitionProvider implements vscode.DefinitionProvider {
@@ -19,8 +20,8 @@ export class NaiteDefinitionProvider implements vscode.DefinitionProvider {
     const { key, type } = callInfo;
 
     // 컨텍스트 인식 점프:
-    // - Naite.t (정의)에서 클릭 → 사용처(Naite.get)로 이동
-    // - Naite.get (사용)에서 클릭 → 정의(Naite.t)로 이동
+    // - 정의 패턴에서 클릭 → 사용처로 이동
+    // - 사용 패턴에서 클릭 → 정의로 이동
     const targetType = type === 'set' ? 'get' : 'set';
     let locations = this.tracker.getKeyLocations(key, targetType);
 
@@ -45,19 +46,29 @@ export class NaiteDefinitionProvider implements vscode.DefinitionProvider {
    */
   private getNaiteCallAtPosition(document: vscode.TextDocument, position: vscode.Position): NaiteCallInfo | null {
     const line = document.lineAt(position.line).text;
-    const pattern = /Naite\.(t|get)\s*\(\s*["'`]([^"'`]+)["'`]/g;
+    const config = this.tracker.getConfig();
 
-    let match;
-    while ((match = pattern.exec(line)) !== null) {
-      const matchStart = match.index;
-      const matchEnd = match.index + match[0].length;
+    // 모든 패턴에 대해 매칭 시도
+    for (const patternStr of [...config.setPatterns, ...config.getPatterns]) {
+      const [obj, method] = patternStr.split('.');
+      if (!obj || !method) continue;
 
-      // 커서가 이 매치 범위 안에 있는지 확인
-      if (position.character >= matchStart && position.character <= matchEnd) {
-        return {
-          key: match[2],
-          type: match[1] === 't' ? 'set' : 'get'
-        };
+      const regex = new RegExp(`${obj}\\.${method}\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`, 'g');
+
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        const matchStart = match.index;
+        const matchEnd = match.index + match[0].length;
+
+        // 커서가 이 매치 범위 안에 있는지 확인
+        if (position.character >= matchStart && position.character <= matchEnd) {
+          const isSet = config.setPatterns.includes(patternStr);
+          return {
+            key: match[1],
+            type: isSet ? 'set' : 'get',
+            pattern: patternStr
+          };
+        }
       }
     }
 
