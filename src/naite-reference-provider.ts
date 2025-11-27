@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { NaiteTracker } from './naite-tracker';
 
 /**
- * Naite 키의 모든 참조를 찾습니다 (Find All References)
+ * Naite 키의 사용처를 찾습니다 (Find All References)
  */
 export class NaiteReferenceProvider implements vscode.ReferenceProvider {
   constructor(private tracker: NaiteTracker) {}
@@ -18,8 +18,8 @@ export class NaiteReferenceProvider implements vscode.ReferenceProvider {
     // 현재 문서 스캔 (아직 안 됐을 수 있음)
     await this.tracker.scanFile(document.uri);
 
-    // 모든 위치 반환 (set + get)
-    return this.tracker.getKeyLocations(key);
+    // References = 사용된 곳 (get, 즉 Naite.get/expect 등)
+    return this.tracker.getKeyLocations(key, 'get');
   }
 
   private getKeyAtPosition(document: vscode.TextDocument, position: vscode.Position): string | null {
