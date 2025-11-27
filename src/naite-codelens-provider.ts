@@ -7,6 +7,12 @@ export class NaiteCodeLensProvider implements vscode.CodeLensProvider {
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     if (document.languageId !== 'typescript') return [];
 
+    // 설정에서 CodeLens 활성화 여부 확인
+    const config = vscode.workspace.getConfiguration('sonamu');
+    if (!config.get<boolean>('codeLens.enabled', true)) {
+      return [];
+    }
+
     // tracker에서 스캔된 데이터 사용 (주석 자동 제외)
     const entries = this.tracker.getEntriesForFile(document.uri);
     const lenses: vscode.CodeLens[] = [];
