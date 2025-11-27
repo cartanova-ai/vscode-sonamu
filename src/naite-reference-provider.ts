@@ -9,17 +9,23 @@ export class NaiteReferenceProvider implements vscode.ReferenceProvider {
 
   async provideReferences(
     document: vscode.TextDocument,
-    position: vscode.Position,
-    context: vscode.ReferenceContext
+    position: vscode.Position
   ): Promise<vscode.Location[] | undefined> {
     const key = this.getKeyAtPosition(document, position);
     if (!key) return undefined;
 
-    // 현재 문서 스캔 (아직 안 됐을 수 있음)
-    await this.tracker.scanFile(document.uri);
-
     // References = 사용된 곳 (get, 즉 Naite.get/expect 등)
-    return this.tracker.getKeyLocations(key, 'get');
+    let locations = this.tracker.getKeyLocations(key, 'get');
+
+    // 없으면 현재 문서 스캔 후 재시도
+    if (locations.length === 0) {
+      await this.tracker.scanFile(document.uri);
+      locations = this.tracker.getKeyLocations(key, 'get');
+    }
+
+    if (locations.length === 0) return undefined;
+
+    return locations;
   }
 
   private getKeyAtPosition(document: vscode.TextDocument, position: vscode.Position): string | null {
