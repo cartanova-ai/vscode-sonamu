@@ -258,6 +258,7 @@ function escapeHtml(str: string): string {
 
 // 글로벌 Naite Trace Viewer
 let globalTracePanel: vscode.WebviewPanel | null = null;
+let globalTraceDisposable: vscode.Disposable | null = null;
 
 function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.WebviewPanel {
   if (globalTracePanel) {
@@ -269,11 +270,21 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
     'naiteGlobalTrace',
     'Naite Traces',
     vscode.ViewColumn.Beside,
-    { enableScripts: true }
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+    }
   );
+
+  // 기본 HTML 한 번만 설정
+  globalTracePanel.webview.html = getGlobalTraceViewerHtml();
 
   globalTracePanel.onDidDispose(() => {
     globalTracePanel = null;
+    if (globalTraceDisposable) {
+      globalTraceDisposable.dispose();
+      globalTraceDisposable = null;
+    }
   });
 
   // 메시지 핸들러
@@ -289,135 +300,35 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
     }
   });
 
-  // 초기 렌더링
-  updateGlobalTraceViewer();
+  // 초기 데이터 전송
+  sendTraceDataToWebview();
 
   // trace 변경 시 업데이트
-  const disposable = onTraceChange(() => {
-    updateGlobalTraceViewer();
+  globalTraceDisposable = onTraceChange(() => {
+    sendTraceDataToWebview();
   });
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(globalTraceDisposable);
 
   return globalTracePanel;
 }
 
-function updateGlobalTraceViewer() {
+// 데이터를 webview에 postMessage로 전송
+function sendTraceDataToWebview() {
   if (!globalTracePanel) return;
 
   const traces = getAllTraces();
   const runInfo = getCurrentRunInfo();
 
-  // run 상태 표시
-  let runStatusHtml = '';
-  if (runInfo.runId) {
-    const startTime = runInfo.runStartedAt
-      ? new Date(runInfo.runStartedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-      : '';
-    const isRunning = !runInfo.runEndedAt;
-    runStatusHtml = `
-      <div class="run-status ${isRunning ? 'running' : 'ended'}">
-        <span class="run-indicator"></span>
-        <span class="run-label">${isRunning ? 'Test Running' : 'Test Completed'}</span>
-        ${startTime ? `<span class="run-time">${startTime}</span>` : ''}
-      </div>
-    `;
-  }
+  globalTracePanel.webview.postMessage({
+    type: 'updateTraces',
+    traces,
+    runInfo,
+  });
+}
 
-  // 테스트별로 그룹화: suite > testName > traces
-  interface TestGroup {
-    testName: string;
-    traces: typeof traces;
-  }
-  interface SuiteGroup {
-    suite: string;
-    tests: Map<string, TestGroup>;
-  }
-
-  const suiteMap = new Map<string, SuiteGroup>();
-
-  for (const trace of traces) {
-    const suiteName = trace.testSuite || '(no suite)';
-    const testName = trace.testName || '(no test)';
-
-    if (!suiteMap.has(suiteName)) {
-      suiteMap.set(suiteName, { suite: suiteName, tests: new Map() });
-    }
-    const suiteGroup = suiteMap.get(suiteName)!;
-
-    if (!suiteGroup.tests.has(testName)) {
-      suiteGroup.tests.set(testName, { testName, traces: [] });
-    }
-    suiteGroup.tests.get(testName)!.traces.push(trace);
-  }
-
-  // HTML 생성
-  let traceIdx = 0;
-  let contentHtml = '';
-
-  for (const [suiteName, suiteGroup] of suiteMap) {
-    const suiteTestCount = suiteGroup.tests.size;
-    const suiteTraceCount = Array.from(suiteGroup.tests.values()).reduce((sum, t) => sum + t.traces.length, 0);
-
-    contentHtml += `
-      <div class="suite-group">
-        <div class="suite-header" onclick="toggleSuite('${escapeHtml(suiteName)}')">
-          <span class="arrow suite-arrow" id="suite-arrow-${escapeHtml(suiteName)}">▼</span>
-          <span class="suite-name">${escapeHtml(suiteName)}</span>
-          <span class="suite-count">${suiteTestCount} tests · ${suiteTraceCount} traces</span>
-        </div>
-        <div class="suite-content" id="suite-content-${escapeHtml(suiteName)}">
-    `;
-
-    for (const [testName, testGroup] of suiteGroup.tests) {
-      const testId = `test-${traceIdx}`;
-      contentHtml += `
-        <div class="test-group">
-          <div class="test-header" onclick="toggleTest('${testId}')">
-            <span class="arrow test-arrow" id="arrow-${testId}">▼</span>
-            <span class="test-name">${escapeHtml(testName)}</span>
-            <span class="test-count">${testGroup.traces.length}</span>
-          </div>
-          <div class="test-content" id="content-${testId}">
-      `;
-
-      for (const trace of testGroup.traces) {
-        const time = new Date(trace.at).toLocaleTimeString('ko-KR', {
-          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-        });
-        const fileName = trace.filePath.split('/').pop() || trace.filePath;
-        const locationData = JSON.stringify({ filePath: trace.filePath, lineNumber: trace.lineNumber });
-        const itemId = `item-${traceIdx++}`;
-
-        contentHtml += `
-          <div class="trace-item" id="${itemId}" data-filepath="${escapeHtml(trace.filePath)}" data-line="${trace.lineNumber}" data-key="${escapeHtml(trace.key)}">
-            <div class="trace-header" onclick="toggleTrace('${itemId}')">
-              <span class="arrow" id="arrow-${itemId}">▶</span>
-              <span class="key">${escapeHtml(trace.key)}</span>
-              <span class="location-link" onclick="event.stopPropagation(); goToLocation(${escapeHtml(locationData)})">
-                ${escapeHtml(fileName)}:${trace.lineNumber}
-              </span>
-              <span class="time">${time}</span>
-            </div>
-            <div class="trace-content collapsed" id="content-${itemId}">
-              <div class="json-viewer">${renderJsonValue(trace.value)}</div>
-            </div>
-          </div>
-        `;
-      }
-
-      contentHtml += `
-          </div>
-        </div>
-      `;
-    }
-
-    contentHtml += `
-        </div>
-      </div>
-    `;
-  }
-
-  globalTracePanel.webview.html = `<!DOCTYPE html>
+// Global Trace Viewer HTML 템플릿 (한 번만 생성)
+function getGlobalTraceViewerHtml(): string {
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -646,55 +557,249 @@ function updateGlobalTraceViewer() {
   <div class="header">
     <div class="header-left">
       <h2>📊 Naite Traces</h2>
-      <span class="count">${traces.length}개</span>
+      <span class="count" id="trace-count">0개</span>
     </div>
-    ${runStatusHtml}
+    <div id="run-status-container"></div>
   </div>
-  ${traces.length === 0
-    ? '<div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>'
-    : `<div class="traces">${contentHtml}</div>`
-  }
+  <div id="traces-container">
+    <div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>
+  </div>
   <script>
     const vscode = acquireVsCodeApi();
 
+    // 열림 상태 저장 (suite, test, trace별)
+    const expandedState = {
+      suites: new Set(),    // suite 이름
+      tests: new Set(),     // "suite::testName"
+      traces: new Set(),    // "suite::testName::key::filePath::lineNumber"
+    };
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function escapeId(str) {
+      return str.replace(/[^a-zA-Z0-9-_]/g, '_');
+    }
+
+    function renderJsonValue(value) {
+      if (value === null) {
+        return '<span class="json-null">null</span>';
+      }
+      if (value === undefined) {
+        return '<span class="json-null">undefined</span>';
+      }
+      if (typeof value === 'string') {
+        return '<span class="json-string">"' + escapeHtml(value) + '"</span>';
+      }
+      if (typeof value === 'number') {
+        return '<span class="json-number">' + value + '</span>';
+      }
+      if (typeof value === 'boolean') {
+        return '<span class="json-boolean">' + value + '</span>';
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return '<span class="json-bracket">[]</span>';
+        }
+        const items = value.map(v => '<span class="json-item">' + renderJsonValue(v) + ',</span>').join('');
+        return '<span class="json-bracket">[</span><div class="json-array">' + items + '</div><span class="json-bracket">]</span>';
+      }
+      if (typeof value === 'object') {
+        const keys = Object.keys(value);
+        if (keys.length === 0) {
+          return '<span class="json-bracket">{}</span>';
+        }
+        const items = keys.map(k =>
+          '<span class="json-item"><span class="json-key">"' + escapeHtml(k) + '"</span>: ' + renderJsonValue(value[k]) + ',</span>'
+        ).join('');
+        return '<span class="json-bracket">{</span><div class="json-object">' + items + '</div><span class="json-bracket">}</span>';
+      }
+      return escapeHtml(String(value));
+    }
+
     function toggleSuite(name) {
-      const content = document.getElementById('suite-content-' + name);
-      const arrow = document.getElementById('suite-arrow-' + name);
-      content.classList.toggle('collapsed');
-      if (content.classList.contains('collapsed')) {
+      const content = document.getElementById('suite-content-' + escapeId(name));
+      const arrow = document.getElementById('suite-arrow-' + escapeId(name));
+      if (!content || !arrow) return;
+
+      const isExpanded = !content.classList.contains('collapsed');
+      if (isExpanded) {
+        content.classList.add('collapsed');
         arrow.textContent = '▶';
+        expandedState.suites.delete(name);
       } else {
+        content.classList.remove('collapsed');
         arrow.textContent = '▼';
+        expandedState.suites.add(name);
       }
     }
 
-    function toggleTest(id) {
-      const content = document.getElementById('content-' + id);
-      const arrow = document.getElementById('arrow-' + id);
-      content.classList.toggle('collapsed');
-      if (content.classList.contains('collapsed')) {
+    function toggleTest(suite, testName) {
+      const key = suite + '::' + testName;
+      const id = escapeId(key);
+      const content = document.getElementById('test-content-' + id);
+      const arrow = document.getElementById('test-arrow-' + id);
+      if (!content || !arrow) return;
+
+      const isExpanded = !content.classList.contains('collapsed');
+      if (isExpanded) {
+        content.classList.add('collapsed');
         arrow.textContent = '▶';
+        expandedState.tests.delete(key);
       } else {
+        content.classList.remove('collapsed');
         arrow.textContent = '▼';
+        expandedState.tests.add(key);
       }
     }
 
-    function toggleTrace(id) {
-      const content = document.getElementById('content-' + id);
-      const arrow = document.getElementById('arrow-' + id);
-      content.classList.toggle('collapsed');
-      arrow.classList.toggle('expanded');
+    function toggleTrace(suite, testName, traceKey, filePath, lineNumber) {
+      const stateKey = suite + '::' + testName + '::' + traceKey + '::' + filePath + '::' + lineNumber;
+      const id = escapeId(stateKey);
+      const content = document.getElementById('trace-content-' + id);
+      const arrow = document.getElementById('trace-arrow-' + id);
+      if (!content || !arrow) return;
+
+      const isExpanded = !content.classList.contains('collapsed');
+      if (isExpanded) {
+        content.classList.add('collapsed');
+        arrow.classList.remove('expanded');
+        expandedState.traces.delete(stateKey);
+      } else {
+        content.classList.remove('collapsed');
+        arrow.classList.add('expanded');
+        expandedState.traces.add(stateKey);
+      }
     }
 
-    function goToLocation(location) {
-      vscode.postMessage({ type: 'goToLocation', ...location });
+    function goToLocation(filePath, lineNumber) {
+      vscode.postMessage({ type: 'goToLocation', filePath, lineNumber });
     }
 
-    // 메시지 리스너 - highlightTrace 처리
+    function renderTraces(traces, runInfo) {
+      // count 업데이트
+      document.getElementById('trace-count').textContent = traces.length + '개';
+
+      // run status 업데이트
+      const statusContainer = document.getElementById('run-status-container');
+      if (runInfo.runId) {
+        const startTime = runInfo.runStartedAt
+          ? new Date(runInfo.runStartedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+          : '';
+        const isRunning = !runInfo.runEndedAt;
+        statusContainer.innerHTML =
+          '<div class="run-status ' + (isRunning ? 'running' : 'ended') + '">' +
+            '<span class="run-indicator"></span>' +
+            '<span class="run-label">' + (isRunning ? 'Test Running' : 'Test Completed') + '</span>' +
+            (startTime ? '<span class="run-time">' + startTime + '</span>' : '') +
+          '</div>';
+      } else {
+        statusContainer.innerHTML = '';
+      }
+
+      // 데이터가 없으면 empty
+      if (traces.length === 0) {
+        document.getElementById('traces-container').innerHTML =
+          '<div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>';
+        return;
+      }
+
+      // 테스트별로 그룹화
+      const suiteMap = new Map();
+      for (const trace of traces) {
+        const suiteName = trace.testSuite || '(no suite)';
+        const testName = trace.testName || '(no test)';
+
+        if (!suiteMap.has(suiteName)) {
+          suiteMap.set(suiteName, new Map());
+        }
+        const testMap = suiteMap.get(suiteName);
+
+        if (!testMap.has(testName)) {
+          testMap.set(testName, []);
+        }
+        testMap.get(testName).push(trace);
+      }
+
+      // HTML 생성
+      let html = '';
+      for (const [suiteName, testMap] of suiteMap) {
+        const suiteTestCount = testMap.size;
+        let suiteTraceCount = 0;
+        for (const traces of testMap.values()) {
+          suiteTraceCount += traces.length;
+        }
+
+        const suiteExpanded = expandedState.suites.has(suiteName);
+        const suiteId = escapeId(suiteName);
+
+        html += '<div class="suite-group">';
+        html += '<div class="suite-header" onclick="toggleSuite(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\')">';
+        html += '<span class="arrow suite-arrow" id="suite-arrow-' + suiteId + '">' + (suiteExpanded ? '▼' : '▶') + '</span>';
+        html += '<span class="suite-name">' + escapeHtml(suiteName) + '</span>';
+        html += '<span class="suite-count">' + suiteTestCount + ' tests · ' + suiteTraceCount + ' traces</span>';
+        html += '</div>';
+        html += '<div class="suite-content' + (suiteExpanded ? '' : ' collapsed') + '" id="suite-content-' + suiteId + '">';
+
+        for (const [testName, testTraces] of testMap) {
+          const testKey = suiteName + '::' + testName;
+          const testExpanded = expandedState.tests.has(testKey);
+          const testId = escapeId(testKey);
+
+          html += '<div class="test-group">';
+          html += '<div class="test-header" onclick="toggleTest(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\')">';
+          html += '<span class="arrow test-arrow" id="test-arrow-' + testId + '">' + (testExpanded ? '▼' : '▶') + '</span>';
+          html += '<span class="test-name">' + escapeHtml(testName) + '</span>';
+          html += '<span class="test-count">' + testTraces.length + '</span>';
+          html += '</div>';
+          html += '<div class="test-content' + (testExpanded ? '' : ' collapsed') + '" id="test-content-' + testId + '">';
+
+          for (const trace of testTraces) {
+            const time = new Date(trace.at).toLocaleTimeString('ko-KR', {
+              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+            const fileName = trace.filePath.split('/').pop() || trace.filePath;
+            const traceStateKey = suiteName + '::' + testName + '::' + trace.key + '::' + trace.filePath + '::' + trace.lineNumber;
+            const traceExpanded = expandedState.traces.has(traceStateKey);
+            const traceId = escapeId(traceStateKey);
+
+            html += '<div class="trace-item" id="item-' + traceId + '" data-filepath="' + escapeHtml(trace.filePath) + '" data-line="' + trace.lineNumber + '" data-key="' + escapeHtml(trace.key) + '">';
+            html += '<div class="trace-header" onclick="toggleTrace(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.key).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.filePath).replace(/'/g, "\\\\'") + '\\', ' + trace.lineNumber + ')">';
+            html += '<span class="arrow' + (traceExpanded ? ' expanded' : '') + '" id="trace-arrow-' + traceId + '">▶</span>';
+            html += '<span class="key">' + escapeHtml(trace.key) + '</span>';
+            html += '<span class="location-link" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(trace.filePath).replace(/'/g, "\\\\'") + '\\', ' + trace.lineNumber + ')">' + escapeHtml(fileName) + ':' + trace.lineNumber + '</span>';
+            html += '<span class="time">' + time + '</span>';
+            html += '</div>';
+            html += '<div class="trace-content' + (traceExpanded ? '' : ' collapsed') + '" id="trace-content-' + traceId + '">';
+            html += '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
+            html += '</div>';
+            html += '</div>';
+          }
+
+          html += '</div></div>';
+        }
+
+        html += '</div></div>';
+      }
+
+      document.getElementById('traces-container').innerHTML = '<div class="traces">' + html + '</div>';
+    }
+
+    // 메시지 리스너
     window.addEventListener('message', (event) => {
       const message = event.data;
+
+      if (message.type === 'updateTraces') {
+        renderTraces(message.traces, message.runInfo);
+      }
+
       if (message.type === 'highlightTrace') {
-        // 해당 위치(filePath + lineNumber)의 모든 trace 찾기
+        // 해당 위치의 모든 trace 찾기
         const items = document.querySelectorAll('.trace-item');
         let firstMatch = null;
         for (const item of items) {
@@ -704,18 +809,24 @@ function updateGlobalTraceViewer() {
             // 부모 suite/test 열기
             let parent = item.parentElement;
             while (parent) {
-              if (parent.classList.contains('suite-content') || parent.classList.contains('test-content')) {
+              if (parent.classList.contains('suite-content')) {
                 parent.classList.remove('collapsed');
-                const arrowId = parent.id.replace('content-', 'arrow-').replace('suite-content-', 'suite-arrow-');
-                const arrow = document.getElementById(arrowId);
+                const suiteName = parent.id.replace('suite-content-', '');
+                const arrow = document.getElementById('suite-arrow-' + suiteName);
+                if (arrow) arrow.textContent = '▼';
+              }
+              if (parent.classList.contains('test-content')) {
+                parent.classList.remove('collapsed');
+                const testId = parent.id.replace('test-content-', '');
+                const arrow = document.getElementById('test-arrow-' + testId);
                 if (arrow) arrow.textContent = '▼';
               }
               parent = parent.parentElement;
             }
             // trace 내용 열기
-            const itemId = item.id;
-            const content = document.getElementById('content-' + itemId);
-            const arrow = document.getElementById('arrow-' + itemId);
+            const traceId = item.id.replace('item-', '');
+            const content = document.getElementById('trace-content-' + traceId);
+            const arrow = document.getElementById('trace-arrow-' + traceId);
             if (content) content.classList.remove('collapsed');
             if (arrow) arrow.classList.add('expanded');
             // 하이라이트
