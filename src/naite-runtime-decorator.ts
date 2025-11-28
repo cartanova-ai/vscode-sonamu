@@ -30,6 +30,11 @@ let fileWatcher: fs.FSWatcher | null = null;
 // 현재 trace 데이터
 let currentTraces: NaiteTraceFileEntry[] = [];
 
+// 현재 trace 데이터 접근용 (외부에서 사용)
+export function getTracesForLine(filePath: string, lineNumber: number): NaiteTraceFileEntry[] {
+  return currentTraces.filter(t => t.filePath === filePath && t.lineNumber === lineNumber);
+}
+
 /**
  * 값을 표시용 문자열로 변환 (truncate)
  */
@@ -159,12 +164,16 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
     hoverContent.isTrusted = true;
     hoverContent.supportHtml = true;
 
+    // command link용 인코딩
+    const commandArgs = encodeURIComponent(JSON.stringify({ filePath, lineNumber: line + 1 }));
+
     if (traces.length === 1) {
       hoverContent.appendMarkdown(`### 📍 \`${lastTrace.key}\`\n\n`);
       hoverContent.appendCodeblock(formatValueFull(lastTrace.value), 'json');
+      hoverContent.appendMarkdown(`\n[📄 탭에서 열기](command:sonamu.openTraceInEditor?${commandArgs})`);
     } else {
       hoverContent.appendMarkdown(`### 📍 \`${lastTrace.key}\`\n`);
-      hoverContent.appendMarkdown(`\n*${traces.length}회 호출됨*\n\n`);
+      hoverContent.appendMarkdown(`\n*${traces.length}회 호출됨* · [📄 탭에서 열기](command:sonamu.openTraceInEditor?${commandArgs})\n\n`);
 
       // 역순으로 표시 (최신이 위로)
       const reversedTraces = [...traces].reverse();
