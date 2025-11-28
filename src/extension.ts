@@ -494,6 +494,9 @@ function getGlobalTraceViewerHtml(): string {
     .trace-content {
       padding: 8px 12px;
       background: var(--vscode-sideBar-background);
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
     }
     .trace-content.collapsed {
       display: none;
@@ -510,9 +513,11 @@ function getGlobalTraceViewerHtml(): string {
       font-family: var(--vscode-editor-font-family);
       font-size: 12px;
       line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
     }
     .json-key { color: #9cdcfe; }
-    .json-string { color: #ce9178; }
+    .json-string { color: #ce9178; word-break: break-all; }
     .json-number { color: #b5cea8; }
     .json-boolean { color: #569cd6; }
     .json-null { color: #569cd6; }

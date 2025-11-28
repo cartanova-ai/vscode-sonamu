@@ -54,10 +54,23 @@ export function onTraceChange(listener: TraceChangeListener): { dispose: () => v
   };
 }
 
+// debounce 타이머 (100ms)
+let notifyDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const DEBOUNCE_DELAY = 100;
+
 function notifyTraceChange() {
-  for (const listener of traceChangeListeners) {
-    listener(currentTraces);
+  // 이전 타이머 취소
+  if (notifyDebounceTimer) {
+    clearTimeout(notifyDebounceTimer);
   }
+
+  // 새 타이머 설정
+  notifyDebounceTimer = setTimeout(() => {
+    notifyDebounceTimer = null;
+    for (const listener of traceChangeListeners) {
+      listener(currentTraces);
+    }
+  }, DEBOUNCE_DELAY);
 }
 
 // 데이터 접근 함수
