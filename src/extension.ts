@@ -7,7 +7,7 @@ import { NaiteHoverProvider } from './naite-hover-provider';
 import { NaiteCodeLensProvider, showNaiteLocations } from './naite-codelens-provider';
 import { NaiteDiagnosticProvider } from './naite-diagnostic-provider';
 import { updateDecorations, disposeDecorations } from './naite-decorator';
-import { startRuntimeWatcher, updateRuntimeDecorations, disposeRuntimeDecorations, getTracesForLine, getAllTraces, onTraceChange, getCurrentRunInfo } from './naite-runtime-decorator';
+import { startRuntimeWatcher, updateRuntimeDecorations, disposeRuntimeDecorations, getTracesForLine, getAllTraces, onTraceChange, getCurrentRunInfo, handleDocumentChange } from './naite-runtime-decorator';
 
 // Naite Trace Webview 생성
 function createTraceWebviewPanel(
@@ -943,6 +943,9 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
     vscode.workspace.onDidChangeTextDocument((e) => {
+      // 라인 번호 보정 (trace 데코레이터용)
+      handleDocumentChange(e);
+
       const editor = vscode.window.activeTextEditor;
       if (editor && e.document === editor.document) {
         triggerUpdate(editor);

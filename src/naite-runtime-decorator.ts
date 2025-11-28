@@ -35,9 +35,79 @@ let fileWatcher: fs.FSWatcher | null = null;
 // 현재 trace 데이터
 let currentTraces: NaiteTraceFileEntry[] = [];
 
+// 라인 번호 보정값 (파일별로 관리)
+// key: filePath, value: Map<originalLineNumber, adjustedLineNumber>
+const lineAdjustments = new Map<string, Map<number, number>>();
+
+/**
+ * 보정된 라인 번호 반환
+ */
+function getAdjustedLineNumber(filePath: string, originalLine: number): number {
+  const adjustments = lineAdjustments.get(filePath);
+  if (!adjustments) return originalLine;
+  return adjustments.get(originalLine) ?? originalLine;
+}
+
+/**
+ * 문서 변경 시 라인 번호 보정
+ */
+export function handleDocumentChange(event: vscode.TextDocumentChangeEvent): void {
+  const filePath = event.document.uri.fsPath;
+
+  // 해당 파일의 trace가 없으면 무시
+  const fileTraces = currentTraces.filter(t => t.filePath === filePath);
+  if (fileTraces.length === 0) return;
+
+  // 기존 adjustment가 없으면 초기화
+  if (!lineAdjustments.has(filePath)) {
+    const initialMap = new Map<number, number>();
+    for (const trace of fileTraces) {
+      initialMap.set(trace.lineNumber, trace.lineNumber);
+    }
+    lineAdjustments.set(filePath, initialMap);
+  }
+
+  const adjustments = lineAdjustments.get(filePath)!;
+
+  // 각 변경에 대해 라인 보정
+  for (const change of event.contentChanges) {
+    const startLine = change.range.start.line + 1; // 1-based
+    const endLine = change.range.end.line + 1;
+    const oldLineCount = endLine - startLine + 1;
+    const newLineCount = change.text.split('\n').length;
+    const lineDelta = newLineCount - oldLineCount;
+
+    if (lineDelta === 0) continue;
+
+    // 변경된 위치 이후의 라인들 보정
+    const newAdjustments = new Map<number, number>();
+    for (const [originalLine, currentLine] of adjustments) {
+      if (currentLine >= startLine) {
+        // 변경 위치 이후면 delta만큼 조정
+        newAdjustments.set(originalLine, currentLine + lineDelta);
+      } else {
+        newAdjustments.set(originalLine, currentLine);
+      }
+    }
+    lineAdjustments.set(filePath, newAdjustments);
+  }
+}
+
+/**
+ * trace 파일 다시 읽을 때 adjustment 초기화
+ */
+function resetLineAdjustments(): void {
+  lineAdjustments.clear();
+}
+
 // 현재 trace 데이터 접근용 (외부에서 사용)
 export function getTracesForLine(filePath: string, lineNumber: number): NaiteTraceFileEntry[] {
-  return currentTraces.filter(t => t.filePath === filePath && t.lineNumber === lineNumber);
+  // 보정된 라인 번호로 매칭
+  return currentTraces.filter(t => {
+    if (t.filePath !== filePath) return false;
+    const adjustedLine = getAdjustedLineNumber(filePath, t.lineNumber);
+    return adjustedLine === lineNumber;
+  });
 }
 
 // 전체 trace 데이터 접근용
@@ -249,10 +319,11 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
   // 해당 파일의 trace만 필터
   const fileTraces = currentTraces.filter(t => t.filePath === filePath);
 
-  // lineNumber별로 그룹화 (같은 라인에 여러 trace가 있을 수 있음)
+  // 보정된 lineNumber별로 그룹화 (같은 라인에 여러 trace가 있을 수 있음)
   const tracesByLine = new Map<number, NaiteTraceFileEntry[]>();
   for (const trace of fileTraces) {
-    const line = trace.lineNumber - 1; // 0-based
+    const adjustedLine = getAdjustedLineNumber(filePath, trace.lineNumber);
+    const line = adjustedLine - 1; // 0-based
     if (!tracesByLine.has(line)) {
       tracesByLine.set(line, []);
     }
@@ -263,6 +334,10 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
 
   for (const [line, traces] of tracesByLine) {
     if (line < 0 || line >= editor.document.lineCount) continue;
+
+    // 안전장치: 해당 라인에 실제로 Naite.t가 있는지 확인
+    const lineText = editor.document.lineAt(line).text;
+    if (!lineText.includes('Naite.t(')) continue;
 
     // 마지막 trace만 표시
     const lastTrace = traces[traces.length - 1];
@@ -322,6 +397,7 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
 export function startRuntimeWatcher(context: vscode.ExtensionContext) {
   // 초기 로드
   currentTraces = readTraceFile();
+  resetLineAdjustments();  // 새로 읽으면 보정값 초기화
   notifyTraceChange();
 
   // 파일 변경 감지 (debounce)
@@ -349,6 +425,7 @@ export function startRuntimeWatcher(context: vscode.ExtensionContext) {
 
       debounceTimer = setTimeout(() => {
         currentTraces = readTraceFile();
+        resetLineAdjustments();  // 새로 읽으면 보정값 초기화
         notifyTraceChange();
 
         // 모든 visible editor 업데이트
