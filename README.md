@@ -65,7 +65,9 @@ code --install-extension vscode-sonamu-0.0.1.vsix --force
 
 | 설정 | 기본값 | 설명 |
 |------|--------|------|
+| `sonamu.codeLens.enabled` | `false` | Naite 키 위에 CodeLens 표시 |
 | `sonamu.decoration.enabled` | `true` | Naite 키 텍스트 데코레이션 |
+| `sonamu.decoration.style` | `underline` | 데코레이션 스타일 |
 | `sonamu.runtimeValue.enabled` | `true` | 실행 시 값 인라인 표시 |
 | `sonamu.runtimeValue.maxLength` | `50` | 표시할 값의 최대 길이 |
 
