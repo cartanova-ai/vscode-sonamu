@@ -19,6 +19,7 @@ export interface NaiteTraceEntry {
   runId: string;
   testSuite?: string;
   testName?: string;
+  seq?: number; // 메시지 순서
 }
 
 export interface RunInfo {
@@ -54,19 +55,36 @@ export function onTraceChange(listener: TraceChangeListener): { dispose: () => v
   };
 }
 
-// debounce 타이머 (100ms)
-let notifyDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+// 메시지 버퍼 및 debounce
+let pendingMessages: any[] = [];
+let processDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const DEBOUNCE_DELAY = 100;
 
-function notifyTraceChange() {
+function queueMessage(data: any) {
+  // seq=0이면 이전 pending 버리기 (새 테스트 시작)
+  if (data.seq === 0) {
+    pendingMessages = [];
+  }
+
+  pendingMessages.push(data);
+
   // 이전 타이머 취소
-  if (notifyDebounceTimer) {
-    clearTimeout(notifyDebounceTimer);
+  if (processDebounceTimer) {
+    clearTimeout(processDebounceTimer);
   }
 
   // 새 타이머 설정
-  notifyDebounceTimer = setTimeout(() => {
-    notifyDebounceTimer = null;
+  processDebounceTimer = setTimeout(() => {
+    processDebounceTimer = null;
+
+    // seq 기준 정렬 후 순서대로 처리
+    pendingMessages.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+    for (const msg of pendingMessages) {
+      processMessage(msg);
+    }
+    pendingMessages = [];
+
+    // 리스너 알림
     for (const listener of traceChangeListeners) {
       listener(currentTraces);
     }
@@ -90,8 +108,8 @@ export function getSocketPath(): string {
   return SOCKET_PATH;
 }
 
-// 메시지 핸들러
-function handleMessage(data: any) {
+// 메시지 처리 (seq 정렬 후 호출됨)
+function processMessage(data: any) {
   const type = data.type;
 
   switch (type) {
@@ -102,7 +120,6 @@ function handleMessage(data: any) {
         runStartedAt: data.startedAt,
         runEndedAt: null,
       };
-      notifyTraceChange();
       break;
 
     case 'run/end':
@@ -110,7 +127,6 @@ function handleMessage(data: any) {
         ...currentRunInfo,
         runEndedAt: data.endedAt,
       };
-      notifyTraceChange();
       break;
 
     case 'test/start':
@@ -139,9 +155,9 @@ function handleMessage(data: any) {
         runId: data.runId,
         testSuite: data.testSuite,
         testName: data.testName,
+        seq: data.seq,
       };
       currentTraces.push(trace);
-      notifyTraceChange();
       break;
   }
 }
@@ -179,7 +195,7 @@ export function startServer(): Promise<string> {
           if (line.trim()) {
             try {
               const data = JSON.parse(line);
-              handleMessage(data);
+              queueMessage(data);
             } catch (err) {
               console.error('[Naite Socket] Parse error:', err);
             }
@@ -224,10 +240,13 @@ export function stopServer(): void {
 // 데이터 초기화
 export function clearTraces(): void {
   currentTraces = [];
+  pendingMessages = [];
   currentRunInfo = {
     runId: null,
     runStartedAt: null,
     runEndedAt: null,
   };
-  notifyTraceChange();
+  for (const listener of traceChangeListeners) {
+    listener(currentTraces);
+  }
 }

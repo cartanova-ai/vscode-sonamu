@@ -375,6 +375,21 @@ function getGlobalTraceViewerHtml(): string {
       text-align: center;
       padding: 32px;
     }
+    .warning-banner {
+      background: var(--vscode-inputValidation-warningBackground, #5a4d25);
+      border: 1px solid var(--vscode-inputValidation-warningBorder, #b89500);
+      color: var(--vscode-inputValidation-warningForeground, #cca700);
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .warning-banner .icon {
+      font-size: 16px;
+    }
     /* Suite level */
     .suite-group {
       margin-bottom: 12px;
@@ -716,6 +731,18 @@ function getGlobalTraceViewerHtml(): string {
         return;
       }
 
+      // 300개 넘으면 자르기
+      const MAX_TRACES = 300;
+      const totalCount = traces.length;
+      let warningHtml = '';
+      if (totalCount > MAX_TRACES) {
+        warningHtml = '<div class="warning-banner">' +
+          '<span class="icon">⚠️</span>' +
+          '<span>Trace가 ' + totalCount + '개로 너무 많아 처음 ' + MAX_TRACES + '개만 표시합니다. 테스트를 쪼개서 돌려보세요.</span>' +
+          '</div>';
+        traces = traces.slice(0, MAX_TRACES);
+      }
+
       // 테스트별로 그룹화
       const suiteMap = new Map();
       for (const trace of traces) {
@@ -734,7 +761,8 @@ function getGlobalTraceViewerHtml(): string {
       }
 
       // HTML 생성
-      let html = '';
+      let html = warningHtml;
+
       for (const [suiteName, testMap] of suiteMap) {
         const suiteTestCount = testMap.size;
         let suiteTraceCount = 0;
