@@ -413,6 +413,18 @@ function getGlobalTraceViewerHtml(): string {
     .suite-name {
       color: var(--vscode-symbolIcon-classForeground, #ee9d28);
     }
+    .suite-file {
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      font-weight: normal;
+      font-family: var(--vscode-editor-font-family);
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .suite-file:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
     .suite-count {
       margin-left: auto;
       color: var(--vscode-descriptionForeground);
@@ -744,26 +756,27 @@ function getGlobalTraceViewerHtml(): string {
       }
 
       // 테스트별로 그룹화
-      const suiteMap = new Map();
+      const suiteMap = new Map();  // suiteName -> { testMap, testFilePath }
       for (const trace of traces) {
         const suiteName = trace.testSuite || '(no suite)';
         const testName = trace.testName || '(no test)';
 
         if (!suiteMap.has(suiteName)) {
-          suiteMap.set(suiteName, new Map());
+          suiteMap.set(suiteName, { testMap: new Map(), testFilePath: trace.testFilePath });
         }
-        const testMap = suiteMap.get(suiteName);
+        const suiteData = suiteMap.get(suiteName);
 
-        if (!testMap.has(testName)) {
-          testMap.set(testName, []);
+        if (!suiteData.testMap.has(testName)) {
+          suiteData.testMap.set(testName, []);
         }
-        testMap.get(testName).push(trace);
+        suiteData.testMap.get(testName).push(trace);
       }
 
       // HTML 생성
       let html = warningHtml;
 
-      for (const [suiteName, testMap] of suiteMap) {
+      for (const [suiteName, suiteData] of suiteMap) {
+        const testMap = suiteData.testMap;
         const suiteTestCount = testMap.size;
         let suiteTraceCount = 0;
         for (const traces of testMap.values()) {
@@ -772,11 +785,15 @@ function getGlobalTraceViewerHtml(): string {
 
         const suiteExpanded = !collapsedState.suites.has(suiteName);  // 기본 열림
         const suiteId = escapeId(suiteName);
+        const testFileName = suiteData.testFilePath ? suiteData.testFilePath.split('/').pop() : null;
 
         html += '<div class="suite-group">';
         html += '<div class="suite-header" onclick="toggleSuite(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\')">';
         html += '<span class="arrow suite-arrow" id="suite-arrow-' + suiteId + '">' + (suiteExpanded ? '▼' : '▶') + '</span>';
         html += '<span class="suite-name">' + escapeHtml(suiteName) + '</span>';
+        if (testFileName && suiteData.testFilePath) {
+          html += '<span class="suite-file" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(suiteData.testFilePath).replace(/'/g, "\\\\'") + '\\', 1)">' + escapeHtml(testFileName) + '</span>';
+        }
         html += '<span class="suite-count">' + suiteTestCount + ' tests · ' + suiteTraceCount + ' traces</span>';
         html += '</div>';
         html += '<div class="suite-content' + (suiteExpanded ? '' : ' collapsed') + '" id="suite-content-' + suiteId + '">';
