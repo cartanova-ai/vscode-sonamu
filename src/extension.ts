@@ -915,8 +915,17 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  // Runtime value watcher 시작
-  startRuntimeWatcher(context);
+  // Runtime value watcher 시작 (Unix Socket 서버)
+  const socketPath = await startRuntimeWatcher(context);
+  console.log(`[Sonamu] Naite Socket server started at ${socketPath}`);
+
+  // 상태바에 소켓 상태 표시
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBarItem.text = `$(plug) Naite`;
+  statusBarItem.tooltip = `Naite Socket: ${socketPath}\nClick to open Trace Viewer`;
+  statusBarItem.command = 'sonamu.openGlobalTraceViewer';
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
 
   if (vscode.window.activeTextEditor) {
     triggerUpdate(vscode.window.activeTextEditor);
