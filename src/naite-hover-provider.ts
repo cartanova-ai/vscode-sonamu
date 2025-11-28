@@ -19,7 +19,7 @@ export class NaiteHoverProvider implements vscode.HoverProvider {
     md.appendCodeblock(`(Naite key) "${key}"`, 'typescript');
 
     const args = encodeURIComponent(JSON.stringify([key]));
-    md.appendMarkdown(`[정의 ${setLocs.length} | 사용 ${getLocs.length}](command:sonamu.showNaiteLocationsByKey?${args})`);
+    md.appendMarkdown(`[정의 ${setLocs.length} | 참조 ${getLocs.length}](command:sonamu.showNaiteLocationsByKey?${args})`);
 
     return new vscode.Hover(md);
   }

@@ -389,7 +389,7 @@ function updateGlobalTraceViewer() {
         const itemId = `item-${traceIdx++}`;
 
         contentHtml += `
-          <div class="trace-item">
+          <div class="trace-item" id="${itemId}" data-filepath="${escapeHtml(trace.filePath)}" data-line="${trace.lineNumber}" data-key="${escapeHtml(trace.key)}">
             <div class="trace-header" onclick="toggleTrace('${itemId}')">
               <span class="arrow" id="arrow-${itemId}">▶</span>
               <span class="key">${escapeHtml(trace.key)}</span>
@@ -587,6 +587,14 @@ function updateGlobalTraceViewer() {
     .trace-content.collapsed {
       display: none;
     }
+    .trace-item.highlight {
+      background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
+      animation: fadeHighlight 2s ease-out forwards;
+    }
+    @keyframes fadeHighlight {
+      0% { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33)); }
+      100% { background: transparent; }
+    }
     .json-viewer {
       font-family: var(--vscode-editor-font-family);
       font-size: 12px;
@@ -681,6 +689,45 @@ function updateGlobalTraceViewer() {
     function goToLocation(location) {
       vscode.postMessage({ type: 'goToLocation', ...location });
     }
+
+    // 메시지 리스너 - highlightTrace 처리
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (message.type === 'highlightTrace') {
+        // 해당 위치(filePath + lineNumber)의 모든 trace 찾기
+        const items = document.querySelectorAll('.trace-item');
+        let firstMatch = null;
+        for (const item of items) {
+          if (item.dataset.filepath === message.filePath &&
+              parseInt(item.dataset.line) === message.lineNumber) {
+            if (!firstMatch) firstMatch = item;
+            // 부모 suite/test 열기
+            let parent = item.parentElement;
+            while (parent) {
+              if (parent.classList.contains('suite-content') || parent.classList.contains('test-content')) {
+                parent.classList.remove('collapsed');
+                const arrowId = parent.id.replace('content-', 'arrow-').replace('suite-content-', 'suite-arrow-');
+                const arrow = document.getElementById(arrowId);
+                if (arrow) arrow.textContent = '▼';
+              }
+              parent = parent.parentElement;
+            }
+            // trace 내용 열기
+            const itemId = item.id;
+            const content = document.getElementById('content-' + itemId);
+            const arrow = document.getElementById('arrow-' + itemId);
+            if (content) content.classList.remove('collapsed');
+            if (arrow) arrow.classList.add('expanded');
+            // 하이라이트
+            item.classList.add('highlight');
+          }
+        }
+        // 첫 번째 매칭으로 스크롤
+        if (firstMatch) {
+          firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    });
   </script>
 </body>
 </html>`;
@@ -835,8 +882,18 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      // Global Trace Viewer 열고 해당 trace 하이라이트
+      const panel = createGlobalTraceViewer(context);
       const key = traces[0].key;
-      createTraceWebviewPanel(context, key, traces);
+      // 약간의 딜레이 후 메시지 전송 (webview 로드 대기)
+      setTimeout(() => {
+        panel.webview.postMessage({
+          type: 'highlightTrace',
+          filePath: args.filePath,
+          lineNumber: args.lineNumber,
+          key,
+        });
+      }, 100);
     }),
     vscode.commands.registerCommand('sonamu.openGlobalTraceViewer', () => {
       createGlobalTraceViewer(context);

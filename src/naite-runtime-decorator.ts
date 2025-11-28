@@ -136,6 +136,54 @@ function truncate(str: string, maxLength: number): string {
   return str.slice(0, maxLength - 3) + '...';
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * JSON 값을 syntax highlighting된 HTML로 변환
+ */
+function formatValueHtml(value: any, depth: number = 0): string {
+  const indent = '  '.repeat(depth);
+  const nextIndent = '  '.repeat(depth + 1);
+
+  if (value === null) return '<span style="color: #569cd6;">null</span>';
+  if (value === undefined) return '<span style="color: #569cd6;">undefined</span>';
+
+  if (typeof value === 'string') {
+    return `<span style="color: #ce9178;">"${escapeHtml(value)}"</span>`;
+  }
+  if (typeof value === 'number') {
+    return `<span style="color: #b5cea8;">${value}</span>`;
+  }
+  if (typeof value === 'boolean') {
+    return `<span style="color: #569cd6;">${value}</span>`;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    if (depth > 2) return `[...${value.length} items]`;
+    const items = value.map(v => `${nextIndent}${formatValueHtml(v, depth + 1)}`).join(',\n');
+    return `[\n${items}\n${indent}]`;
+  }
+
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 0) return '{}';
+    if (depth > 2) return `{...${keys.length} keys}`;
+    const items = keys.map(k =>
+      `${nextIndent}<span style="color: #9cdcfe;">"${escapeHtml(k)}"</span>: ${formatValueHtml(value[k], depth + 1)}`
+    ).join(',\n');
+    return `{\n${items}\n${indent}}`;
+  }
+
+  return escapeHtml(String(value));
+}
+
 /**
  * decoration type 생성
  */
@@ -223,41 +271,34 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
     // 호버 시 전체 값 표시 (모든 trace 포함)
     const hoverContent = new vscode.MarkdownString();
     hoverContent.isTrusted = true;
-    hoverContent.supportHtml = true;
 
     // command link용 인코딩
     const commandArgs = encodeURIComponent(JSON.stringify({ filePath, lineNumber: line + 1 }));
 
-    if (traces.length === 1) {
-      hoverContent.appendMarkdown(`### 📍 \`${lastTrace.key}\`\n\n`);
-      hoverContent.appendCodeblock(formatValueFull(lastTrace.value), 'json');
-      hoverContent.appendMarkdown(`\n[📄 탭에서 열기](command:sonamu.openTraceInEditor?${commandArgs})`);
-    } else {
-      hoverContent.appendMarkdown(`### 📍 \`${lastTrace.key}\`\n`);
-      hoverContent.appendMarkdown(`\n*${traces.length}회 호출됨* · [📄 탭에서 열기](command:sonamu.openTraceInEditor?${commandArgs})\n\n`);
+    // 역순으로 표시 (최신이 위로)
+    const reversedTraces = [...traces].reverse();
 
-      // 역순으로 표시 (최신이 위로)
-      const reversedTraces = [...traces].reverse();
-      reversedTraces.forEach((t, i) => {
-        const originalIndex = traces.length - i;
-        const time = new Date(t.at).toLocaleTimeString('ko-KR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        });
+    // 헤더
+    hoverContent.appendMarkdown(`**\`${lastTrace.key}\`** · ${traces.length}회 호출\n\n`);
+    hoverContent.appendMarkdown(`[📊 Naite Traces에서 열기](command:sonamu.openTraceInEditor?${commandArgs})\n\n---\n\n`);
 
-        const isLatest = i === 0;
-        const label = isLatest ? `**#${originalIndex}** (latest)` : `#${originalIndex}`;
-
-        hoverContent.appendMarkdown(`${label} \`${time}\`\n`);
-        hoverContent.appendCodeblock(formatValueFull(t.value), 'json');
-
-        if (i < reversedTraces.length - 1) {
-          hoverContent.appendMarkdown('\n');
-        }
+    // Trace 목록
+    reversedTraces.forEach((t, i) => {
+      const time = new Date(t.at).toLocaleTimeString('ko-KR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
       });
-    }
+      const isLatest = i === 0;
+      const testLabel = t.testName || '(unknown test)';
+      const latestBadge = isLatest ? ' ★' : '';
+
+      hoverContent.appendMarkdown(`\`${time}\` *${testLabel}*${latestBadge}\n`);
+      hoverContent.appendCodeblock(formatValueFull(t.value), 'json');
+
+      if (i < reversedTraces.length - 1) {
+        hoverContent.appendMarkdown(`---\n`);
+      }
+    });
+
 
     // 라인 끝 위치에만 decoration 적용 (호버 영역 제한)
     const lineEnd = editor.document.lineAt(line).range.end;
