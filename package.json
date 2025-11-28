@@ -11,7 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "workspaceContains:**/sonamu.config.ts"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -34,7 +34,7 @@
       "properties": {
         "sonamu.codeLens.enabled": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Naite 키 위에 CodeLens(정의/참조 카운트) 표시 여부"
         },
         "sonamu.decoration.enabled": {
