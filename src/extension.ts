@@ -459,6 +459,16 @@ function getGlobalTraceViewerHtml(): string {
     .test-name {
       color: var(--vscode-symbolIcon-functionForeground, #b180d7);
     }
+    .test-line {
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      font-family: var(--vscode-editor-font-family);
+      cursor: pointer;
+    }
+    .test-line:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
     .test-count {
       margin-left: auto;
       background: var(--badge-bg);
@@ -807,6 +817,10 @@ function getGlobalTraceViewerHtml(): string {
           html += '<div class="test-header" onclick="toggleTest(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\')">';
           html += '<span class="arrow test-arrow" id="test-arrow-' + testId + '">' + (testExpanded ? '▼' : '▶') + '</span>';
           html += '<span class="test-name">' + escapeHtml(testName) + '</span>';
+          const firstTrace = testTraces[0];
+          if (firstTrace?.testFilePath && firstTrace?.testLine) {
+            html += '<span class="test-line" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(firstTrace.testFilePath).replace(/'/g, "\\\\'") + '\\', ' + firstTrace.testLine + ')">:' + firstTrace.testLine + '</span>';
+          }
           html += '<span class="test-count">' + testTraces.length + '</span>';
           html += '</div>';
           html += '<div class="test-content' + (testExpanded ? '' : ' collapsed') + '" id="test-content-' + testId + '">';

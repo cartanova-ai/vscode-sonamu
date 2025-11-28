@@ -20,6 +20,7 @@ export interface NaiteTraceEntry {
   testSuite?: string;
   testName?: string;
   testFilePath?: string; // 테스트 파일 경로
+  testLine?: number; // 테스트 케이스 라인 번호
   seq?: number; // 메시지 순서
 }
 
@@ -157,6 +158,7 @@ function processMessage(data: any) {
         testSuite: data.testSuite,
         testName: data.testName,
         testFilePath: data.testFilePath,
+        testLine: data.testLine,
         seq: data.seq,
       };
       currentTraces.push(trace);
