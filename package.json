@@ -3,7 +3,7 @@
   "displayName": "Sonamu",
   "description": "Sonamu development support extension",
   "version": "0.0.1",
-  "publisher": "sonamu-dev",
+  "publisher": "potados99",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -62,10 +62,10 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
-    "compile": "node esbuild.js --production",
-    "watch": "node esbuild.js --watch",
-    "pretest": "pnpm run compile && pnpm run lint",
+    "vscode:prepublish": "pnpm run build",
+    "build": "node esbuild.js --production",
+    "dev": "node esbuild.js --watch",
+    "pretest": "pnpm run build && pnpm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
     "package": "vsce package",

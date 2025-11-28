@@ -6,7 +6,7 @@ Sonamu 프로젝트 개발을 위한 VS Code 확장입니다.
 
 ### Naite 키 자동완성
 
-`Naite.t("` 또는 `Naite.get("` 입력 시 프로젝트의 모든 Naite 키를 자동완성합니다.
+`Naite.t("`, `Naite.del("`, 또는 `Naite.get("` 입력 시 프로젝트의 모든 Naite 키를 자동완성합니다.
 
 ### Naite 키 네비게이션
 
