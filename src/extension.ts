@@ -7,6 +7,7 @@ import { NaiteHoverProvider } from './naite-hover-provider';
 import { NaiteCodeLensProvider, showNaiteLocations } from './naite-codelens-provider';
 import { NaiteDiagnosticProvider } from './naite-diagnostic-provider';
 import { updateDecorations, disposeDecorations } from './naite-decorator';
+import { startRuntimeWatcher, updateRuntimeDecorations, disposeRuntimeDecorations } from './naite-runtime-decorator';
 
 let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
@@ -35,8 +36,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 데코레이션: 에디터 변경 시 업데이트
   const triggerUpdate = (editor?: vscode.TextEditor) => {
-    if (editor) updateDecorations(editor, tracker);
+    if (editor) {
+      updateDecorations(editor, tracker);
+      updateRuntimeDecorations(editor);
+    }
   };
+
+  // Runtime value watcher 시작
+  startRuntimeWatcher(context);
 
   if (vscode.window.activeTextEditor) {
     triggerUpdate(vscode.window.activeTextEditor);
@@ -113,4 +120,5 @@ export async function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   disposeDecorations();
+  disposeRuntimeDecorations();
 }
