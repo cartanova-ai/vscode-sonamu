@@ -43,8 +43,8 @@ function parsePattern(pattern: string): { object: string; method: string } | nul
 export class NaiteTracker {
   private keys: Map<string, NaiteKey[]> = new Map();
   private config: NaitePatternConfig = {
-    setPatterns: ['Naite.t'],
-    getPatterns: ['Naite.get', 'Naite.safeGet', 'Naite.expect', 'Naite.expectWithSnapshot']
+    setPatterns: ['Naite.t', ],
+    getPatterns: ['Naite.get', 'Naite.del']
   };
 
   /**
