@@ -6,18 +6,23 @@ import * as os from 'os';
 // trace 파일 경로
 const TRACE_FILE_PATH = path.join(os.homedir(), '.sonamu', 'naite-traces.json');
 
-// trace 파일 타입
-interface NaiteTraceFileEntry {
+// trace 파일 타입 (sonamu naite-trace.ts와 동기화)
+export interface NaiteTraceFileEntry {
   key: string;
   value: any;
   filePath: string;
   lineNumber: number;
   at: string;
+  runId: string;
+  testSuite?: string;
+  testName?: string;
 }
 
 interface NaiteTraceFile {
   version: number;
-  clearedAt: string;
+  currentRunId: string | null;
+  runStartedAt: string | null;
+  runEndedAt: string | null;
   traces: NaiteTraceFileEntry[];
 }
 
@@ -33,6 +38,56 @@ let currentTraces: NaiteTraceFileEntry[] = [];
 // 현재 trace 데이터 접근용 (외부에서 사용)
 export function getTracesForLine(filePath: string, lineNumber: number): NaiteTraceFileEntry[] {
   return currentTraces.filter(t => t.filePath === filePath && t.lineNumber === lineNumber);
+}
+
+// 전체 trace 데이터 접근용
+export function getAllTraces(): NaiteTraceFileEntry[] {
+  return currentTraces;
+}
+
+// run 정보 타입
+export interface RunInfo {
+  runId: string | null;
+  runStartedAt: string | null;
+  runEndedAt: string | null;
+}
+
+// 현재 run 정보 조회
+export function getCurrentRunInfo(): RunInfo {
+  try {
+    if (!fs.existsSync(TRACE_FILE_PATH)) {
+      return { runId: null, runStartedAt: null, runEndedAt: null };
+    }
+    const raw = fs.readFileSync(TRACE_FILE_PATH, 'utf-8');
+    const data: NaiteTraceFile = JSON.parse(raw);
+    return {
+      runId: data.currentRunId,
+      runStartedAt: data.runStartedAt,
+      runEndedAt: data.runEndedAt,
+    };
+  } catch {
+    return { runId: null, runStartedAt: null, runEndedAt: null };
+  }
+}
+
+// trace 변경 리스너
+type TraceChangeListener = (traces: NaiteTraceFileEntry[]) => void;
+const traceChangeListeners: TraceChangeListener[] = [];
+
+export function onTraceChange(listener: TraceChangeListener): { dispose: () => void } {
+  traceChangeListeners.push(listener);
+  return {
+    dispose: () => {
+      const index = traceChangeListeners.indexOf(listener);
+      if (index >= 0) traceChangeListeners.splice(index, 1);
+    }
+  };
+}
+
+function notifyTraceChange() {
+  for (const listener of traceChangeListeners) {
+    listener(currentTraces);
+  }
 }
 
 /**
@@ -101,7 +156,7 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
 }
 
 /**
- * trace 파일 읽기
+ * trace 파일 읽기 (현재 test run의 trace만 반환)
  */
 function readTraceFile(): NaiteTraceFileEntry[] {
   try {
@@ -110,7 +165,13 @@ function readTraceFile(): NaiteTraceFileEntry[] {
     }
     const raw = fs.readFileSync(TRACE_FILE_PATH, 'utf-8');
     const data: NaiteTraceFile = JSON.parse(raw);
-    return data.traces || [];
+
+    // 현재 run의 trace만 필터링
+    if (!data.currentRunId) {
+      return [];
+    }
+
+    return (data.traces || []).filter(t => t.runId === data.currentRunId);
   } catch {
     return [];
   }
@@ -220,6 +281,7 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
 export function startRuntimeWatcher(context: vscode.ExtensionContext) {
   // 초기 로드
   currentTraces = readTraceFile();
+  notifyTraceChange();
 
   // 파일 변경 감지 (debounce)
   let debounceTimer: NodeJS.Timeout | null = null;
@@ -246,6 +308,7 @@ export function startRuntimeWatcher(context: vscode.ExtensionContext) {
 
       debounceTimer = setTimeout(() => {
         currentTraces = readTraceFile();
+        notifyTraceChange();
 
         // 모든 visible editor 업데이트
         for (const editor of vscode.window.visibleTextEditors) {

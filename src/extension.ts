@@ -7,7 +7,7 @@ import { NaiteHoverProvider } from './naite-hover-provider';
 import { NaiteCodeLensProvider, showNaiteLocations } from './naite-codelens-provider';
 import { NaiteDiagnosticProvider } from './naite-diagnostic-provider';
 import { updateDecorations, disposeDecorations } from './naite-decorator';
-import { startRuntimeWatcher, updateRuntimeDecorations, disposeRuntimeDecorations, getTracesForLine } from './naite-runtime-decorator';
+import { startRuntimeWatcher, updateRuntimeDecorations, disposeRuntimeDecorations, getTracesForLine, getAllTraces, onTraceChange, getCurrentRunInfo } from './naite-runtime-decorator';
 
 // Naite Trace Webview 생성
 function createTraceWebviewPanel(
@@ -256,6 +256,436 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// 글로벌 Naite Trace Viewer
+let globalTracePanel: vscode.WebviewPanel | null = null;
+
+function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.WebviewPanel {
+  if (globalTracePanel) {
+    globalTracePanel.reveal();
+    return globalTracePanel;
+  }
+
+  globalTracePanel = vscode.window.createWebviewPanel(
+    'naiteGlobalTrace',
+    'Naite Traces',
+    vscode.ViewColumn.Beside,
+    { enableScripts: true }
+  );
+
+  globalTracePanel.onDidDispose(() => {
+    globalTracePanel = null;
+  });
+
+  // 메시지 핸들러
+  globalTracePanel.webview.onDidReceiveMessage(async (message) => {
+    if (message.type === 'goToLocation') {
+      const uri = vscode.Uri.file(message.filePath);
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+      const line = message.lineNumber - 1;
+      const position = new vscode.Position(line, 0);
+      editor.selection = new vscode.Selection(position, position);
+      editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+    }
+  });
+
+  // 초기 렌더링
+  updateGlobalTraceViewer();
+
+  // trace 변경 시 업데이트
+  const disposable = onTraceChange(() => {
+    updateGlobalTraceViewer();
+  });
+  context.subscriptions.push(disposable);
+
+  return globalTracePanel;
+}
+
+function updateGlobalTraceViewer() {
+  if (!globalTracePanel) return;
+
+  const traces = getAllTraces();
+  const runInfo = getCurrentRunInfo();
+
+  // run 상태 표시
+  let runStatusHtml = '';
+  if (runInfo.runId) {
+    const startTime = runInfo.runStartedAt
+      ? new Date(runInfo.runStartedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+      : '';
+    const isRunning = !runInfo.runEndedAt;
+    runStatusHtml = `
+      <div class="run-status ${isRunning ? 'running' : 'ended'}">
+        <span class="run-indicator"></span>
+        <span class="run-label">${isRunning ? 'Test Running' : 'Test Completed'}</span>
+        ${startTime ? `<span class="run-time">${startTime}</span>` : ''}
+      </div>
+    `;
+  }
+
+  // 테스트별로 그룹화: suite > testName > traces
+  interface TestGroup {
+    testName: string;
+    traces: typeof traces;
+  }
+  interface SuiteGroup {
+    suite: string;
+    tests: Map<string, TestGroup>;
+  }
+
+  const suiteMap = new Map<string, SuiteGroup>();
+
+  for (const trace of traces) {
+    const suiteName = trace.testSuite || '(no suite)';
+    const testName = trace.testName || '(no test)';
+
+    if (!suiteMap.has(suiteName)) {
+      suiteMap.set(suiteName, { suite: suiteName, tests: new Map() });
+    }
+    const suiteGroup = suiteMap.get(suiteName)!;
+
+    if (!suiteGroup.tests.has(testName)) {
+      suiteGroup.tests.set(testName, { testName, traces: [] });
+    }
+    suiteGroup.tests.get(testName)!.traces.push(trace);
+  }
+
+  // HTML 생성
+  let traceIdx = 0;
+  let contentHtml = '';
+
+  for (const [suiteName, suiteGroup] of suiteMap) {
+    const suiteTestCount = suiteGroup.tests.size;
+    const suiteTraceCount = Array.from(suiteGroup.tests.values()).reduce((sum, t) => sum + t.traces.length, 0);
+
+    contentHtml += `
+      <div class="suite-group">
+        <div class="suite-header" onclick="toggleSuite('${escapeHtml(suiteName)}')">
+          <span class="arrow suite-arrow" id="suite-arrow-${escapeHtml(suiteName)}">▼</span>
+          <span class="suite-name">${escapeHtml(suiteName)}</span>
+          <span class="suite-count">${suiteTestCount} tests · ${suiteTraceCount} traces</span>
+        </div>
+        <div class="suite-content" id="suite-content-${escapeHtml(suiteName)}">
+    `;
+
+    for (const [testName, testGroup] of suiteGroup.tests) {
+      const testId = `test-${traceIdx}`;
+      contentHtml += `
+        <div class="test-group">
+          <div class="test-header" onclick="toggleTest('${testId}')">
+            <span class="arrow test-arrow" id="arrow-${testId}">▼</span>
+            <span class="test-name">${escapeHtml(testName)}</span>
+            <span class="test-count">${testGroup.traces.length}</span>
+          </div>
+          <div class="test-content" id="content-${testId}">
+      `;
+
+      for (const trace of testGroup.traces) {
+        const time = new Date(trace.at).toLocaleTimeString('ko-KR', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        });
+        const fileName = trace.filePath.split('/').pop() || trace.filePath;
+        const locationData = JSON.stringify({ filePath: trace.filePath, lineNumber: trace.lineNumber });
+        const itemId = `item-${traceIdx++}`;
+
+        contentHtml += `
+          <div class="trace-item">
+            <div class="trace-header" onclick="toggleTrace('${itemId}')">
+              <span class="arrow" id="arrow-${itemId}">▶</span>
+              <span class="key">${escapeHtml(trace.key)}</span>
+              <span class="location-link" onclick="event.stopPropagation(); goToLocation(${escapeHtml(locationData)})">
+                ${escapeHtml(fileName)}:${trace.lineNumber}
+              </span>
+              <span class="time">${time}</span>
+            </div>
+            <div class="trace-content collapsed" id="content-${itemId}">
+              <div class="json-viewer">${renderJsonValue(trace.value)}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      contentHtml += `
+          </div>
+        </div>
+      `;
+    }
+
+    contentHtml += `
+        </div>
+      </div>
+    `;
+  }
+
+  globalTracePanel.webview.html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: var(--vscode-editor-background);
+      --fg: var(--vscode-editor-foreground);
+      --border: var(--vscode-panel-border);
+      --hover: var(--vscode-list-hoverBackground);
+      --accent: var(--vscode-textLink-foreground);
+      --badge-bg: var(--vscode-badge-background);
+      --badge-fg: var(--vscode-badge-foreground);
+    }
+    body {
+      font-family: var(--vscode-font-family);
+      padding: 16px;
+      color: var(--fg);
+      background: var(--bg);
+    }
+    .header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .header .count {
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+    }
+    .empty {
+      color: var(--vscode-descriptionForeground);
+      text-align: center;
+      padding: 32px;
+    }
+    /* Suite level */
+    .suite-group {
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .suite-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      background: var(--vscode-sideBar-background);
+      user-select: none;
+      font-weight: 500;
+    }
+    .suite-header:hover {
+      background: var(--hover);
+    }
+    .suite-name {
+      color: var(--vscode-symbolIcon-classForeground, #ee9d28);
+    }
+    .suite-count {
+      margin-left: auto;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      font-weight: normal;
+    }
+    .suite-content {
+      border-top: 1px solid var(--border);
+    }
+    .suite-content.collapsed {
+      display: none;
+    }
+    /* Test level */
+    .test-group {
+      border-bottom: 1px solid var(--border);
+    }
+    .test-group:last-child {
+      border-bottom: none;
+    }
+    .test-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px 8px 24px;
+      cursor: pointer;
+      background: var(--bg);
+      user-select: none;
+    }
+    .test-header:hover {
+      background: var(--hover);
+    }
+    .test-name {
+      color: var(--vscode-symbolIcon-functionForeground, #b180d7);
+    }
+    .test-count {
+      margin-left: auto;
+      background: var(--badge-bg);
+      color: var(--badge-fg);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+    .test-content {
+      padding-left: 24px;
+    }
+    .test-content.collapsed {
+      display: none;
+    }
+    /* Trace level */
+    .trace-item {
+      border-top: 1px solid var(--border);
+    }
+    .trace-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+    }
+    .trace-header:hover {
+      background: var(--hover);
+    }
+    .arrow {
+      font-size: 10px;
+      transition: transform 0.2s;
+      color: var(--vscode-descriptionForeground);
+      width: 10px;
+    }
+    .arrow.expanded {
+      transform: rotate(90deg);
+    }
+    .key {
+      color: var(--accent);
+      font-family: var(--vscode-editor-font-family);
+    }
+    .location-link {
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      font-family: var(--vscode-editor-font-family);
+      cursor: pointer;
+    }
+    .location-link:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    .time {
+      margin-left: auto;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      font-family: var(--vscode-editor-font-family);
+    }
+    .trace-content {
+      padding: 8px 12px;
+      background: var(--vscode-sideBar-background);
+    }
+    .trace-content.collapsed {
+      display: none;
+    }
+    .json-viewer {
+      font-family: var(--vscode-editor-font-family);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .json-key { color: #9cdcfe; }
+    .json-string { color: #ce9178; }
+    .json-number { color: #b5cea8; }
+    .json-boolean { color: #569cd6; }
+    .json-null { color: #569cd6; }
+    .json-bracket { color: var(--fg); }
+    .json-object, .json-array { margin-left: 16px; }
+    .json-item { display: block; }
+    .run-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      background: var(--vscode-sideBar-background);
+    }
+    .run-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .run-status.running .run-indicator {
+      background: #4caf50;
+      animation: pulse 1.5s infinite;
+    }
+    .run-status.ended .run-indicator {
+      background: var(--vscode-descriptionForeground);
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .run-label {
+      font-weight: 500;
+    }
+    .run-time {
+      color: var(--vscode-descriptionForeground);
+      font-family: var(--vscode-editor-font-family);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h2>📊 Naite Traces</h2>
+      <span class="count">${traces.length}개</span>
+    </div>
+    ${runStatusHtml}
+  </div>
+  ${traces.length === 0
+    ? '<div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>'
+    : `<div class="traces">${contentHtml}</div>`
+  }
+  <script>
+    const vscode = acquireVsCodeApi();
+
+    function toggleSuite(name) {
+      const content = document.getElementById('suite-content-' + name);
+      const arrow = document.getElementById('suite-arrow-' + name);
+      content.classList.toggle('collapsed');
+      if (content.classList.contains('collapsed')) {
+        arrow.textContent = '▶';
+      } else {
+        arrow.textContent = '▼';
+      }
+    }
+
+    function toggleTest(id) {
+      const content = document.getElementById('content-' + id);
+      const arrow = document.getElementById('arrow-' + id);
+      content.classList.toggle('collapsed');
+      if (content.classList.contains('collapsed')) {
+        arrow.textContent = '▶';
+      } else {
+        arrow.textContent = '▼';
+      }
+    }
+
+    function toggleTrace(id) {
+      const content = document.getElementById('content-' + id);
+      const arrow = document.getElementById('arrow-' + id);
+      content.classList.toggle('collapsed');
+      arrow.classList.toggle('expanded');
+    }
+
+    function goToLocation(location) {
+      vscode.postMessage({ type: 'goToLocation', ...location });
+    }
+  </script>
+</body>
+</html>`;
+}
+
 function renderJsonValue(value: any, inline = false): string {
   if (value === null) {
     return '<span class="json-null">null</span>';
@@ -407,6 +837,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const key = traces[0].key;
       createTraceWebviewPanel(context, key, traces);
+    }),
+    vscode.commands.registerCommand('sonamu.openGlobalTraceViewer', () => {
+      createGlobalTraceViewer(context);
     })
   );
 }
