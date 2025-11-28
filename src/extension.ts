@@ -567,12 +567,14 @@ function getGlobalTraceViewerHtml(): string {
   <script>
     const vscode = acquireVsCodeApi();
 
-    // 열림 상태 저장 (suite, test, trace별)
-    const expandedState = {
-      suites: new Set(),    // suite 이름
-      tests: new Set(),     // "suite::testName"
-      traces: new Set(),    // "suite::testName::key::filePath::lineNumber"
+    // 열림/닫힘 상태 저장
+    // suite, test: 기본 열림 → 닫힌 것만 추적
+    // trace: 기본 닫힘 → 열린 것만 추적
+    const collapsedState = {
+      suites: new Set(),    // 닫힌 suite 이름
+      tests: new Set(),     // 닫힌 "suite::testName"
     };
+    const expandedTraces = new Set();  // 열린 trace key
 
     function escapeHtml(str) {
       return str
@@ -631,11 +633,11 @@ function getGlobalTraceViewerHtml(): string {
       if (isExpanded) {
         content.classList.add('collapsed');
         arrow.textContent = '▶';
-        expandedState.suites.delete(name);
+        collapsedState.suites.add(name);  // 닫힘 추가
       } else {
         content.classList.remove('collapsed');
         arrow.textContent = '▼';
-        expandedState.suites.add(name);
+        collapsedState.suites.delete(name);  // 닫힘 제거
       }
     }
 
@@ -650,11 +652,11 @@ function getGlobalTraceViewerHtml(): string {
       if (isExpanded) {
         content.classList.add('collapsed');
         arrow.textContent = '▶';
-        expandedState.tests.delete(key);
+        collapsedState.tests.add(key);  // 닫힘 추가
       } else {
         content.classList.remove('collapsed');
         arrow.textContent = '▼';
-        expandedState.tests.add(key);
+        collapsedState.tests.delete(key);  // 닫힘 제거
       }
     }
 
@@ -669,11 +671,11 @@ function getGlobalTraceViewerHtml(): string {
       if (isExpanded) {
         content.classList.add('collapsed');
         arrow.classList.remove('expanded');
-        expandedState.traces.delete(stateKey);
+        expandedTraces.delete(stateKey);  // 열림 제거
       } else {
         content.classList.remove('collapsed');
         arrow.classList.add('expanded');
-        expandedState.traces.add(stateKey);
+        expandedTraces.add(stateKey);  // 열림 추가
       }
     }
 
@@ -735,7 +737,7 @@ function getGlobalTraceViewerHtml(): string {
           suiteTraceCount += traces.length;
         }
 
-        const suiteExpanded = expandedState.suites.has(suiteName);
+        const suiteExpanded = !collapsedState.suites.has(suiteName);  // 기본 열림
         const suiteId = escapeId(suiteName);
 
         html += '<div class="suite-group">';
@@ -748,7 +750,7 @@ function getGlobalTraceViewerHtml(): string {
 
         for (const [testName, testTraces] of testMap) {
           const testKey = suiteName + '::' + testName;
-          const testExpanded = expandedState.tests.has(testKey);
+          const testExpanded = !collapsedState.tests.has(testKey);  // 기본 열림
           const testId = escapeId(testKey);
 
           html += '<div class="test-group">';
@@ -765,7 +767,7 @@ function getGlobalTraceViewerHtml(): string {
             });
             const fileName = trace.filePath.split('/').pop() || trace.filePath;
             const traceStateKey = suiteName + '::' + testName + '::' + trace.key + '::' + trace.filePath + '::' + trace.lineNumber;
-            const traceExpanded = expandedState.traces.has(traceStateKey);
+            const traceExpanded = expandedTraces.has(traceStateKey);  // 기본 닫힘
             const traceId = escapeId(traceStateKey);
 
             html += '<div class="trace-item" id="item-' + traceId + '" data-filepath="' + escapeHtml(trace.filePath) + '" data-line="' + trace.lineNumber + '" data-key="' + escapeHtml(trace.key) + '">';
