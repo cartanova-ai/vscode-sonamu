@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import * as ts from 'typescript';
+import * as ts from "typescript";
+import * as vscode from "vscode";
 
 /**
  * Naite 호출에서 키와 위치 정보를 추출합니다
@@ -7,7 +7,7 @@ import * as ts from 'typescript';
 export interface NaiteKey {
   key: string;
   location: vscode.Location;
-  type: 'set' | 'get';
+  type: "set" | "get";
   pattern: string; // 매칭된 패턴 (예: "Naite.t", "Naite.get")
 }
 
@@ -24,7 +24,9 @@ export interface NaitePatternConfig {
 /**
  * 문자열 리터럴 노드인지 확인 (작은따옴표, 큰따옴표, 백틱)
  */
-function isStringLiteralLike(node: ts.Node): node is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral {
+function isStringLiteralLike(
+  node: ts.Node,
+): node is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral {
   return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node);
 }
 
@@ -33,16 +35,18 @@ function isStringLiteralLike(node: ts.Node): node is ts.StringLiteral | ts.NoSub
  * 예: "puri:*"는 "puri:abc", "puri:def" 등과 매칭됨
  */
 export function matchesWildcard(pattern: string, keys: string[]): boolean {
-  if (!pattern.includes('*')) return keys.includes(pattern);
-  const regex = new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`);
-  return keys.some(key => regex.test(key));
+  if (!pattern.includes("*")) return keys.includes(pattern);
+  const regex = new RegExp(
+    `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
+  );
+  return keys.some((key) => regex.test(key));
 }
 
 /**
  * 패턴 문자열을 파싱합니다 (예: "Naite.t" → { object: "Naite", method: "t" })
  */
 function parsePattern(pattern: string): { object: string; method: string } | null {
-  const parts = pattern.split('.');
+  const parts = pattern.split(".");
   if (parts.length !== 2) return null;
   return { object: parts[0], method: parts[1] };
 }
@@ -53,8 +57,8 @@ function parsePattern(pattern: string): { object: string; method: string } | nul
 export class NaiteTracker {
   private keys: Map<string, NaiteKey[]> = new Map();
   private config: NaitePatternConfig = {
-    setPatterns: ['Naite.t', ],
-    getPatterns: ['Naite.get', 'Naite.del']
+    setPatterns: ["Naite.t"],
+    getPatterns: ["Naite.get", "Naite.del"],
   };
 
   /**
@@ -83,8 +87,12 @@ export class NaiteTracker {
    * 패턴의 메서드 이름만 추출합니다 (예: ["t", "get", "safeGet", ...])
    */
   getAllMethods(): { setMethods: string[]; getMethods: string[] } {
-    const setMethods = this.config.setPatterns.map(p => parsePattern(p)?.method).filter(Boolean) as string[];
-    const getMethods = this.config.getPatterns.map(p => parsePattern(p)?.method).filter(Boolean) as string[];
+    const setMethods = this.config.setPatterns
+      .map((p) => parsePattern(p)?.method)
+      .filter(Boolean) as string[];
+    const getMethods = this.config.getPatterns
+      .map((p) => parsePattern(p)?.method)
+      .filter(Boolean) as string[];
     return { setMethods, getMethods };
   }
 
@@ -95,7 +103,7 @@ export class NaiteTracker {
     this.keys.clear();
 
     // 모든 .ts 파일 찾기 (node_modules 제외)
-    const files = await vscode.workspace.findFiles('**/*.ts', '**/node_modules/**');
+    const files = await vscode.workspace.findFiles("**/*.ts", "**/node_modules/**");
 
     for (const file of files) {
       await this.scanFile(file);
@@ -109,7 +117,7 @@ export class NaiteTracker {
     // 먼저 해당 파일의 기존 엔트리 제거
     const uriString = uri.toString();
     for (const [key, entries] of this.keys) {
-      const filtered = entries.filter(e => e.location.uri.toString() !== uriString);
+      const filtered = entries.filter((e) => e.location.uri.toString() !== uriString);
       if (filtered.length === 0) {
         this.keys.delete(key);
       } else {
@@ -121,12 +129,7 @@ export class NaiteTracker {
     const sourceCode = document.getText();
 
     // TypeScript AST로 파싱
-    const sourceFile = ts.createSourceFile(
-      uri.fsPath,
-      sourceCode,
-      ts.ScriptTarget.Latest,
-      true
-    );
+    const sourceFile = ts.createSourceFile(uri.fsPath, sourceCode, ts.ScriptTarget.Latest, true);
 
     // AST를 순회하며 Naite.t와 Naite.get 호출 찾기
     this.visitNode(sourceFile, sourceFile, document);
@@ -157,7 +160,7 @@ export class NaiteTracker {
 
               if (isStringLiteralLike(firstArg)) {
                 const keyValue = firstArg.text;
-                const type = isSetPattern ? 'set' : 'get';
+                const type = isSetPattern ? "set" : "get";
 
                 // 위치 정보 생성 (전체 호출문 위치)
                 const start = document.positionAt(node.getStart(sourceFile));
@@ -180,7 +183,7 @@ export class NaiteTracker {
     }
 
     // 자식 노드 방문
-    ts.forEachChild(node, child => this.visitNode(child, sourceFile, document));
+    ts.forEachChild(node, (child) => this.visitNode(child, sourceFile, document));
   }
 
   /**
@@ -193,12 +196,12 @@ export class NaiteTracker {
   /**
    * 특정 키의 모든 사용 위치를 반환합니다
    */
-  getKeyLocations(key: string, type?: 'set' | 'get'): vscode.Location[] {
+  getKeyLocations(key: string, type?: "set" | "get"): vscode.Location[] {
     const naiteKeys = this.keys.get(key) || [];
     if (type) {
-      return naiteKeys.filter(k => k.type === type).map(k => k.location);
+      return naiteKeys.filter((k) => k.type === type).map((k) => k.location);
     }
-    return naiteKeys.map(k => k.location);
+    return naiteKeys.map((k) => k.location);
   }
 
   /**
@@ -230,7 +233,7 @@ export class NaiteTracker {
       document.uri.fsPath,
       sourceCode,
       ts.ScriptTarget.Latest,
-      true
+      true,
     );
 
     let foundKey: string | null = null;
@@ -294,10 +297,10 @@ export class NaiteTracker {
     // 여러 객체가 있을 수 있으므로 OR로 연결
     const parts: string[] = [];
     for (const [obj, methods] of methodsByObject) {
-      parts.push(`${obj}\\.(${methods.join('|')})`);
+      parts.push(`${obj}\\.(${methods.join("|")})`);
     }
 
-    const patternStr = `(${parts.join('|')})\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`;
-    return new RegExp(patternStr, 'g');
+    const patternStr = `(${parts.join("|")})\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`;
+    return new RegExp(patternStr, "g");
   }
 }

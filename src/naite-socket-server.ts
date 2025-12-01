@@ -1,13 +1,12 @@
-import * as net from 'net';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import * as fs from "fs";
+import * as net from "net";
+import * as os from "os";
+import * as path from "path";
 
 // 소켓 경로
-const SOCKET_DIR = path.join(os.homedir(), '.sonamu');
-const SOCKET_PATH = process.platform === 'win32'
-  ? '\\\\.\\pipe\\naite'
-  : path.join(SOCKET_DIR, 'naite.sock');
+const SOCKET_DIR = path.join(os.homedir(), ".sonamu");
+const SOCKET_PATH =
+  process.platform === "win32" ? "\\\\.\\pipe\\naite" : path.join(SOCKET_DIR, "naite.sock");
 
 // NaiteReporter에서 보내는 데이터 타입
 export interface NaiteTraceEntry {
@@ -53,7 +52,7 @@ export function onTraceChange(listener: TraceChangeListener): { dispose: () => v
     dispose: () => {
       const index = traceChangeListeners.indexOf(listener);
       if (index >= 0) traceChangeListeners.splice(index, 1);
-    }
+    },
   };
 }
 
@@ -99,7 +98,7 @@ export function getAllTraces(): NaiteTraceEntry[] {
 }
 
 export function getTracesForLine(filePath: string, lineNumber: number): NaiteTraceEntry[] {
-  return currentTraces.filter(t => t.filePath === filePath && t.lineNumber === lineNumber);
+  return currentTraces.filter((t) => t.filePath === filePath && t.lineNumber === lineNumber);
 }
 
 export function getCurrentRunInfo(): RunInfo {
@@ -115,7 +114,7 @@ function processMessage(data: any) {
   const type = data.type;
 
   switch (type) {
-    case 'run/start':
+    case "run/start":
       currentTraces = [];
       currentRunInfo = {
         runId: data.runId,
@@ -124,14 +123,14 @@ function processMessage(data: any) {
       };
       break;
 
-    case 'run/end':
+    case "run/end":
       currentRunInfo = {
         ...currentRunInfo,
         runEndedAt: data.endedAt,
       };
       break;
 
-    case 'test/start':
+    case "test/start":
       currentRunInfo = {
         ...currentRunInfo,
         currentTestSuite: data.suite,
@@ -139,7 +138,7 @@ function processMessage(data: any) {
       };
       break;
 
-    case 'test/end':
+    case "test/end":
       currentRunInfo = {
         ...currentRunInfo,
         currentTestSuite: undefined,
@@ -147,7 +146,7 @@ function processMessage(data: any) {
       };
       break;
 
-    case 'trace':
+    case "trace": {
       const trace: NaiteTraceEntry = {
         key: data.key,
         value: data.value,
@@ -163,6 +162,7 @@ function processMessage(data: any) {
       };
       currentTraces.push(trace);
       break;
+    }
   }
 }
 
@@ -175,7 +175,7 @@ export function startServer(): Promise<string> {
     }
 
     // 디렉토리 생성
-    if (process.platform !== 'win32') {
+    if (process.platform !== "win32") {
       if (!fs.existsSync(SOCKET_DIR)) {
         fs.mkdirSync(SOCKET_DIR, { recursive: true });
       }
@@ -186,14 +186,14 @@ export function startServer(): Promise<string> {
     }
 
     server = net.createServer((socket) => {
-      let buffer = '';
+      let buffer = "";
 
-      socket.on('data', (chunk) => {
+      socket.on("data", (chunk) => {
         buffer += chunk.toString();
 
         // 줄바꿈으로 메시지 구분
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.trim()) {
@@ -201,13 +201,13 @@ export function startServer(): Promise<string> {
               const data = JSON.parse(line);
               queueMessage(data);
             } catch (err) {
-              console.error('[Naite Socket] Parse error:', err);
+              console.error("[Naite Socket] Parse error:", err);
             }
           }
         }
       });
 
-      socket.on('error', (err) => {
+      socket.on("error", (err) => {
         // 클라이언트 연결 에러 무시
       });
     });
@@ -217,8 +217,8 @@ export function startServer(): Promise<string> {
       resolve(SOCKET_PATH);
     });
 
-    server.on('error', (err) => {
-      console.error('[Naite Socket Server] Error:', err);
+    server.on("error", (err) => {
+      console.error("[Naite Socket Server] Error:", err);
       reject(err);
     });
   });
@@ -231,13 +231,13 @@ export function stopServer(): void {
     server = null;
 
     // 소켓 파일 삭제
-    if (process.platform !== 'win32' && fs.existsSync(SOCKET_PATH)) {
+    if (process.platform !== "win32" && fs.existsSync(SOCKET_PATH)) {
       try {
         fs.unlinkSync(SOCKET_PATH);
       } catch {}
     }
 
-    console.log('[Naite Socket Server] Stopped');
+    console.log("[Naite Socket Server] Stopped");
   }
 }
 

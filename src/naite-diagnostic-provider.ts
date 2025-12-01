@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
-import * as ts from 'typescript';
-import { NaiteTracker, matchesWildcard } from './naite-tracker';
+import * as ts from "typescript";
+import * as vscode from "vscode";
+import { matchesWildcard, type NaiteTracker } from "./naite-tracker";
 
 /**
  * 사용 패턴(get)에서 정의되지 않은 키 사용 시 경고를 표시합니다
@@ -9,7 +9,7 @@ export class NaiteDiagnosticProvider {
   private diagnosticCollection: vscode.DiagnosticCollection;
 
   constructor(private tracker: NaiteTracker) {
-    this.diagnosticCollection = vscode.languages.createDiagnosticCollection('naite');
+    this.diagnosticCollection = vscode.languages.createDiagnosticCollection("naite");
   }
 
   dispose() {
@@ -20,7 +20,7 @@ export class NaiteDiagnosticProvider {
    * 문서를 분석하여 진단 정보를 업데이트합니다
    */
   updateDiagnostics(document: vscode.TextDocument): void {
-    if (document.languageId !== 'typescript') {
+    if (document.languageId !== "typescript") {
       return;
     }
 
@@ -32,7 +32,7 @@ export class NaiteDiagnosticProvider {
       document.uri.fsPath,
       sourceCode,
       ts.ScriptTarget.Latest,
-      true
+      true,
     );
 
     const visit = (node: ts.Node): void => {
@@ -54,9 +54,9 @@ export class NaiteDiagnosticProvider {
                   const keyValue = firstArg.text;
 
                   // 와일드카드 패턴(*)을 지원하여 정의된 키들과 매칭 여부 확인
-                  const definedKeys = this.tracker.getAllKeys().filter(k =>
-                    this.tracker.getKeyLocations(k, 'set').length > 0
-                  );
+                  const definedKeys = this.tracker
+                    .getAllKeys()
+                    .filter((k) => this.tracker.getKeyLocations(k, "set").length > 0);
 
                   if (!matchesWildcard(keyValue, definedKeys)) {
                     // 키 부분의 범위 계산
@@ -67,10 +67,10 @@ export class NaiteDiagnosticProvider {
                     const diagnostic = new vscode.Diagnostic(
                       range,
                       `정의되지 않은 Naite 키: "${keyValue}"`,
-                      vscode.DiagnosticSeverity.Warning
+                      vscode.DiagnosticSeverity.Warning,
                     );
-                    diagnostic.source = 'sonamu';
-                    diagnostic.code = 'undefined-naite-key';
+                    diagnostic.source = "sonamu";
+                    diagnostic.code = "undefined-naite-key";
 
                     diagnostics.push(diagnostic);
                   }

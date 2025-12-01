@@ -1,21 +1,22 @@
-import * as vscode from 'vscode';
-import { NaiteTracker } from './naite-tracker';
-import { NaiteCompletionProvider } from './naite-completion-provider';
-import { NaiteDefinitionProvider } from './naite-definition-provider';
-import { NaiteReferenceProvider } from './naite-reference-provider';
-import { NaiteHoverProvider } from './naite-hover-provider';
-import { NaiteCodeLensProvider, showNaiteLocations } from './naite-codelens-provider';
-import { NaiteDiagnosticProvider } from './naite-diagnostic-provider';
-import { updateDecorations, disposeDecorations } from './naite-decorator';
-import { startRuntimeWatcher, updateRuntimeDecorations, disposeRuntimeDecorations, getTracesForLine, getAllTraces, onTraceChange, getCurrentRunInfo, handleDocumentChange } from './naite-runtime-decorator';
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import * as vscode from "vscode";
+import { NaiteCodeLensProvider, showNaiteLocations } from "./naite-codelens-provider";
+import { NaiteCompletionProvider } from "./naite-completion-provider";
+import { disposeDecorations, updateDecorations } from "./naite-decorator";
+import { NaiteDefinitionProvider } from "./naite-definition-provider";
+import { NaiteDiagnosticProvider } from "./naite-diagnostic-provider";
+import { NaiteHoverProvider } from "./naite-hover-provider";
+import { NaiteReferenceProvider } from "./naite-reference-provider";
+import {
+  disposeRuntimeDecorations,
+  getAllTraces,
+  getCurrentRunInfo,
+  getTracesForLine,
+  handleDocumentChange,
+  onTraceChange,
+  startRuntimeWatcher,
+  updateRuntimeDecorations,
+} from "./naite-runtime-decorator";
+import { NaiteTracker } from "./naite-tracker";
 
 // 글로벌 Naite Trace Viewer
 let globalTracePanel: vscode.WebviewPanel | null = null;
@@ -28,13 +29,13 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
   }
 
   globalTracePanel = vscode.window.createWebviewPanel(
-    'naiteGlobalTrace',
-    'Naite Traces',
+    "naiteGlobalTrace",
+    "Naite Traces",
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-    }
+    },
   );
 
   // 기본 HTML 한 번만 설정
@@ -50,14 +51,17 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
 
   // 메시지 핸들러
   globalTracePanel.webview.onDidReceiveMessage(async (message) => {
-    if (message.type === 'goToLocation') {
+    if (message.type === "goToLocation") {
       const uri = vscode.Uri.file(message.filePath);
       const doc = await vscode.workspace.openTextDocument(uri);
       const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
       const line = message.lineNumber - 1;
       const position = new vscode.Position(line, 0);
       editor.selection = new vscode.Selection(position, position);
-      editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+      editor.revealRange(
+        new vscode.Range(position, position),
+        vscode.TextEditorRevealType.InCenter,
+      );
     }
   });
 
@@ -81,7 +85,7 @@ function sendTraceDataToWebview() {
   const runInfo = getCurrentRunInfo();
 
   globalTracePanel.webview.postMessage({
-    type: 'updateTraces',
+    type: "updateTraces",
     traces,
     runInfo,
   });
@@ -673,42 +677,6 @@ function getGlobalTraceViewerHtml(): string {
 </html>`;
 }
 
-function renderJsonValue(value: any, inline = false): string {
-  if (value === null) {
-    return '<span class="json-null">null</span>';
-  }
-  if (value === undefined) {
-    return '<span class="json-null">undefined</span>';
-  }
-  if (typeof value === 'string') {
-    return `<span class="json-string">"${escapeHtml(value)}"</span>`;
-  }
-  if (typeof value === 'number') {
-    return `<span class="json-number">${value}</span>`;
-  }
-  if (typeof value === 'boolean') {
-    return `<span class="json-boolean">${value}</span>`;
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return '<span class="json-bracket">[]</span>';
-    }
-    const items = value.map(v => `<span class="json-item">${renderJsonValue(v)},</span>`).join('');
-    return `<span class="json-bracket">[</span><div class="json-array">${items}</div><span class="json-bracket">]</span>`;
-  }
-  if (typeof value === 'object') {
-    const keys = Object.keys(value);
-    if (keys.length === 0) {
-      return '<span class="json-bracket">{}</span>';
-    }
-    const items = keys.map(k =>
-      `<span class="json-item"><span class="json-key">"${escapeHtml(k)}"</span>: ${renderJsonValue(value[k])},</span>`
-    ).join('');
-    return `<span class="json-bracket">{</span><div class="json-object">${items}</div><span class="json-bracket">}</span>`;
-  }
-  return escapeHtml(String(value));
-}
-
 let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
 
@@ -725,11 +693,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // 파일 저장 시 재스캔 + 진단 업데이트
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async (doc) => {
-      if (doc.languageId === 'typescript') {
+      if (doc.languageId === "typescript") {
         await tracker.scanFile(doc.uri);
         diagnosticProvider.updateAllDiagnostics();
       }
-    })
+    }),
   );
 
   context.subscriptions.push(diagnosticProvider);
@@ -750,7 +718,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = `$(plug) Naite`;
   statusBarItem.tooltip = `Naite Socket: ${socketPath}\nClick to open Trace Viewer`;
-  statusBarItem.command = 'sonamu.openGlobalTraceViewer';
+  statusBarItem.command = "sonamu.openGlobalTraceViewer";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
@@ -764,17 +732,20 @@ export async function activate(context: vscode.ExtensionContext) {
     const key = doc.uri.toString();
     const existing = scanDebounceMap.get(key);
     if (existing) clearTimeout(existing);
-    scanDebounceMap.set(key, setTimeout(async () => {
-      await tracker.scanFile(doc.uri);
-      diagnosticProvider.updateDiagnostics(doc);
-      scanDebounceMap.delete(key);
-    }, 500));
+    scanDebounceMap.set(
+      key,
+      setTimeout(async () => {
+        await tracker.scanFile(doc.uri);
+        diagnosticProvider.updateDiagnostics(doc);
+        scanDebounceMap.delete(key);
+      }, 500),
+    );
   };
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       triggerUpdate(editor);
-      if (editor && editor.document.languageId === 'typescript') {
+      if (editor && editor.document.languageId === "typescript") {
         diagnosticProvider.updateDiagnostics(editor.document);
       }
     }),
@@ -786,70 +757,78 @@ export async function activate(context: vscode.ExtensionContext) {
       if (editor && e.document === editor.document) {
         triggerUpdate(editor);
         // TypeScript 파일이면 debounce된 스캔 트리거
-        if (e.document.languageId === 'typescript') {
+        if (e.document.languageId === "typescript") {
           debouncedScan(e.document);
         }
       }
     }),
     // 설정 변경 시 데코레이션 업데이트
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('sonamu')) {
+      if (e.affectsConfiguration("sonamu")) {
         if (vscode.window.activeTextEditor) {
           triggerUpdate(vscode.window.activeTextEditor);
         }
       }
-    })
+    }),
   );
 
   // Provider 등록
-  const selector = { language: 'typescript', scheme: 'file' };
+  const selector = { language: "typescript", scheme: "file" };
 
   context.subscriptions.push(
-    vscode.languages.registerCompletionItemProvider(selector, new NaiteCompletionProvider(tracker), '"', "'"),
+    vscode.languages.registerCompletionItemProvider(
+      selector,
+      new NaiteCompletionProvider(tracker),
+      '"',
+      "'",
+    ),
     vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider(tracker)),
     vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider(tracker)),
     vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider(tracker)),
-    vscode.languages.registerCodeLensProvider(selector, new NaiteCodeLensProvider(tracker))
+    vscode.languages.registerCodeLensProvider(selector, new NaiteCodeLensProvider(tracker)),
   );
 
   // 명령어
   context.subscriptions.push(
-    vscode.commands.registerCommand('sonamu.showNaiteLocations', showNaiteLocations),
-    vscode.commands.registerCommand('sonamu.showNaiteLocationsByKey', (key: string) => {
-      const setLocs = tracker.getKeyLocations(key, 'set');
-      const getLocs = tracker.getKeyLocations(key, 'get');
+    vscode.commands.registerCommand("sonamu.showNaiteLocations", showNaiteLocations),
+    vscode.commands.registerCommand("sonamu.showNaiteLocationsByKey", (key: string) => {
+      const setLocs = tracker.getKeyLocations(key, "set");
+      const getLocs = tracker.getKeyLocations(key, "get");
       showNaiteLocations(key, setLocs, getLocs);
     }),
-    vscode.commands.registerCommand('sonamu.rescanNaite', async () => {
+    vscode.commands.registerCommand("sonamu.rescanNaite", async () => {
       await tracker.scanWorkspace();
       vscode.window.showInformationMessage(`Found ${tracker.getAllKeys().length} Naite keys`);
     }),
-    vscode.commands.registerCommand('sonamu.helloWorld', () => {
+    vscode.commands.registerCommand("sonamu.helloWorld", () => {
       vscode.window.showInformationMessage(`Sonamu: ${tracker.getAllKeys().length} keys`);
     }),
-    vscode.commands.registerCommand('sonamu.openTraceInEditor', async (args: { filePath: string; lineNumber: number }) => {
-      const traces = getTracesForLine(args.filePath, args.lineNumber);
-      if (traces.length === 0) {
-        vscode.window.showWarningMessage('No trace data available');
-        return;
-      }
+    vscode.commands.registerCommand(
+      "sonamu.openTraceInEditor",
+      async (args: { filePath: string; lineNumber: number }) => {
+        const traces = getTracesForLine(args.filePath, args.lineNumber);
+        if (traces.length === 0) {
+          vscode.window.showWarningMessage("No trace data available");
+          return;
+        }
 
-      // Global Trace Viewer 열고 해당 trace 하이라이트
-      const panel = createGlobalTraceViewer(context);
-      const key = traces[0].key;
-      // 약간의 딜레이 후 메시지 전송 (webview 로드 대기)
-      setTimeout(() => {
-        panel.webview.postMessage({
-          type: 'highlightTrace',
-          filePath: args.filePath,
-          lineNumber: args.lineNumber,
-          key,
-        });
-      }, 100);
-    }),
-    vscode.commands.registerCommand('sonamu.openGlobalTraceViewer', () => {
+        // Global Trace Viewer 열고 해당 trace 하이라이트
+        const panel = createGlobalTraceViewer(context);
+        const key = traces[0].key;
+        // 약간의 딜레이 후 메시지 전송 (webview 로드 대기)
+        setTimeout(() => {
+          panel.webview.postMessage({
+            type: "highlightTrace",
+            filePath: args.filePath,
+            lineNumber: args.lineNumber,
+            key,
+          });
+        }, 100);
+      },
+    ),
+    vscode.commands.registerCommand("sonamu.openGlobalTraceViewer", () => {
       createGlobalTraceViewer(context);
-    })
+    }),
   );
 }
 

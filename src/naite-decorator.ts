@@ -1,31 +1,31 @@
-import * as vscode from 'vscode';
-import { NaiteTracker } from './naite-tracker';
+import * as vscode from "vscode";
+import type { NaiteTracker } from "./naite-tracker";
 
 let decorationType: vscode.TextEditorDecorationType | null = null;
-let currentStyle: string = '';
+let currentStyle: string = "";
 
 function getDecorationStyle(): vscode.DecorationRenderOptions {
-  const config = vscode.workspace.getConfiguration('sonamu');
-  const style = config.get<string>('decoration.style', 'underline');
+  const config = vscode.workspace.getConfiguration("sonamu");
+  const style = config.get<string>("decoration.style", "underline");
 
   const options: vscode.DecorationRenderOptions = {};
 
-  if (style.includes('underline')) {
-    options.textDecoration = 'underline';
+  if (style.includes("underline")) {
+    options.textDecoration = "underline";
   }
-  if (style.includes('bold')) {
-    options.fontWeight = 'bold';
+  if (style.includes("bold")) {
+    options.fontWeight = "bold";
   }
-  if (style.includes('italic')) {
-    options.fontStyle = 'italic';
+  if (style.includes("italic")) {
+    options.fontStyle = "italic";
   }
 
   return options;
 }
 
 function ensureDecorationType(): vscode.TextEditorDecorationType {
-  const config = vscode.workspace.getConfiguration('sonamu');
-  const style = config.get<string>('decoration.style', 'underline');
+  const config = vscode.workspace.getConfiguration("sonamu");
+  const style = config.get<string>("decoration.style", "underline");
 
   if (decorationType && currentStyle === style) {
     return decorationType;
@@ -42,11 +42,11 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
 }
 
 export function updateDecorations(editor: vscode.TextEditor, tracker: NaiteTracker) {
-  if (editor.document.languageId !== 'typescript') return;
+  if (editor.document.languageId !== "typescript") return;
 
   // 설정에서 decoration 활성화 여부 확인
-  const config = vscode.workspace.getConfiguration('sonamu');
-  if (!config.get<boolean>('decoration.enabled', true)) {
+  const config = vscode.workspace.getConfiguration("sonamu");
+  if (!config.get<boolean>("decoration.enabled", true)) {
     // 비활성화된 경우 기존 데코레이션 제거
     if (decorationType) {
       editor.setDecorations(decorationType, []);
@@ -67,7 +67,7 @@ export function updateDecorations(editor: vscode.TextEditor, tracker: NaiteTrack
     const keyIndexSingle = callText.indexOf(`'${entry.key}'`) + 1;
     const keyIndexBacktick = callText.indexOf(`\`${entry.key}\``) + 1;
 
-    let offset = keyIndex > 0 ? keyIndex : (keyIndexSingle > 0 ? keyIndexSingle : keyIndexBacktick);
+    const offset = keyIndex > 0 ? keyIndex : keyIndexSingle > 0 ? keyIndexSingle : keyIndexBacktick;
     if (offset <= 0) continue;
 
     const startOffset = editor.document.offsetAt(entry.location.range.start) + offset;
