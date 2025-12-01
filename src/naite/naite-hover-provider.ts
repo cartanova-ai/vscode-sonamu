@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type { NaiteTracker } from "./naite-tracker";
+import type NaiteTracker from "./tracker";
 
 export class NaiteHoverProvider implements vscode.HoverProvider {
   constructor(private tracker: NaiteTracker) {}

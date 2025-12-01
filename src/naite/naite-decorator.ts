@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type { NaiteTracker } from "./naite-tracker";
+import type NaiteTracker from "./tracker";
 
 let decorationType: vscode.TextEditorDecorationType | null = null;
 let currentStyle: string = "";
