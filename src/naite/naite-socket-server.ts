@@ -1,7 +1,7 @@
-import * as fs from "fs";
-import * as net from "net";
-import * as os from "os";
-import * as path from "path";
+import fs from "fs";
+import net from "net";
+import os from "os";
+import path from "path";
 
 // 소켓 경로
 const SOCKET_DIR = path.join(os.homedir(), ".sonamu");

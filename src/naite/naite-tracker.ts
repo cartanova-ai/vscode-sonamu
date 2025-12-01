@@ -1,5 +1,5 @@
-import * as ts from "typescript";
-import * as vscode from "vscode";
+import ts from "typescript";
+import vscode from "vscode";
 
 /**
  * Naite 호출에서 키와 위치 정보를 추출합니다
@@ -149,7 +149,6 @@ export class NaiteTracker {
           const fullPattern = `${objectName}.${methodName}`;
 
           // 패턴 매칭 확인
-          const { setMethods, getMethods } = this.getAllMethods();
           const isSetPattern = this.config.setPatterns.includes(fullPattern);
           const isGetPattern = this.config.getPatterns.includes(fullPattern);
 
@@ -174,7 +173,7 @@ export class NaiteTracker {
                 if (!this.keys.has(keyValue)) {
                   this.keys.set(keyValue, []);
                 }
-                this.keys.get(keyValue)!.push(naiteKey);
+                this.keys.get(keyValue)?.push(naiteKey);
               }
             }
           }
@@ -291,7 +290,7 @@ export class NaiteTracker {
       if (!methodsByObject.has(parsed.object)) {
         methodsByObject.set(parsed.object, []);
       }
-      methodsByObject.get(parsed.object)!.push(parsed.method);
+      methodsByObject.get(parsed.object)?.push(parsed.method);
     }
 
     // 여러 객체가 있을 수 있으므로 OR로 연결

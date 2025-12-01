@@ -1,11 +1,11 @@
-import * as vscode from "vscode";
-import { NaiteCodeLensProvider, showNaiteLocations } from "./naite-codelens-provider";
-import { NaiteCompletionProvider } from "./naite-completion-provider";
-import { disposeDecorations, updateDecorations } from "./naite-decorator";
-import { NaiteDefinitionProvider } from "./naite-definition-provider";
-import { NaiteDiagnosticProvider } from "./naite-diagnostic-provider";
-import { NaiteHoverProvider } from "./naite-hover-provider";
-import { NaiteReferenceProvider } from "./naite-reference-provider";
+import vscode from "vscode";
+import { NaiteCodeLensProvider, showNaiteLocations } from "./naite/naite-codelens-provider";
+import { NaiteCompletionProvider } from "./naite/naite-completion-provider";
+import { disposeDecorations, updateDecorations } from "./naite/naite-decorator";
+import { NaiteDefinitionProvider } from "./naite/naite-definition-provider";
+import { NaiteDiagnosticProvider } from "./naite/naite-diagnostic-provider";
+import { NaiteHoverProvider } from "./naite/naite-hover-provider";
+import { NaiteReferenceProvider } from "./naite/naite-reference-provider";
 import {
   disposeRuntimeDecorations,
   getAllTraces,
@@ -15,8 +15,8 @@ import {
   onTraceChange,
   startRuntimeWatcher,
   updateRuntimeDecorations,
-} from "./naite-runtime-decorator";
-import { NaiteTracker } from "./naite-tracker";
+} from "./naite/naite-runtime-decorator";
+import { NaiteTracker } from "./naite/naite-tracker";
 
 // 글로벌 Naite Trace Viewer
 let globalTracePanel: vscode.WebviewPanel | null = null;

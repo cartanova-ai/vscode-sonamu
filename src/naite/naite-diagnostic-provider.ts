@@ -1,5 +1,5 @@
-import * as ts from "typescript";
-import * as vscode from "vscode";
+import ts from "typescript";
+import vscode from "vscode";
 import { matchesWildcard, type NaiteTracker } from "./naite-tracker";
 
 /**
