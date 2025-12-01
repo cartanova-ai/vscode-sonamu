@@ -702,8 +702,8 @@ function getGlobalTraceViewerHtml(): string {
       }
     }
 
-    function toggleTrace(suite, testName, traceKey, filePath, lineNumber) {
-      const stateKey = suite + '::' + testName + '::' + traceKey + '::' + filePath + '::' + lineNumber;
+    function toggleTrace(suite, testName, traceKey, traceAt) {
+      const stateKey = suite + '::' + testName + '::' + traceKey + '::' + traceAt;
       const id = escapeId(stateKey);
       const content = document.getElementById('trace-content-' + id);
       const arrow = document.getElementById('trace-arrow-' + id);
@@ -825,17 +825,19 @@ function getGlobalTraceViewerHtml(): string {
           html += '</div>';
           html += '<div class="test-content' + (testExpanded ? '' : ' collapsed') + '" id="test-content-' + testId + '">';
 
-          for (const trace of testTraces) {
+          for (let traceIdx = 0; traceIdx < testTraces.length; traceIdx++) {
+            const trace = testTraces[traceIdx];
             const time = new Date(trace.at).toLocaleTimeString('ko-KR', {
               hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
             });
             const fileName = trace.filePath.split('/').pop() || trace.filePath;
-            const traceStateKey = suiteName + '::' + testName + '::' + trace.key + '::' + trace.filePath + '::' + trace.lineNumber;
+            // trace.at(timestamp)을 포함하여 각 트레이스를 고유하게 식별
+            const traceStateKey = suiteName + '::' + testName + '::' + trace.key + '::' + trace.at;
             const traceExpanded = expandedTraces.has(traceStateKey);  // 기본 닫힘
             const traceId = escapeId(traceStateKey);
 
             html += '<div class="trace-item" id="item-' + traceId + '" data-filepath="' + escapeHtml(trace.filePath) + '" data-line="' + trace.lineNumber + '" data-key="' + escapeHtml(trace.key) + '">';
-            html += '<div class="trace-header" onclick="toggleTrace(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.key).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.filePath).replace(/'/g, "\\\\'") + '\\', ' + trace.lineNumber + ')">';
+            html += '<div class="trace-header" onclick="toggleTrace(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.key).replace(/'/g, "\\\\'") + '\\', ' + trace.at + ')">';
             html += '<span class="arrow' + (traceExpanded ? ' expanded' : '') + '" id="trace-arrow-' + traceId + '">▶</span>';
             html += '<span class="key">' + escapeHtml(trace.key) + '</span>';
             html += '<span class="location-link" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(trace.filePath).replace(/'/g, "\\\\'") + '\\', ' + trace.lineNumber + ')">' + escapeHtml(fileName) + ':' + trace.lineNumber + '</span>';
