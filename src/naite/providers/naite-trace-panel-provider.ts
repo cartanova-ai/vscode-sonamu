@@ -147,8 +147,30 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       flex-shrink: 0;
     }
 
+    /* 리사이저 */
+    .resizer {
+      width: 4px;
+      background: transparent;
+      cursor: col-resize;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+    .resizer:hover,
+    .resizer.dragging {
+      background: var(--vscode-focusBorder);
+    }
+    .resizer::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -2px;
+      right: -2px;
+    }
+
     /* 왼쪽: Keys 패널 */
-    .keys-panel { width: 200px; min-width: 150px; }
+    .keys-panel { width: 200px; min-width: 120px; max-width: 400px; }
 
     .search-box {
       width: 100%;
@@ -197,7 +219,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     }
 
     /* 가운데: Tests 패널 */
-    .tests-panel { width: 280px; min-width: 200px; }
+    .tests-panel { width: 280px; min-width: 150px; max-width: 500px; }
 
     .suite-item {
       border-bottom: 1px solid var(--vscode-panel-border);
@@ -243,7 +265,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     }
 
     /* 오른쪽: Traces 패널 */
-    .traces-panel { flex: 1; min-width: 250px; }
+    .traces-panel { flex: 1; min-width: 200px; }
 
     .trace-item {
       border-bottom: 1px solid var(--vscode-panel-border);
@@ -302,7 +324,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 <body>
   <div class="container">
     <!-- 왼쪽: Keys -->
-    <div class="panel keys-panel">
+    <div class="panel keys-panel" id="keysPanel">
       <div class="panel-header">
         <input type="text" class="search-box" id="keySearch" placeholder="Search keys...">
       </div>
@@ -310,8 +332,11 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       <div class="panel-footer" id="keyFooter">0 keys</div>
     </div>
 
+    <!-- 리사이저 1 -->
+    <div class="resizer" id="resizer1"></div>
+
     <!-- 가운데: Tests -->
-    <div class="panel tests-panel">
+    <div class="panel tests-panel" id="testsPanel">
       <div class="panel-header">
         <span>Tests</span>
         <div class="panel-header-btns">
@@ -323,8 +348,11 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       <div class="panel-footer" id="testFooter">0 tests</div>
     </div>
 
+    <!-- 리사이저 2 -->
+    <div class="resizer" id="resizer2"></div>
+
     <!-- 오른쪽: Traces -->
-    <div class="panel traces-panel">
+    <div class="panel traces-panel" id="tracesPanel">
       <div class="panel-header" id="traceHeader">Traces</div>
       <div class="panel-content" id="traceList"></div>
       <div class="panel-footer" id="traceFooter">Select a test</div>
@@ -339,11 +367,84 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       testResults: [],
       selectedKey: null,
       selectedTest: null,
-      searchQuery: ''
+      searchQuery: '',
+      keysPanelWidth: 200,
+      testsPanelWidth: 280
     };
 
     function saveState() {
       vscode.setState(state);
+    }
+
+    // 패널 크기 복원
+    function restorePanelSizes() {
+      const keysPanel = document.getElementById('keysPanel');
+      const testsPanel = document.getElementById('testsPanel');
+      if (state.keysPanelWidth) {
+        keysPanel.style.width = state.keysPanelWidth + 'px';
+      }
+      if (state.testsPanelWidth) {
+        testsPanel.style.width = state.testsPanelWidth + 'px';
+      }
+    }
+
+    // 리사이저 드래그 핸들링
+    function setupResizers() {
+      const resizer1 = document.getElementById('resizer1');
+      const resizer2 = document.getElementById('resizer2');
+      const keysPanel = document.getElementById('keysPanel');
+      const testsPanel = document.getElementById('testsPanel');
+
+      let isResizing = false;
+      let currentResizer = null;
+
+      function onMouseDown(e, resizer) {
+        isResizing = true;
+        currentResizer = resizer;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      }
+
+      function onMouseMove(e) {
+        if (!isResizing) return;
+
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+
+        if (currentResizer === resizer1) {
+          // Keys 패널 리사이즈
+          let newWidth = e.clientX - containerRect.left;
+          newWidth = Math.max(120, Math.min(400, newWidth));
+          keysPanel.style.width = newWidth + 'px';
+          state.keysPanelWidth = newWidth;
+        } else if (currentResizer === resizer2) {
+          // Tests 패널 리사이즈
+          const keysWidth = keysPanel.getBoundingClientRect().width;
+          const resizer1Width = resizer1.getBoundingClientRect().width;
+          let newWidth = e.clientX - containerRect.left - keysWidth - resizer1Width;
+          newWidth = Math.max(150, Math.min(500, newWidth));
+          testsPanel.style.width = newWidth + 'px';
+          state.testsPanelWidth = newWidth;
+        }
+      }
+
+      function onMouseUp() {
+        if (!isResizing) return;
+        isResizing = false;
+        if (currentResizer) {
+          currentResizer.classList.remove('dragging');
+        }
+        currentResizer = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        saveState();
+      }
+
+      resizer1.addEventListener('mousedown', (e) => onMouseDown(e, resizer1));
+      resizer2.addEventListener('mousedown', (e) => onMouseDown(e, resizer2));
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
     }
 
     // 데이터 파싱
@@ -696,6 +797,8 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     // 초기화
     document.getElementById('keySearch').value = state.searchQuery || '';
+    restorePanelSizes();
+    setupResizers();
     renderAll();
     vscode.postMessage({ type: 'ready' });
   </script>
