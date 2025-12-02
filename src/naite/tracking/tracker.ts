@@ -1,7 +1,7 @@
 import ts from "typescript";
 import vscode from "vscode";
 import NaiteParser from "./parser";
-import type { NaiteKey, NaitePatternConfig } from "./types";
+import type { NaiteKey, NaiteKeysMap, NaitePatternConfig } from "./types";
 
 /**
  * 문자열 리터럴 노드인지 확인 (작은따옴표, 큰따옴표, 백틱)
@@ -37,7 +37,7 @@ function parsePattern(pattern: string): { object: string; method: string } | nul
  * TypeScript 파일을 파싱하여 Naite 호출을 찾습니다
  */
 export default class NaiteTracker {
-  private keys: Map<string, NaiteKey[]> = new Map();
+  private keys: NaiteKeysMap = new Map();
   private config: NaitePatternConfig = {
     setPatterns: ["Naite.t"],
     getPatterns: ["Naite.get", "Naite.del"],
@@ -79,24 +79,17 @@ export default class NaiteTracker {
     }
   }
 
-  /**
-   * 특정 파일을 스캔합니다
-   */
-  async scanFile(uri: vscode.Uri): Promise<void> {
-    // 먼저 해당 파일의 기존 엔트리 제거
+  private removeKeysByUri(uri: vscode.Uri): void {
     const uriString = uri.toString();
     for (const [key, entries] of this.keys) {
       const filtered = entries.filter((e) => e.location.uri.toString() !== uriString);
       if (filtered.length === 0) {
         this.keys.delete(key);
-      } else {
-        this.keys.set(key, filtered);
       }
     }
+  }
 
-    const document = await vscode.workspace.openTextDocument(uri);
-    const keys = new NaiteParser(document, this.config).parse();
-
+  private addKeys(keys: NaiteKeysMap): void {
     for (const [key, entries] of keys) {
       if (!this.keys.has(key)) {
         this.keys.set(key, entries);
@@ -104,6 +97,18 @@ export default class NaiteTracker {
         this.keys.get(key)?.push(...entries);
       }
     }
+  }
+  
+  /**
+   * 특정 파일을 스캔합니다
+   */
+  async scanFile(uri: vscode.Uri): Promise<void> {
+    this.removeKeysByUri(uri);
+
+    const document = await vscode.workspace.openTextDocument(uri);
+    const keys = new NaiteParser(document, this.config).parse();
+
+    this.addKeys(keys);
   }
 
   /**

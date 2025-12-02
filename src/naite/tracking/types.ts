@@ -19,3 +19,12 @@ export interface NaitePatternConfig {
   // 사용 패턴 (예: ["Naite.get", "Naite.safeGet", "Naite.expect", "Naite.expectWithSnapshot"])
   getPatterns: string[];
 }
+
+/**
+ * Naite key -> NaiteKey[] 매핑입니다.
+ * 예시: { "add:params": [NaiteKey, NaiteKey, ...], "add:result": [NaiteKey, NaiteKey, ...], ... }
+ *
+ * 여기서 NaiteKey는 그냥 string이 아니고, 위치와 패턴을 포함하는 객체임에 유의해주세요!
+ * 이 map은 key 스트링으로 해당 key에 대한 모든 NaiteKey 객체들을 쉽게 찾기 위한 자료구조입니다.
+ */
+export type NaiteKeysMap = Map<string, NaiteKey[]>;
