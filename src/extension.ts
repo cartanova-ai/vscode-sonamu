@@ -18,6 +18,10 @@ import {
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
 import { getAllTestResults } from "./naite/providers/naite-socket-server";
+import {
+  NaiteDocumentSymbolProvider,
+  NaiteWorkspaceSymbolProvider,
+} from "./naite/providers/naite-symbol-provider";
 import { NaiteTracePanelProvider } from "./naite/providers/naite-trace-panel-provider";
 import NaiteTracker from "./naite/tracking/tracker";
 
@@ -896,6 +900,11 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider(tracker)),
     vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider(tracker)),
     vscode.languages.registerCodeLensProvider(selector, new NaiteCodeLensProvider(tracker)),
+    vscode.languages.registerDocumentSymbolProvider(
+      selector,
+      new NaiteDocumentSymbolProvider(tracker),
+    ),
+    vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider(tracker)),
   );
 
   // 명령어
