@@ -1,5 +1,5 @@
 import type vscode from "vscode";
-import type NaiteTracker from "./tracker";
+import type NaiteTracker from "./tracking/tracker";
 
 /**
  * Naite 키의 사용처를 찾습니다 (Find All References)

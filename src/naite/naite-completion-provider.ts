@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type NaiteTracker from "./tracker";
+import type NaiteTracker from "./tracking/tracker";
 
 /**
  * Naite 호출에서 자동완성을 제공합니다

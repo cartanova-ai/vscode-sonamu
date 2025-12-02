@@ -16,7 +16,7 @@ import {
   startRuntimeWatcher,
   updateRuntimeDecorations,
 } from "./naite/naite-runtime-decorator";
-import NaiteTracker from "./naite/tracker";
+import NaiteTracker from "./naite/tracking/tracker";
 
 // 글로벌 Naite Trace Viewer
 let globalTracePanel: vscode.WebviewPanel | null = null;
