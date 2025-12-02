@@ -115,7 +115,7 @@
         },
         "sonamu.statusBarMessages.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Naite tracker 액션 발생 시 상태창에 메시지 표시 여부"
         }
       }

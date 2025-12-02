@@ -25,7 +25,7 @@ export default class NaiteTracker {
     setPatterns: ["Naite.t"],
     getPatterns: ["Naite.get", "Naite.del"],
   };
-  private statusBarMessagesEnabled: boolean = false;
+  private statusBarMessagesEnabled: boolean = true;
 
   /**
    * 상태창 메시지 표시 여부를 설정합니다
