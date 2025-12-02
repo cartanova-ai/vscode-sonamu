@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/cartanova-ai/vscode-sonamu.git"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "potados99",
   "engines": {
     "vscode": "^1.85.0"
