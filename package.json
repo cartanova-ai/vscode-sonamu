@@ -58,7 +58,8 @@
         {
           "type": "webview",
           "id": "naiteTracePanelView",
-          "name": "Traces"
+          "name": "Traces",
+          "when": "sonamu:isActive"
         }
       ]
     },

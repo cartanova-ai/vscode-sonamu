@@ -8,50 +8,44 @@ const SOCKET_DIR = path.join(os.homedir(), ".sonamu");
 const SOCKET_PATH =
   process.platform === "win32" ? "\\\\.\\pipe\\naite" : path.join(SOCKET_DIR, "naite.sock");
 
-// NaiteReporter에서 보내는 데이터 타입
-export interface NaiteTraceEntry {
+export interface NaiteTrace {
   key: string;
   value: any;
   filePath: string;
   lineNumber: number;
   at: string;
-  runId: string;
-  testSuite?: string;
-  testName?: string;
-  testFilePath?: string; // 테스트 파일 경로
-  testLine?: number; // 테스트 케이스 라인 번호
-  seq?: number; // 메시지 순서
 }
 
-export interface RunInfo {
-  runId: string | null;
-  runStartedAt: string | null;
-  runEndedAt: string | null;
-  currentTestSuite?: string;
-  currentTestName?: string;
+// 테스트 결과 엔트리
+export interface TestResultEntry {
+  suiteName: string;
+  suiteFilePath?: string;
+  testName: string;
+  testFilePath: string;
+  testLine: number;
+  status: string;
+  duration: number;
+  error?: { message: string; stack?: string };
+  traces: NaiteTrace[];
+  receivedAt: string;
 }
 
 // 서버 상태
 let server: net.Server | null = null;
 
 // 현재 데이터
-let currentTraces: NaiteTraceEntry[] = [];
-let currentRunInfo: RunInfo = {
-  runId: null,
-  runStartedAt: null,
-  runEndedAt: null,
-};
+let currentTestResults: TestResultEntry[] = [];
 
 // 변경 리스너
-type TraceChangeListener = (traces: NaiteTraceEntry[]) => void;
-const traceChangeListeners: TraceChangeListener[] = [];
+type TestResultChangeListener = (testResults: TestResultEntry[]) => void;
+const testResultChangeListeners: TestResultChangeListener[] = [];
 
-export function onTraceChange(listener: TraceChangeListener): { dispose: () => void } {
-  traceChangeListeners.push(listener);
+export function onTestResultChange(listener: TestResultChangeListener): { dispose: () => void } {
+  testResultChangeListeners.push(listener);
   return {
     dispose: () => {
-      const index = traceChangeListeners.indexOf(listener);
-      if (index >= 0) traceChangeListeners.splice(index, 1);
+      const index = testResultChangeListeners.indexOf(listener);
+      if (index >= 0) testResultChangeListeners.splice(index, 1);
     },
   };
 }
@@ -62,9 +56,27 @@ let processDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const DEBOUNCE_DELAY = 100;
 
 function queueMessage(data: any) {
-  // seq=0이면 이전 pending 버리기 (새 테스트 시작)
-  if (data.seq === 0) {
-    pendingMessages = [];
+  // run/start는 즉시 처리 (데이터 클리어 + 리스너 알림)
+  if (data.type === "run/start") {
+    // 대기 중인 메시지 즉시 처리
+    if (processDebounceTimer) {
+      clearTimeout(processDebounceTimer);
+      processDebounceTimer = null;
+    }
+    if (pendingMessages.length > 0) {
+      pendingMessages.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+      for (const msg of pendingMessages) {
+        processMessage(msg);
+      }
+      pendingMessages = [];
+    }
+
+    // run/start 즉시 처리
+    processMessage(data);
+    for (const listener of testResultChangeListeners) {
+      listener(currentTestResults);
+    }
+    return;
   }
 
   pendingMessages.push(data);
@@ -86,42 +98,45 @@ function queueMessage(data: any) {
     pendingMessages = [];
 
     // 리스너 알림
-    for (const listener of traceChangeListeners) {
-      listener(currentTraces);
+    for (const listener of testResultChangeListeners) {
+      listener(currentTestResults);
     }
   }, DEBOUNCE_DELAY);
 }
 
 // 데이터 접근 함수
-export function getAllTraces(): NaiteTraceEntry[] {
-  return currentTraces;
+export function getAllTestResults(): TestResultEntry[] {
+  return currentTestResults;
 }
 
-export function getTracesForLine(filePath: string, lineNumber: number): NaiteTraceEntry[] {
-  return currentTraces.filter((t) => t.filePath === filePath && t.lineNumber === lineNumber);
+// 모든 traces를 flat하게 추출 (기존 코드 호환용)
+export function getAllTraces(): NaiteTrace[] {
+  return currentTestResults.flatMap((r) => r.traces);
 }
 
-export function getCurrentRunInfo(): RunInfo {
-  return { ...currentRunInfo };
+export function getTracesForLine(filePath: string, lineNumber: number): NaiteTrace[] {
+  return getAllTraces().filter((t) => t.filePath === filePath && t.lineNumber === lineNumber);
 }
 
 // 특정 파일의 trace 라인 번호를 업데이트 (key와 새 라인 번호 매핑)
 export function updateTraceLineNumbers(filePath: string, keyToLineMap: Map<string, number>): void {
   let updated = false;
-  for (const trace of currentTraces) {
-    if (trace.filePath === filePath && keyToLineMap.has(trace.key)) {
-      const newLineNumber = keyToLineMap.get(trace.key)!;
-      if (trace.lineNumber !== newLineNumber) {
-        trace.lineNumber = newLineNumber;
-        updated = true;
+  for (const testResult of currentTestResults) {
+    for (const trace of testResult.traces) {
+      const newLineNumber = keyToLineMap.get(trace.key);
+      if (trace.filePath === filePath && newLineNumber !== undefined) {
+        if (trace.lineNumber !== newLineNumber) {
+          trace.lineNumber = newLineNumber;
+          updated = true;
+        }
       }
     }
   }
 
   // 변경사항이 있으면 리스너 알림
   if (updated) {
-    for (const listener of traceChangeListeners) {
-      listener(currentTraces);
+    for (const listener of testResultChangeListeners) {
+      listener(currentTestResults);
     }
   }
 }
@@ -136,54 +151,31 @@ function processMessage(data: any) {
 
   switch (type) {
     case "run/start":
-      currentTraces = [];
-      currentRunInfo = {
-        runId: data.runId,
-        runStartedAt: data.startedAt,
-        runEndedAt: null,
-      };
+      // 새 테스트 run 시작 - 데이터 클리어
+      currentTestResults = [];
       break;
 
-    case "run/end":
-      currentRunInfo = {
-        ...currentRunInfo,
-        runEndedAt: data.endedAt,
-      };
-      break;
-
-    case "test/start":
-      currentRunInfo = {
-        ...currentRunInfo,
-        currentTestSuite: data.suite,
-        currentTestName: data.name,
-      };
-      break;
-
-    case "test/end":
-      currentRunInfo = {
-        ...currentRunInfo,
-        currentTestSuite: undefined,
-        currentTestName: undefined,
-      };
-      break;
-
-    case "trace": {
-      const trace: NaiteTraceEntry = {
-        key: data.key,
-        value: data.value,
-        filePath: data.filePath,
-        lineNumber: data.lineNumber,
-        at: data.at,
-        runId: data.runId,
-        testSuite: data.testSuite,
+    case "test/result": {
+      // 테스트 케이스 결과 추가
+      const entry: TestResultEntry = {
+        suiteName: data.suiteName,
+        suiteFilePath: data.suiteFilePath,
         testName: data.testName,
         testFilePath: data.testFilePath,
         testLine: data.testLine,
-        seq: data.seq,
+        status: data.status,
+        duration: data.duration,
+        error: data.error,
+        traces: data.traces ?? [],
+        receivedAt: data.receivedAt,
       };
-      currentTraces.push(trace);
+      currentTestResults.push(entry);
       break;
     }
+
+    case "run/end":
+      // run 종료 - 현재는 특별히 처리할 것 없음
+      break;
   }
 }
 
@@ -211,15 +203,19 @@ export function startServer(): Promise<string> {
 
       socket.on("data", (chunk) => {
         buffer += chunk.toString();
+        console.log("[Naite Socket] Received chunk, buffer length:", buffer.length);
 
         // 줄바꿈으로 메시지 구분
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
+        console.log("[Naite Socket] Lines to process:", lines.length);
+
         for (const line of lines) {
           if (line.trim()) {
             try {
               const data = JSON.parse(line);
+              console.log("[Naite Socket] Parsed message type:", data.type);
               queueMessage(data);
             } catch (err) {
               console.error("[Naite Socket] Parse error:", err);
@@ -263,15 +259,10 @@ export function stopServer(): void {
 }
 
 // 데이터 초기화
-export function clearTraces(): void {
-  currentTraces = [];
+export function clearTestResults(): void {
+  currentTestResults = [];
   pendingMessages = [];
-  currentRunInfo = {
-    runId: null,
-    runStartedAt: null,
-    runEndedAt: null,
-  };
-  for (const listener of traceChangeListeners) {
-    listener(currentTraces);
+  for (const listener of testResultChangeListeners) {
+    listener(currentTestResults);
   }
 }

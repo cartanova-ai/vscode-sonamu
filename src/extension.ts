@@ -11,14 +11,13 @@ import { NaiteHoverProvider } from "./naite/providers/naite-hover-provider";
 import { NaiteReferenceProvider } from "./naite/providers/naite-reference-provider";
 import {
   disposeRuntimeDecorations,
-  getAllTraces,
-  getCurrentRunInfo,
   getTracesForLine,
   onTraceChange,
   startRuntimeWatcher,
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
+import { getAllTestResults } from "./naite/providers/naite-socket-server";
 import { NaiteTracePanelProvider } from "./naite/providers/naite-trace-panel-provider";
 import NaiteTracker from "./naite/tracking/tracker";
 
@@ -85,13 +84,11 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
 function sendTraceDataToWebview() {
   if (!globalTracePanel) return;
 
-  const traces = getAllTraces();
-  const runInfo = getCurrentRunInfo();
+  const testResults = getAllTestResults();
 
   globalTracePanel.webview.postMessage({
-    type: "updateTraces",
-    traces,
-    runInfo,
+    type: "updateTestResults",
+    testResults,
   });
 }
 
@@ -330,38 +327,6 @@ function getGlobalTraceViewerHtml(): string {
     .json-bracket { color: var(--fg); }
     .json-object, .json-array { margin-left: 16px; }
     .json-item { display: block; }
-    .run-status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      background: var(--vscode-sideBar-background);
-    }
-    .run-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .run-status.running .run-indicator {
-      background: #4caf50;
-      animation: pulse 1.5s infinite;
-    }
-    .run-status.ended .run-indicator {
-      background: var(--vscode-descriptionForeground);
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-    .run-label {
-      font-weight: 500;
-    }
-    .run-time {
-      color: var(--vscode-descriptionForeground);
-      font-family: var(--vscode-editor-font-family);
-    }
   </style>
 </head>
 <body>
@@ -370,7 +335,6 @@ function getGlobalTraceViewerHtml(): string {
       <h2>📊 Naite Traces</h2>
       <span class="count" id="trace-count">0개</span>
     </div>
-    <div id="run-status-container"></div>
   </div>
   <div id="traces-container">
     <div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>
@@ -494,29 +458,18 @@ function getGlobalTraceViewerHtml(): string {
       vscode.postMessage({ type: 'goToLocation', filePath, lineNumber });
     }
 
-    function renderTraces(traces, runInfo) {
-      // count 업데이트
-      document.getElementById('trace-count').textContent = traces.length + '개';
-
-      // run status 업데이트
-      const statusContainer = document.getElementById('run-status-container');
-      if (runInfo.runId) {
-        const startTime = runInfo.runStartedAt
-          ? new Date(runInfo.runStartedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-          : '';
-        const isRunning = !runInfo.runEndedAt;
-        statusContainer.innerHTML =
-          '<div class="run-status ' + (isRunning ? 'running' : 'ended') + '">' +
-            '<span class="run-indicator"></span>' +
-            '<span class="run-label">' + (isRunning ? 'Test Running' : 'Test Completed') + '</span>' +
-            (startTime ? '<span class="run-time">' + startTime + '</span>' : '') +
-          '</div>';
-      } else {
-        statusContainer.innerHTML = '';
+    function renderTestResults(testResults) {
+      // 전체 trace 개수 계산
+      let totalTraces = 0;
+      for (const result of testResults) {
+        totalTraces += result.traces.length;
       }
 
+      // count 업데이트
+      document.getElementById('trace-count').textContent = totalTraces + '개';
+
       // 데이터가 없으면 empty
-      if (traces.length === 0) {
+      if (testResults.length === 0) {
         document.getElementById('traces-container').innerHTML =
           '<div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>';
         return;
@@ -524,31 +477,27 @@ function getGlobalTraceViewerHtml(): string {
 
       // 300개 넘으면 자르기
       const MAX_TRACES = 300;
-      const totalCount = traces.length;
       let warningHtml = '';
-      if (totalCount > MAX_TRACES) {
+      if (totalTraces > MAX_TRACES) {
         warningHtml = '<div class="warning-banner">' +
           '<span class="icon">⚠️</span>' +
-          '<span>Trace가 ' + totalCount + '개로 너무 많아 처음 ' + MAX_TRACES + '개만 표시합니다. 테스트를 쪼개서 돌려보세요.</span>' +
+          '<span>Trace가 ' + totalTraces + '개로 너무 많습니다. 테스트를 쪼개서 돌려보세요.</span>' +
           '</div>';
-        traces = traces.slice(0, MAX_TRACES);
       }
 
-      // 테스트별로 그룹화
-      const suiteMap = new Map();  // suiteName -> { testMap, testFilePath }
-      for (const trace of traces) {
-        const suiteName = trace.testSuite || '(no suite)';
-        const testName = trace.testName || '(no test)';
+      // Suite > Test 구조로 그룹화
+      const suiteMap = new Map();  // suiteName -> { testMap, suiteFilePath }
+      for (const result of testResults) {
+        const suiteName = result.suiteName || '(no suite)';
+        const testName = result.testName || '(no test)';
 
         if (!suiteMap.has(suiteName)) {
-          suiteMap.set(suiteName, { testMap: new Map(), testFilePath: trace.testFilePath });
+          suiteMap.set(suiteName, { testMap: new Map(), suiteFilePath: result.suiteFilePath });
         }
         const suiteData = suiteMap.get(suiteName);
 
-        if (!suiteData.testMap.has(testName)) {
-          suiteData.testMap.set(testName, []);
-        }
-        suiteData.testMap.get(testName).push(trace);
+        // 같은 테스트가 여러번 실행될 수 있으므로 마지막 것만 사용
+        suiteData.testMap.set(testName, result);
       }
 
       // HTML 생성
@@ -558,37 +507,37 @@ function getGlobalTraceViewerHtml(): string {
         const testMap = suiteData.testMap;
         const suiteTestCount = testMap.size;
         let suiteTraceCount = 0;
-        for (const traces of testMap.values()) {
-          suiteTraceCount += traces.length;
+        for (const result of testMap.values()) {
+          suiteTraceCount += result.traces.length;
         }
 
         const suiteExpanded = !collapsedState.suites.has(suiteName);  // 기본 열림
         const suiteId = escapeId(suiteName);
-        const testFileName = suiteData.testFilePath ? suiteData.testFilePath.split('/').pop() : null;
+        const testFileName = suiteData.suiteFilePath ? suiteData.suiteFilePath.split('/').pop() : null;
 
         html += '<div class="suite-group">';
         html += '<div class="suite-header" onclick="toggleSuite(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\')">';
         html += '<span class="arrow suite-arrow" id="suite-arrow-' + suiteId + '">' + (suiteExpanded ? '▼' : '▶') + '</span>';
         html += '<span class="suite-name">' + escapeHtml(suiteName) + '</span>';
-        if (testFileName && suiteData.testFilePath) {
-          html += '<span class="suite-file" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(suiteData.testFilePath).replace(/'/g, "\\\\'") + '\\', 1)">' + escapeHtml(testFileName) + '</span>';
+        if (testFileName && suiteData.suiteFilePath) {
+          html += '<span class="suite-file" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(suiteData.suiteFilePath).replace(/'/g, "\\\\'") + '\\', 1)">' + escapeHtml(testFileName) + '</span>';
         }
         html += '<span class="suite-count">' + suiteTestCount + ' tests · ' + suiteTraceCount + ' traces</span>';
         html += '</div>';
         html += '<div class="suite-content' + (suiteExpanded ? '' : ' collapsed') + '" id="suite-content-' + suiteId + '">';
 
-        for (const [testName, testTraces] of testMap) {
+        for (const [testName, result] of testMap) {
           const testKey = suiteName + '::' + testName;
           const testExpanded = !collapsedState.tests.has(testKey);  // 기본 열림
           const testId = escapeId(testKey);
+          const testTraces = result.traces;
 
           html += '<div class="test-group">';
           html += '<div class="test-header" onclick="toggleTest(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\')">';
           html += '<span class="arrow test-arrow" id="test-arrow-' + testId + '">' + (testExpanded ? '▼' : '▶') + '</span>';
           html += '<span class="test-name">' + escapeHtml(testName) + '</span>';
-          const firstTrace = testTraces[0];
-          if (firstTrace?.testFilePath && firstTrace?.testLine) {
-            html += '<span class="test-line" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(firstTrace.testFilePath).replace(/'/g, "\\\\'") + '\\', ' + firstTrace.testLine + ')">:' + firstTrace.testLine + '</span>';
+          if (result.testFilePath && result.testLine) {
+            html += '<span class="test-line" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(result.testFilePath).replace(/'/g, "\\\\'") + '\\', ' + result.testLine + ')">:' + result.testLine + '</span>';
           }
           html += '<span class="test-count">' + testTraces.length + '</span>';
           html += '</div>';
@@ -631,8 +580,8 @@ function getGlobalTraceViewerHtml(): string {
     window.addEventListener('message', (event) => {
       const message = event.data;
 
-      if (message.type === 'updateTraces') {
-        renderTraces(message.traces, message.runInfo);
+      if (message.type === 'updateTestResults') {
+        renderTestResults(message.testResults);
       }
 
       if (message.type === 'highlightTrace') {
@@ -685,6 +634,9 @@ let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
 
 export async function activate(context: vscode.ExtensionContext) {
+  // 소나무 프로젝트에서만 UI 표시
+  vscode.commands.executeCommand("setContext", "sonamu:isActive", true);
+
   // 하단 패널 WebviewView 등록 (상태 유지됨)
   const tracePanelProvider = new NaiteTracePanelProvider();
   context.subscriptions.push(
