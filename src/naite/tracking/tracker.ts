@@ -68,6 +68,8 @@ export default class NaiteTracker {
       const filtered = entries.filter((e) => e.location.uri.toString() !== uriString);
       if (filtered.length === 0) {
         this.keys.delete(key);
+      } else {
+        this.keys.set(key, filtered);
       }
     }
   }
