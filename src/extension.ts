@@ -19,7 +19,7 @@ import {
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
-import { NaiteTraceTreeProvider } from "./naite/providers/naite-trace-tree-provider";
+import { NaiteTracePanelProvider } from "./naite/providers/naite-trace-panel-provider";
 import NaiteTracker from "./naite/tracking/tracker";
 
 // 글로벌 Naite Trace Viewer
@@ -685,15 +685,19 @@ let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
 
 export async function activate(context: vscode.ExtensionContext) {
-  // TreeView 등록 (PoC - 네이티브 UI로 빠름!)
-  const traceTreeProvider = new NaiteTraceTreeProvider();
-  const treeView = vscode.window.createTreeView("naiteTraceTree", {
-    treeDataProvider: traceTreeProvider,
-    showCollapseAll: true,
-  });
-  context.subscriptions.push(treeView, traceTreeProvider);
+  // 하단 패널 WebviewView 등록 (상태 유지됨)
+  const tracePanelProvider = new NaiteTracePanelProvider();
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      NaiteTracePanelProvider.viewType,
+      tracePanelProvider,
+      {
+        webviewOptions: { retainContextWhenHidden: true },
+      },
+    ),
+  );
 
-  // TreeView에서 위치로 이동하는 명령어
+  // 위치로 이동하는 명령어
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "naiteTrace.goToLocation",

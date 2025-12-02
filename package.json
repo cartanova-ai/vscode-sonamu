@@ -45,18 +45,19 @@
   },
   "contributes": {
     "viewsContainers": {
-      "activitybar": [
+      "panel": [
         {
-          "id": "naite",
+          "id": "naitePanel",
           "title": "Naite",
           "icon": "resources/naite.svg"
         }
       ]
     },
     "views": {
-      "naite": [
+      "naitePanel": [
         {
-          "id": "naiteTraceTree",
+          "type": "webview",
+          "id": "naiteTracePanelView",
           "name": "Traces"
         }
       ]
