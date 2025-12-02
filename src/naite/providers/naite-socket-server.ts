@@ -105,6 +105,27 @@ export function getCurrentRunInfo(): RunInfo {
   return { ...currentRunInfo };
 }
 
+// 특정 파일의 trace 라인 번호를 업데이트 (key와 새 라인 번호 매핑)
+export function updateTraceLineNumbers(filePath: string, keyToLineMap: Map<string, number>): void {
+  let updated = false;
+  for (const trace of currentTraces) {
+    if (trace.filePath === filePath && keyToLineMap.has(trace.key)) {
+      const newLineNumber = keyToLineMap.get(trace.key)!;
+      if (trace.lineNumber !== newLineNumber) {
+        trace.lineNumber = newLineNumber;
+        updated = true;
+      }
+    }
+  }
+
+  // 변경사항이 있으면 리스너 알림
+  if (updated) {
+    for (const listener of traceChangeListeners) {
+      listener(currentTraces);
+    }
+  }
+}
+
 export function getSocketPath(): string {
   return SOCKET_PATH;
 }

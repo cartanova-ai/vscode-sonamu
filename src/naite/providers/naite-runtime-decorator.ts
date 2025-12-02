@@ -1,4 +1,5 @@
 import vscode from "vscode";
+import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
 import {
   NaiteTraceEntry,
   RunInfo,
@@ -8,6 +9,7 @@ import {
   onTraceChange as socketOnTraceChange,
   startServer,
   stopServer,
+  updateTraceLineNumbers,
 } from "./naite-socket-server";
 
 // Re-export for extension.ts
@@ -20,55 +22,29 @@ export const onTraceChange = socketOnTraceChange;
 // decoration type (line 끝에 값 표시)
 let runtimeDecorationType: vscode.TextEditorDecorationType | null = null;
 
-// 라인 번호 보정값 (파일별로 관리)
-const lineAdjustments = new Map<string, Map<number, number>>();
+// 파일 변경/저장 시 Naite.t 호출 위치를 스캔해서 trace 라인 번호 업데이트
+export async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promise<void> {
+  if (doc.languageId !== "typescript") return;
 
-function getAdjustedLineNumber(filePath: string, originalLine: number): number {
-  const adjustments = lineAdjustments.get(filePath);
-  if (!adjustments) return originalLine;
-  return adjustments.get(originalLine) ?? originalLine;
-}
-
-export function handleDocumentChange(event: vscode.TextDocumentChangeEvent): void {
-  const filePath = event.document.uri.fsPath;
+  const filePath = doc.uri.fsPath;
   const currentTraces = socketGetAllTraces();
-
   const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
+
   if (fileTraces.length === 0) return;
 
-  if (!lineAdjustments.has(filePath)) {
-    const initialMap = new Map<number, number>();
-    for (const trace of fileTraces) {
-      initialMap.set(trace.lineNumber, trace.lineNumber);
-    }
-    lineAdjustments.set(filePath, initialMap);
+  // 현재 문서에서 Naite.t 호출 위치 스캔
+  const searcher = new NaiteExpressionSearcher(doc);
+  const naiteCalls = Array.from(searcher.searchNaiteCalls(["Naite.t"]));
+
+  // key -> 라인 번호 매핑 생성
+  const keyToLineMap = new Map<string, number>();
+  for (const call of naiteCalls) {
+    const lineNumber = call.location.range.start.line + 1; // 1-based
+    keyToLineMap.set(call.key, lineNumber);
   }
 
-  const adjustments = lineAdjustments.get(filePath)!;
-
-  for (const change of event.contentChanges) {
-    const startLine = change.range.start.line + 1;
-    const endLine = change.range.end.line + 1;
-    const oldLineCount = endLine - startLine + 1;
-    const newLineCount = change.text.split("\n").length;
-    const lineDelta = newLineCount - oldLineCount;
-
-    if (lineDelta === 0) continue;
-
-    const newAdjustments = new Map<number, number>();
-    for (const [originalLine, currentLine] of adjustments) {
-      if (currentLine >= startLine) {
-        newAdjustments.set(originalLine, currentLine + lineDelta);
-      } else {
-        newAdjustments.set(originalLine, currentLine);
-      }
-    }
-    lineAdjustments.set(filePath, newAdjustments);
-  }
-}
-
-function resetLineAdjustments(): void {
-  lineAdjustments.clear();
+  // trace 라인 번호 업데이트
+  updateTraceLineNumbers(filePath, keyToLineMap);
 }
 
 function formatValue(value: any, maxLength: number = 50): string {
@@ -151,8 +127,8 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
 
   const tracesByLine = new Map<number, NaiteTraceEntry[]>();
   for (const trace of fileTraces) {
-    const adjustedLine = getAdjustedLineNumber(filePath, trace.lineNumber);
-    const line = adjustedLine - 1;
+    // trace의 라인 번호를 직접 사용 (파일 변경/저장 시마다 업데이트됨)
+    const line = trace.lineNumber - 1; // 0-based
     if (!tracesByLine.has(line)) {
       tracesByLine.set(line, []);
     }
@@ -219,7 +195,7 @@ export async function startRuntimeWatcher(context: vscode.ExtensionContext): Pro
   const socketPath = await startServer();
 
   const disposable = socketOnTraceChange(() => {
-    resetLineAdjustments();
+    // 새로운 trace가 들어올 때 모든 에디터의 데코레이터 업데이트
     for (const editor of vscode.window.visibleTextEditors) {
       updateRuntimeDecorations(editor);
     }

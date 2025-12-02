@@ -14,9 +14,9 @@ import {
   getAllTraces,
   getCurrentRunInfo,
   getTracesForLine,
-  handleDocumentChange,
   onTraceChange,
   startRuntimeWatcher,
+  syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
 import NaiteTracker from "./naite/tracking/tracker";
@@ -748,7 +748,14 @@ export async function activate(context: vscode.ExtensionContext) {
     updateDecorationsForDocument(doc);
   };
 
-  // 문서 변경 시 debounce된 스캔 (스캔 완료 후 데코레이터 자동 업데이트)
+  // 런타임 데코레이터 업데이트 (trace 동기화 포함)
+  const updateRuntimeDecorationsForDocument = async (doc: vscode.TextDocument) => {
+    if (doc.languageId !== "typescript") return;
+    await syncTraceLineNumbersWithDocument(doc);
+    updateDecorationsForDocument(doc);
+  };
+
+  // 문서 변경 시 debounce된 스캔 및 런타임 데코레이터 업데이트
   const scanDebounceMap = new Map<string, NodeJS.Timeout>();
   const debouncedScanAndUpdate = (doc: vscode.TextDocument) => {
     const key = doc.uri.toString();
@@ -758,6 +765,7 @@ export async function activate(context: vscode.ExtensionContext) {
       key,
       setTimeout(async () => {
         await scanAndUpdate(doc);
+        await updateRuntimeDecorationsForDocument(doc);
         scanDebounceMap.delete(key);
       }, 200),
     );
@@ -773,24 +781,23 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    // 문서 변경 시: 즉시 데코레이터 업데이트 (라인 번호 추적) + debounced 스캔
+    // 문서 변경 시: 즉시 데코레이터 업데이트 + debounced 스캔 및 런타임 데코레이터 업데이트
     vscode.workspace.onDidChangeTextDocument((e) => {
-      handleDocumentChange(e); // 라인 번호 보정 (runtime decorator용)
-
       const editor = vscode.window.activeTextEditor;
       if (editor && e.document === editor.document) {
-        // 즉시 데코레이터 업데이트 (라인 번호 변경 추적)
+        // 즉시 데코레이터 업데이트
         updateDecorationsForEditor(editor);
-        // 스캔은 debounce (완료 후 데코레이터 자동 업데이트)
+        // 스캔 및 런타임 데코레이터는 debounce (완료 후 자동 업데이트)
         if (e.document.languageId === "typescript") {
           debouncedScanAndUpdate(e.document);
         }
       }
     }),
 
-    // 파일 저장 시: 즉시 스캔 + 데코레이터 업데이트
+    // 파일 저장 시: 즉시 스캔 + trace 라인 번호 동기화 + 데코레이터 업데이트
     vscode.workspace.onDidSaveTextDocument(async (doc) => {
       await scanAndUpdate(doc);
+      await updateRuntimeDecorationsForDocument(doc);
     }),
 
     // 설정 변경 시 데코레이터 업데이트
