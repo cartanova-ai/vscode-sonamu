@@ -605,7 +605,7 @@ function getGlobalTraceViewerHtml(): string {
             const traceId = escapeId(traceStateKey);
 
             html += '<div class="trace-item" id="item-' + traceId + '" data-filepath="' + escapeHtml(trace.filePath) + '" data-line="' + trace.lineNumber + '" data-key="' + escapeHtml(trace.key) + '">';
-            html += '<div class="trace-header" onclick="toggleTrace(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.key).replace(/'/g, "\\\\'") + '\\', ' + trace.at + ')">';
+            html += '<div class="trace-header" onclick="toggleTrace(\\'' + escapeHtml(suiteName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(testName).replace(/'/g, "\\\\'") + '\\', \\'' + escapeHtml(trace.key).replace(/'/g, "\\\\'") + '\\', \\'' + trace.at + '\\')">';
             html += '<span class="arrow' + (traceExpanded ? ' expanded' : '') + '" id="trace-arrow-' + traceId + '">▶</span>';
             html += '<span class="key">' + escapeHtml(trace.key) + '</span>';
             html += '<span class="location-link" onclick="event.stopPropagation(); goToLocation(\\'' + escapeHtml(trace.filePath).replace(/'/g, "\\\\'") + '\\', ' + trace.lineNumber + ')">' + escapeHtml(fileName) + ':' + trace.lineNumber + '</span>';
