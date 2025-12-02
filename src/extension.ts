@@ -1,11 +1,11 @@
 import vscode from "vscode";
-import { NaiteCodeLensProvider, showNaiteLocations } from "./naite/naite-codelens-provider";
-import { NaiteCompletionProvider } from "./naite/naite-completion-provider";
-import { disposeDecorations, updateDecorations } from "./naite/naite-decorator";
-import { NaiteDefinitionProvider } from "./naite/naite-definition-provider";
-import { NaiteDiagnosticProvider } from "./naite/naite-diagnostic-provider";
-import { NaiteHoverProvider } from "./naite/naite-hover-provider";
-import { NaiteReferenceProvider } from "./naite/naite-reference-provider";
+import { NaiteCodeLensProvider, showNaiteLocations } from "./naite/providers/naite-codelens-provider";
+import { NaiteCompletionProvider } from "./naite/providers/naite-completion-provider";
+import { disposeDecorations, updateDecorations } from "./naite/providers/naite-decorator";
+import { NaiteDefinitionProvider } from "./naite/providers/naite-definition-provider";
+import { NaiteDiagnosticProvider } from "./naite/providers/naite-diagnostic-provider";
+import { NaiteHoverProvider } from "./naite/providers/naite-hover-provider";
+import { NaiteReferenceProvider } from "./naite/providers/naite-reference-provider";
 import {
   disposeRuntimeDecorations,
   getAllTraces,
@@ -15,7 +15,7 @@ import {
   onTraceChange,
   startRuntimeWatcher,
   updateRuntimeDecorations,
-} from "./naite/naite-runtime-decorator";
+} from "./naite/providers/naite-runtime-decorator";
 import NaiteTracker from "./naite/tracking/tracker";
 
 // 글로벌 Naite Trace Viewer

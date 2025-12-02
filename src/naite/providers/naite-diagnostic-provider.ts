@@ -1,7 +1,7 @@
 import ts from "typescript";
 import vscode from "vscode";
-import type NaiteTracker from "./tracking/tracker";
-import { matchesWildcard } from "./tracking/tracker";
+import type NaiteTracker from "../tracking/tracker";
+import { matchesWildcard } from "../tracking/tracker";
 
 /**
  * 사용 패턴(get)에서 정의되지 않은 키 사용 시 경고를 표시합니다

@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type NaiteTracker from "./tracking/tracker";
+import type NaiteTracker from "../tracking/tracker";
 
 export class NaiteCodeLensProvider implements vscode.CodeLensProvider {
   constructor(private tracker: NaiteTracker) {}
