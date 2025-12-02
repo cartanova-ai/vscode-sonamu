@@ -19,6 +19,7 @@ import {
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
+import { NaiteTraceTreeProvider } from "./naite/providers/naite-trace-tree-provider";
 import NaiteTracker from "./naite/tracking/tracker";
 
 // 글로벌 Naite Trace Viewer
@@ -684,6 +685,33 @@ let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
 
 export async function activate(context: vscode.ExtensionContext) {
+  // TreeView 등록 (PoC - 네이티브 UI로 빠름!)
+  const traceTreeProvider = new NaiteTraceTreeProvider();
+  const treeView = vscode.window.createTreeView("naiteTraceTree", {
+    treeDataProvider: traceTreeProvider,
+    showCollapseAll: true,
+  });
+  context.subscriptions.push(treeView, traceTreeProvider);
+
+  // TreeView에서 위치로 이동하는 명령어
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "naiteTrace.goToLocation",
+      async (filePath: string, lineNumber: number) => {
+        const uri = vscode.Uri.file(filePath);
+        const doc = await vscode.workspace.openTextDocument(uri);
+        const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+        const line = lineNumber - 1;
+        const position = new vscode.Position(line, 0);
+        editor.selection = new vscode.Selection(position, position);
+        editor.revealRange(
+          new vscode.Range(position, position),
+          vscode.TextEditorRevealType.InCenter,
+        );
+      },
+    ),
+  );
+
   tracker = new NaiteTracker();
   diagnosticProvider = new NaiteDiagnosticProvider(tracker);
 

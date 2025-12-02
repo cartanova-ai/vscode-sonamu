@@ -44,6 +44,23 @@
     "typescript": "^5.6.0"
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "naite",
+          "title": "Naite",
+          "icon": "resources/naite.svg"
+        }
+      ]
+    },
+    "views": {
+      "naite": [
+        {
+          "id": "naiteTraceTree",
+          "name": "Traces"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "sonamu.helloWorld",
