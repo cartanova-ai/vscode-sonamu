@@ -18,6 +18,10 @@ export default class NaiteExpressionSearcher {
    * this.document에서 CallExpression 중 다음 조건을 만족하는 것들을 찾습니다:
    * - 모양이 주어진 패턴('Naite.t', 'Naite.get', 'Naite.del' 등)에 맞음.
    * - 첫 번째 인자가 스트링 리터럴(isStringLiteral)이거나 템플릿 리터럴(isNoSubstitutionTemplateLiteral)임.
+   *
+   * Generator를 반환하므로 lazy하게 움직입니다. for...of 문으로 순회하면 됩니다.
+   * 생긴건 변태같지만(?) 써보시면 좋아요.
+   *
    * @param patterns - 패턴 목록. 예시: ['Naite.t', 'Naite.get', 'Naite.del']
    */
   *searchNaiteCalls(patterns: string[]): Generator<NaiteExpression, void, undefined> {

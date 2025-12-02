@@ -1,6 +1,7 @@
+import assert from "assert";
 import ts from "typescript";
 import vscode from "vscode";
-import NaiteParser from "./parser";
+import NaiteExpressionSearcher from "../ast-parsing/expression-searcher";
 import type { NaiteKey, NaiteKeysMap, NaitePatternConfig } from "./types";
 
 /**
@@ -89,16 +90,6 @@ export default class NaiteTracker {
     }
   }
 
-  private addKeys(keys: NaiteKeysMap): void {
-    for (const [key, entries] of keys) {
-      if (!this.keys.has(key)) {
-        this.keys.set(key, entries);
-      } else {
-        this.keys.get(key)?.push(...entries);
-      }
-    }
-  }
-  
   /**
    * 특정 파일을 스캔합니다
    */
@@ -106,9 +97,27 @@ export default class NaiteTracker {
     this.removeKeysByUri(uri);
 
     const document = await vscode.workspace.openTextDocument(uri);
-    const keys = new NaiteParser(document, this.config).parse();
+    const searcher = new NaiteExpressionSearcher(document);
 
-    this.addKeys(keys);
+    const naiteCalls = searcher.searchNaiteCalls([
+      ...this.config.setPatterns,
+      ...this.config.getPatterns,
+    ]);
+
+    for (const { key, location, pattern } of naiteCalls) {
+      const type = this.config.setPatterns.includes(pattern)
+        ? "set"
+        : this.config.getPatterns.includes(pattern)
+          ? "get"
+          : undefined;
+      assert(type, `있을 수 없는 일입니다.`);
+
+      const naiteKey: NaiteKey = { key, location, type, pattern };
+      if (!this.keys.has(key)) {
+        this.keys.set(key, []);
+      }
+      this.keys.get(key)?.push(naiteKey);
+    }
   }
 
   /**
