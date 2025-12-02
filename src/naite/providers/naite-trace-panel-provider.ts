@@ -84,6 +84,8 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-panel-background);
       height: 100vh;
       overflow: hidden;
+      padding: 0;
+      margin: 0;
     }
 
     .container {
@@ -109,6 +111,26 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       border-bottom: 1px solid var(--vscode-panel-border);
       background: var(--vscode-sideBar-background);
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-header-btns {
+      display: flex;
+      gap: 4px;
+    }
+    .panel-header-btn {
+      background: transparent;
+      border: none;
+      color: var(--vscode-descriptionForeground);
+      cursor: pointer;
+      padding: 2px 4px;
+      font-size: 10px;
+      border-radius: 3px;
+    }
+    .panel-header-btn:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+      color: var(--vscode-foreground);
     }
 
     .panel-content {
@@ -159,6 +181,10 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .key-name .match {
+      font-weight: bold;
+      color: var(--vscode-textLink-foreground);
     }
     .key-count {
       font-size: 10px;
@@ -286,7 +312,13 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     <!-- 가운데: Tests -->
     <div class="panel tests-panel">
-      <div class="panel-header">Tests</div>
+      <div class="panel-header">
+        <span>Tests</span>
+        <div class="panel-header-btns">
+          <button class="panel-header-btn" id="expandAllTests" title="모두 펼치기">▼</button>
+          <button class="panel-header-btn" id="collapseAllTests" title="모두 접기">▶</button>
+        </div>
+      </div>
       <div class="panel-content" id="testList"></div>
       <div class="panel-footer" id="testFooter">0 tests</div>
     </div>
@@ -345,16 +377,36 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       return { keyMap, suiteMap };
     }
 
-    // 퍼지 검색
+    // 퍼지 검색 - 매칭 인덱스 반환
     function fuzzyMatch(query, text) {
-      if (!query) return true;
-      query = query.toLowerCase();
-      text = text.toLowerCase();
+      if (!query) return { matched: true, indices: [] };
+      const lowerQuery = query.toLowerCase();
+      const lowerText = text.toLowerCase();
+      const indices = [];
       let qi = 0;
-      for (let i = 0; i < text.length && qi < query.length; i++) {
-        if (text[i] === query[qi]) qi++;
+      for (let i = 0; i < lowerText.length && qi < lowerQuery.length; i++) {
+        if (lowerText[i] === lowerQuery[qi]) {
+          indices.push(i);
+          qi++;
+        }
       }
-      return qi === query.length;
+      return { matched: qi === lowerQuery.length, indices };
+    }
+
+    // 매칭 부분 하이라이트
+    function highlightMatch(text, indices) {
+      if (indices.length === 0) return escapeHtml(text);
+      const indexSet = new Set(indices);
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        const char = escapeHtml(text[i]);
+        if (indexSet.has(i)) {
+          result += '<span class="match">' + char + '</span>';
+        } else {
+          result += char;
+        }
+      }
+      return result;
     }
 
     // 렌더링: Keys
@@ -370,16 +422,21 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       }
 
       const query = state.searchQuery || '';
-      const filtered = Array.from(keyMap.entries())
-        .filter(([key]) => fuzzyMatch(query, key));
+      const matchResults = Array.from(keyMap.entries())
+        .map(([key, count]) => {
+          const result = fuzzyMatch(query, key);
+          return { key, count, ...result };
+        })
+        .filter(r => r.matched);
 
-      if (filtered.length === 0) {
+      if (matchResults.length === 0) {
         container.innerHTML = '<div class="empty-message">No keys</div>';
       } else {
-        container.innerHTML = filtered.map(([key, count]) => {
+        container.innerHTML = matchResults.map(({ key, count, indices }) => {
           const selected = state.selectedKey === key ? 'selected' : '';
+          const highlighted = highlightMatch(key, indices);
           return '<div class="key-item ' + selected + '" data-key="' + escapeAttr(key) + '">' +
-            '<span class="key-name">' + escapeHtml(key) + '</span>' +
+            '<span class="key-name">' + highlighted + '</span>' +
             '<span class="key-count">' + count + '</span>' +
           '</div>';
         }).join('');
@@ -394,7 +451,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         });
       }
 
-      footer.textContent = filtered.length + ' keys';
+      footer.textContent = matchResults.length + ' keys';
     }
 
     // 렌더링: Tests
@@ -584,10 +641,47 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     }
 
     // 검색 이벤트
-    document.getElementById('keySearch').addEventListener('input', (e) => {
+    const searchBox = document.getElementById('keySearch');
+    searchBox.addEventListener('input', (e) => {
       state.searchQuery = e.target.value;
       saveState();
       renderKeys();
+    });
+
+    // ESC 키로 초기화
+    searchBox.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        state.searchQuery = '';
+        state.selectedKey = null;
+        state.selectedTest = null;
+        searchBox.value = '';
+        saveState();
+        renderAll();
+      }
+    });
+
+    // 전역 ESC 키 (검색창에 포커스 없을 때도)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.activeElement !== searchBox) {
+        state.selectedKey = null;
+        state.selectedTest = null;
+        saveState();
+        renderAll();
+      }
+    });
+
+    // Tests 전체 접기/펼치기
+    document.getElementById('expandAllTests').addEventListener('click', () => {
+      state.collapsedSuites = [];
+      saveState();
+      renderTests();
+    });
+
+    document.getElementById('collapseAllTests').addEventListener('click', () => {
+      const { suiteMap } = parseData();
+      state.collapsedSuites = Array.from(suiteMap.keys());
+      saveState();
+      renderTests();
     });
 
     // 메시지 수신
