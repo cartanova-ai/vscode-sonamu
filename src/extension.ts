@@ -1,5 +1,8 @@
 import vscode from "vscode";
-import { NaiteCodeLensProvider, showNaiteLocations } from "./naite/providers/naite-codelens-provider";
+import {
+  NaiteCodeLensProvider,
+  showNaiteLocations,
+} from "./naite/providers/naite-codelens-provider";
 import { NaiteCompletionProvider } from "./naite/providers/naite-completion-provider";
 import { disposeDecorations, updateDecorations } from "./naite/providers/naite-decorator";
 import { NaiteDefinitionProvider } from "./naite/providers/naite-definition-provider";
@@ -706,25 +709,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 초기 진단 실행
   diagnosticProvider.updateAllDiagnostics();
 
-  // 파일 저장 시 재스캔 + 진단 업데이트
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(async (doc) => {
-      if (doc.languageId === "typescript") {
-        await tracker.scanFile(doc.uri);
-        diagnosticProvider.updateAllDiagnostics();
-      }
-    }),
-  );
-
   context.subscriptions.push(diagnosticProvider);
-
-  // 데코레이션: 에디터 변경 시 업데이트
-  const triggerUpdate = (editor?: vscode.TextEditor) => {
-    if (editor) {
-      updateDecorations(editor, tracker);
-      updateRuntimeDecorations(editor);
-    }
-  };
 
   // Runtime value watcher 시작 (Unix Socket 서버)
   const socketPath = await startRuntimeWatcher(context);
@@ -738,55 +723,88 @@ export async function activate(context: vscode.ExtensionContext) {
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
-  if (vscode.window.activeTextEditor) {
-    triggerUpdate(vscode.window.activeTextEditor);
-  }
+  // 데코레이터 업데이트 함수 (일관된 진입점)
+  const updateDecorationsForEditor = (editor?: vscode.TextEditor) => {
+    if (!editor || editor.document.languageId !== "typescript") return;
+    updateDecorations(editor, tracker);
+    updateRuntimeDecorations(editor);
+  };
 
-  // 문서 변경 시 debounce된 스캔 + 진단
+  // 특정 문서의 모든 에디터에 대해 데코레이터 업데이트
+  const updateDecorationsForDocument = (doc: vscode.TextDocument) => {
+    if (doc.languageId !== "typescript") return;
+    for (const editor of vscode.window.visibleTextEditors) {
+      if (editor.document === doc) {
+        updateDecorationsForEditor(editor);
+      }
+    }
+  };
+
+  // 스캔 후 데코레이터 업데이트를 포함한 완전한 파일 처리
+  const scanAndUpdate = async (doc: vscode.TextDocument) => {
+    if (doc.languageId !== "typescript") return;
+    await tracker.scanFile(doc.uri);
+    diagnosticProvider.updateDiagnostics(doc);
+    updateDecorationsForDocument(doc);
+  };
+
+  // 문서 변경 시 debounce된 스캔 (스캔 완료 후 데코레이터 자동 업데이트)
   const scanDebounceMap = new Map<string, NodeJS.Timeout>();
-  const debouncedScan = (doc: vscode.TextDocument) => {
+  const debouncedScanAndUpdate = (doc: vscode.TextDocument) => {
     const key = doc.uri.toString();
     const existing = scanDebounceMap.get(key);
     if (existing) clearTimeout(existing);
     scanDebounceMap.set(
       key,
       setTimeout(async () => {
-        await tracker.scanFile(doc.uri);
-        diagnosticProvider.updateDiagnostics(doc);
+        await scanAndUpdate(doc);
         scanDebounceMap.delete(key);
-      }, 500),
+      }, 200),
     );
   };
 
+  // 이벤트 핸들러 등록
   context.subscriptions.push(
+    // 에디터 변경 시 데코레이터 업데이트
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      triggerUpdate(editor);
+      updateDecorationsForEditor(editor);
       if (editor && editor.document.languageId === "typescript") {
         diagnosticProvider.updateDiagnostics(editor.document);
       }
     }),
+
+    // 문서 변경 시: 즉시 데코레이터 업데이트 (라인 번호 추적) + debounced 스캔
     vscode.workspace.onDidChangeTextDocument((e) => {
-      // 라인 번호 보정 (trace 데코레이터용)
-      handleDocumentChange(e);
+      handleDocumentChange(e); // 라인 번호 보정 (runtime decorator용)
 
       const editor = vscode.window.activeTextEditor;
       if (editor && e.document === editor.document) {
-        triggerUpdate(editor);
-        // TypeScript 파일이면 debounce된 스캔 트리거
+        // 즉시 데코레이터 업데이트 (라인 번호 변경 추적)
+        updateDecorationsForEditor(editor);
+        // 스캔은 debounce (완료 후 데코레이터 자동 업데이트)
         if (e.document.languageId === "typescript") {
-          debouncedScan(e.document);
+          debouncedScanAndUpdate(e.document);
         }
       }
     }),
-    // 설정 변경 시 데코레이션 업데이트
+
+    // 파일 저장 시: 즉시 스캔 + 데코레이터 업데이트
+    vscode.workspace.onDidSaveTextDocument(async (doc) => {
+      await scanAndUpdate(doc);
+    }),
+
+    // 설정 변경 시 데코레이터 업데이트
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("sonamu")) {
-        if (vscode.window.activeTextEditor) {
-          triggerUpdate(vscode.window.activeTextEditor);
-        }
+        updateDecorationsForEditor(vscode.window.activeTextEditor);
       }
     }),
   );
+
+  // 초기 데코레이터 업데이트
+  if (vscode.window.activeTextEditor) {
+    updateDecorationsForEditor(vscode.window.activeTextEditor);
+  }
 
   // Provider 등록
   const selector = { language: "typescript", scheme: "file" };
