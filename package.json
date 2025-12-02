@@ -93,6 +93,11 @@
           "type": "number",
           "default": 50,
           "description": "표시할 값의 최대 문자 길이"
+        },
+        "sonamu.statusBarMessages.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Naite tracker 액션 발생 시 상태창에 메시지 표시 여부"
         }
       }
     }
