@@ -33,7 +33,7 @@ suite("NaiteExpressionSearcher", () => {
     assert.strictEqual(addResult.pattern, "Naite.t");
   });
 
-  test("should parse the Naite.get calls", async () => {
+  test("calculator.test.ts에서 Naite.get 호출을 잘 물어옵니다.", async () => {
     const [uri] = await vscode.workspace.findFiles("calculator.test.ts");
 
     const document = await vscode.workspace.openTextDocument(uri);

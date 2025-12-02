@@ -5,6 +5,9 @@ type NaiteExpression = {
   pattern: string; // 매칭된 패턴 (예: "Naite.t", "Naite.get")
   key: string; // 키 값 (예: "add:params", "add:result")
   location: vscode.Location; // 호출문 위치
+
+  callExpression: ts.CallExpression;
+  firstArgument: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral;
 };
 
 /**
@@ -52,8 +55,8 @@ export default class NaiteExpressionSearcher {
                 if (ts.isStringLiteral(firstArg) || ts.isNoSubstitutionTemplateLiteral(firstArg)) {
                   // 전체 호출문 위치를 꺼내옵니다.
                   // 전체라 함은 "Naite.t("add:params", { a, b })" 전체를 의미합니다.
-                  const start = doc.positionAt(node.getStart(sourceFile));
-                  const end = doc.positionAt(node.getEnd());
+                  const start = doc.positionAt(callExpr.getStart(sourceFile));
+                  const end = doc.positionAt(callExpr.getEnd());
                   const range = new vscode.Range(start, end);
                   const location = new vscode.Location(doc.uri, range);
 
@@ -61,6 +64,8 @@ export default class NaiteExpressionSearcher {
                     pattern: fullPattern,
                     key: firstArg.text,
                     location,
+                    callExpression: callExpr,
+                    firstArgument: firstArg,
                   };
 
                   yield expression;

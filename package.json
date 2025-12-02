@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/cartanova-ai/vscode-sonamu.git"
   },
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "potados99",
   "engines": {
     "vscode": "^1.85.0"
@@ -20,6 +20,29 @@
     "workspaceContains:**/sonamu.config.ts"
   ],
   "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "pnpm run build",
+    "build": "node esbuild.js --production",
+    "pretest": "tsc -p ./",
+    "test": "vscode-test",
+    "package": "vsce package",
+    "install-local": "code --install-extension vscode-sonamu-0.0.1.vsix"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.0",
+    "eslint": "^9.0.0",
+    "mocha": "^11.7.5",
+    "typescript": "^5.6.0"
+  },
   "contributes": {
     "commands": [
       {
@@ -73,30 +96,6 @@
         }
       }
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "pnpm run build",
-    "build": "tsc -p ./",
-    "dev": "tsc -watch -p ./",
-    "pretest": "pnpm run build",
-    "test": "vscode-test",
-    "package": "vsce package",
-    "install-local": "code --install-extension vscode-sonamu-0.0.1.vsix"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.3.8",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^20.x",
-    "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.0",
-    "@vscode/vsce": "^3.7.1",
-    "esbuild": "^0.27.0",
-    "eslint": "^9.0.0",
-    "mocha": "^11.7.5",
-    "typescript": "^5.6.0"
   },
   "packageManager": "pnpm@10.23.0"
 }
