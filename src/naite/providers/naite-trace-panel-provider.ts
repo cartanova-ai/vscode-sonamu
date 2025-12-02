@@ -1,9 +1,5 @@
 import vscode from "vscode";
-import {
-  getAllTestResults,
-  type TestResultEntry,
-  onTestResultChange,
-} from "./naite-socket-server";
+import { getAllTestResults, onTestResultChange, type TestResultEntry } from "./naite-socket-server";
 
 /**
  * 하단 패널용 Trace 뷰어 (3-Column)
@@ -105,7 +101,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     .panel:last-child { border-right: none; }
 
     .panel-header {
-      padding: 8px 10px;
+      padding: 8px 6px;
       font-weight: 500;
       font-size: 11px;
       text-transform: uppercase;
@@ -121,7 +117,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     }
 
     .panel-footer {
-      padding: 4px 10px;
+      padding: 4px 6px;
       font-size: 11px;
       color: var(--vscode-descriptionForeground);
       border-top: 1px solid var(--vscode-panel-border);
@@ -149,7 +145,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     }
 
     .key-item {
-      padding: 4px 10px;
+      padding: 4px 6px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
@@ -181,7 +177,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       border-bottom: 1px solid var(--vscode-panel-border);
     }
     .suite-header {
-      padding: 6px 10px;
+      padding: 6px 6px;
       font-weight: 500;
       background: var(--vscode-sideBar-background);
       cursor: pointer;
@@ -192,9 +188,11 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     .suite-header:hover { background: var(--vscode-list-hoverBackground); }
     .suite-icon { font-size: 10px; }
     .suite-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .suite-tests { display: block; }
+    .suite-tests.collapsed { display: none; }
 
     .test-item {
-      padding: 4px 10px 4px 24px;
+      padding: 4px 6px 4px 20px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -223,7 +221,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     .trace-item {
       border-bottom: 1px solid var(--vscode-panel-border);
-      padding: 8px 10px;
+      padding: 8px 6px;
     }
     .trace-item:hover { background: var(--vscode-list-hoverBackground); }
 
@@ -405,6 +403,9 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       const container = document.getElementById('testList');
       const footer = document.getElementById('testFooter');
 
+      // 접힌 suite 상태 초기화 (없으면)
+      if (!state.collapsedSuites) state.collapsedSuites = [];
+
       let totalTests = 0;
       let passedTests = 0;
       let html = '';
@@ -444,12 +445,15 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
         if (!suiteHasMatch) continue;
 
+        const isCollapsed = state.collapsedSuites.includes(suiteName);
         html += '<div class="suite-item">' +
-          '<div class="suite-header">' +
-            '<span class="suite-icon">▼</span>' +
+          '<div class="suite-header" data-suite="' + escapeAttr(suiteName) + '">' +
+            '<span class="suite-icon">' + (isCollapsed ? '▶' : '▼') + '</span>' +
             '<span class="suite-name">' + escapeHtml(suiteName) + '</span>' +
           '</div>' +
+          '<div class="suite-tests' + (isCollapsed ? ' collapsed' : '') + '">' +
           testItems.join('') +
+          '</div>' +
         '</div>';
       }
 
@@ -458,8 +462,25 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       } else {
         container.innerHTML = html;
 
+        // Suite 토글
+        container.querySelectorAll('.suite-header').forEach(el => {
+          el.addEventListener('click', (e) => {
+            const suiteName = el.dataset.suite;
+            const idx = state.collapsedSuites.indexOf(suiteName);
+            if (idx >= 0) {
+              state.collapsedSuites.splice(idx, 1);
+            } else {
+              state.collapsedSuites.push(suiteName);
+            }
+            saveState();
+            renderTests();
+          });
+        });
+
+        // Test 선택
         container.querySelectorAll('.test-item').forEach(el => {
-          el.addEventListener('click', () => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
             state.selectedTest = state.selectedTest === el.dataset.test ? null : el.dataset.test;
             saveState();
             renderAll();

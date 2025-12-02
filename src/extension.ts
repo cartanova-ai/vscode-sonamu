@@ -127,6 +127,11 @@ function getGlobalTraceViewerHtml(): string {
       align-items: center;
       gap: 8px;
     }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
     .header h2 {
       margin: 0;
       font-size: 16px;
@@ -135,6 +140,18 @@ function getGlobalTraceViewerHtml(): string {
     .header .count {
       color: var(--vscode-descriptionForeground);
       font-size: 12px;
+    }
+    .header-btn {
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .header-btn:hover {
+      background: var(--vscode-button-secondaryHoverBackground);
     }
     .empty {
       color: var(--vscode-descriptionForeground);
@@ -335,6 +352,10 @@ function getGlobalTraceViewerHtml(): string {
       <h2>📊 Naite Traces</h2>
       <span class="count" id="trace-count">0개</span>
     </div>
+    <div class="header-right">
+      <button class="header-btn" onclick="expandAll()">모두 펼치기</button>
+      <button class="header-btn" onclick="collapseAll()">모두 접기</button>
+    </div>
   </div>
   <div id="traces-container">
     <div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>
@@ -456,6 +477,70 @@ function getGlobalTraceViewerHtml(): string {
 
     function goToLocation(filePath, lineNumber) {
       vscode.postMessage({ type: 'goToLocation', filePath, lineNumber });
+    }
+
+    function expandAll() {
+      // 모든 suite 펼치기
+      document.querySelectorAll('.suite-content').forEach(el => {
+        el.classList.remove('collapsed');
+      });
+      document.querySelectorAll('.suite-arrow').forEach(el => {
+        el.textContent = '▼';
+      });
+      collapsedState.suites.clear();
+
+      // 모든 test 펼치기
+      document.querySelectorAll('.test-content').forEach(el => {
+        el.classList.remove('collapsed');
+      });
+      document.querySelectorAll('.test-arrow').forEach(el => {
+        el.textContent = '▼';
+      });
+      collapsedState.tests.clear();
+
+      // 모든 trace 펼치기
+      document.querySelectorAll('.trace-content').forEach(el => {
+        el.classList.remove('collapsed');
+        const traceId = el.id.replace('trace-content-', '');
+        expandedTraces.add(traceId);
+      });
+      document.querySelectorAll('.trace-item .arrow').forEach(el => {
+        if (!el.classList.contains('suite-arrow') && !el.classList.contains('test-arrow')) {
+          el.classList.add('expanded');
+        }
+      });
+    }
+
+    function collapseAll() {
+      // 모든 suite 접기
+      document.querySelectorAll('.suite-content').forEach(el => {
+        el.classList.add('collapsed');
+        const suiteId = el.id.replace('suite-content-', '');
+        // suiteId를 원래 이름으로 변환은 복잡하므로 상태 추적 생략
+      });
+      document.querySelectorAll('.suite-arrow').forEach(el => {
+        el.textContent = '▶';
+      });
+      // collapsedState.suites - 실제 이름 추적 어려우므로 리렌더링 시 상태 재구성
+
+      // 모든 test 접기
+      document.querySelectorAll('.test-content').forEach(el => {
+        el.classList.add('collapsed');
+      });
+      document.querySelectorAll('.test-arrow').forEach(el => {
+        el.textContent = '▶';
+      });
+
+      // 모든 trace 접기
+      document.querySelectorAll('.trace-content').forEach(el => {
+        el.classList.add('collapsed');
+      });
+      document.querySelectorAll('.trace-item .arrow').forEach(el => {
+        if (!el.classList.contains('suite-arrow') && !el.classList.contains('test-arrow')) {
+          el.classList.remove('expanded');
+        }
+      });
+      expandedTraces.clear();
     }
 
     function renderTestResults(testResults) {
