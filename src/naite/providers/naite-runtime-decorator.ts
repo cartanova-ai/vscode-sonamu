@@ -2,9 +2,9 @@ import vscode from "vscode";
 import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
 import {
   type NaiteTrace,
-  getAllTraces as socketGetAllTraces,
-  getTracesForLine as socketGetTracesForLine,
-  onTestResultChange as socketOnTestResultChange,
+  getAllTraces,
+  getTracesForLine,
+  onTestResultChange,
   startServer,
   stopServer,
   updateTraceLineNumbers,
@@ -12,9 +12,7 @@ import {
 
 // Re-export for extension.ts
 export type { NaiteTrace };
-export const getAllTraces = socketGetAllTraces;
-export const getTracesForLine = socketGetTracesForLine;
-export const onTraceChange = socketOnTestResultChange;
+export { getTracesForLine, onTestResultChange as onTraceChange };
 
 // decoration type (line 끝에 값 표시)
 let runtimeDecorationType: vscode.TextEditorDecorationType | null = null;
@@ -24,7 +22,7 @@ export async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument)
   if (doc.languageId !== "typescript") return;
 
   const filePath = doc.uri.fsPath;
-  const currentTraces = socketGetAllTraces();
+  const currentTraces = getAllTraces();
   const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
 
   if (fileTraces.length === 0) return;
@@ -118,7 +116,7 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
   const decType = ensureDecorationType();
 
   const filePath = editor.document.uri.fsPath;
-  const currentTraces = socketGetAllTraces();
+  const currentTraces = getAllTraces();
 
   const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
 
@@ -190,7 +188,7 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
 export async function startRuntimeWatcher(context: vscode.ExtensionContext): Promise<string> {
   const socketPath = await startServer();
 
-  const disposable = socketOnTestResultChange(() => {
+  const disposable = onTestResultChange(() => {
     // 새로운 test result가 들어올 때 모든 에디터의 데코레이터 업데이트
     for (const editor of vscode.window.visibleTextEditors) {
       updateRuntimeDecorations(editor);

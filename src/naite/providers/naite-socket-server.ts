@@ -141,10 +141,6 @@ export function updateTraceLineNumbers(filePath: string, keyToLineMap: Map<strin
   }
 }
 
-export function getSocketPath(): string {
-  return SOCKET_PATH;
-}
-
 // 메시지 처리 (seq 정렬 후 호출됨)
 function processMessage(data: any) {
   const type = data.type;
@@ -258,11 +254,3 @@ export function stopServer(): void {
   }
 }
 
-// 데이터 초기화
-export function clearTestResults(): void {
-  currentTestResults = [];
-  pendingMessages = [];
-  for (const listener of testResultChangeListeners) {
-    listener(currentTestResults);
-  }
-}
