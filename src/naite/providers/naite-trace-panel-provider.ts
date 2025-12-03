@@ -234,8 +234,8 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       gap: 6px;
     }
     .suite-header:hover { background: var(--vscode-list-hoverBackground); }
-    .suite-icon { font-size: 10px; }
-    .suite-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .suite-icon { font-size: 10px; flex-shrink: 0; }
+    .suite-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .suite-tests { display: block; }
     .suite-tests.collapsed { display: none; }
 
@@ -249,19 +249,20 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     .test-item:hover { background: var(--vscode-list-hoverBackground); }
     .test-item.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
 
-    .test-status { font-size: 12px; }
+    .test-status { font-size: 12px; flex-shrink: 0; }
     .test-status.pass { color: #4caf50; }
     .test-status.fail { color: #f44336; }
     .test-status.skip { color: #ff9800; }
     .test-status.todo { color: #9e9e9e; }
-    .test-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .test-time { font-size: 10px; color: var(--vscode-descriptionForeground); }
+    .test-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .test-time { font-size: 10px; color: var(--vscode-descriptionForeground); flex-shrink: 0; }
     .test-traces {
       font-size: 10px;
       background: var(--vscode-badge-background);
       color: var(--vscode-badge-foreground);
       padding: 1px 5px;
       border-radius: 8px;
+      flex-shrink: 0;
     }
 
     /* 오른쪽: Traces 패널 */
@@ -285,12 +286,17 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       cursor: pointer;
     }
     .trace-key:hover { text-decoration: underline; }
-    .trace-location {
+    .trace-location,
+    .location {
       font-size: 11px;
       color: var(--vscode-descriptionForeground);
       cursor: pointer;
+      flex-shrink: 0;
+      margin-left: auto;
+      padding-left: 8px;
     }
-    .trace-location:hover { color: var(--vscode-textLink-foreground); }
+    .trace-location:hover,
+    .location:hover { color: var(--vscode-textLink-foreground); }
 
     .trace-value {
       font-family: var(--vscode-editor-font-family);
@@ -462,12 +468,16 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
       // Suite > Test 구조 (TestResultEntry 기반)
       const suiteMap = new Map();
+      const suiteFilePaths = new Map(); // suite -> filePath
       for (const result of testResults) {
         const suite = result.suiteName || '(no suite)';
         const test = result.testName || '(no test)';
 
         if (!suiteMap.has(suite)) {
           suiteMap.set(suite, new Map());
+          if (result.suiteFilePath) {
+            suiteFilePaths.set(suite, result.suiteFilePath);
+          }
         }
         const testMap = suiteMap.get(suite);
 
@@ -475,7 +485,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         testMap.set(test, result);
       }
 
-      return { keyMap, suiteMap };
+      return { keyMap, suiteMap, suiteFilePaths };
     }
 
     // 퍼지 검색 - 매칭 인덱스 반환
@@ -557,7 +567,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     // 렌더링: Tests
     function renderTests() {
-      const { suiteMap } = parseData();
+      const { suiteMap, suiteFilePaths } = parseData();
       const container = document.getElementById('testList');
       const footer = document.getElementById('testFooter');
 
@@ -591,12 +601,17 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
           const testKey = suiteName + '::' + testName;
           const selected = state.selectedTest === testKey ? 'selected' : '';
 
+          // 파일명:라인넘버
+          const testFileName = result.testFilePath ? result.testFilePath.split('/').pop() : '';
+          const testLocationStr = testFileName && result.testLine ? testFileName + ':' + result.testLine : '';
+
           testItems.push(
             '<div class="test-item ' + selected + '" data-test="' + escapeAttr(testKey) + '">' +
               '<span class="test-status ' + status + '">' + statusIcon + '</span>' +
               '<span class="test-name">' + escapeHtml(testName) + '</span>' +
               '<span class="test-time">' + Math.round(duration) + 'ms</span>' +
               '<span class="test-traces">' + result.traces.length + '</span>' +
+              (testLocationStr ? '<span class="location" data-file="' + escapeAttr(result.testFilePath) + '" data-line="' + result.testLine + '">' + escapeHtml(testLocationStr) + '</span>' : '') +
             '</div>'
           );
         }
@@ -604,10 +619,14 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         if (!suiteHasMatch) continue;
 
         const isCollapsed = state.collapsedSuites.includes(suiteName);
+        const suiteFilePath = suiteFilePaths.get(suiteName) || '';
+        const suiteFileName = suiteFilePath ? suiteFilePath.split('/').pop() : '';
+
         html += '<div class="suite-item">' +
           '<div class="suite-header" data-suite="' + escapeAttr(suiteName) + '">' +
             '<span class="suite-icon">' + (isCollapsed ? '▶' : '▼') + '</span>' +
             '<span class="suite-name">' + escapeHtml(suiteName) + '</span>' +
+            (suiteFileName ? '<span class="location" data-file="' + escapeAttr(suiteFilePath) + '" data-line="1">' + escapeHtml(suiteFileName) + '</span>' : '') +
           '</div>' +
           '<div class="suite-tests' + (isCollapsed ? ' collapsed' : '') + '">' +
           testItems.join('') +
@@ -623,6 +642,9 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         // Suite 토글
         container.querySelectorAll('.suite-header').forEach(el => {
           el.addEventListener('click', (e) => {
+            // .location 클릭 시 파일 이동은 별도 핸들러에서 처리
+            if (e.target.classList.contains('location')) return;
+
             const suiteName = el.dataset.suite;
             const idx = state.collapsedSuites.indexOf(suiteName);
             if (idx >= 0) {
@@ -638,10 +660,25 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         // Test 선택
         container.querySelectorAll('.test-item').forEach(el => {
           el.addEventListener('click', (e) => {
+            // .location 클릭 시 파일 이동은 별도 핸들러에서 처리
+            if (e.target.classList.contains('location')) return;
+
             e.stopPropagation();
             state.selectedTest = state.selectedTest === el.dataset.test ? null : el.dataset.test;
             saveState();
             renderAll();
+          });
+        });
+
+        // 파일 위치 클릭 시 이동
+        container.querySelectorAll('.location[data-file]').forEach(el => {
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            vscode.postMessage({
+              type: 'goToLocation',
+              filePath: el.dataset.file,
+              lineNumber: parseInt(el.dataset.line) || 1
+            });
           });
         });
       }
