@@ -114,10 +114,68 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 6px;
+      min-height: 32px;
+    }
+    .panel-header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+    }
+    .panel-header-title {
+      flex-shrink: 0;
+    }
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 400;
+      text-transform: none;
+      color: var(--vscode-textLink-foreground);
+      background: color-mix(in srgb, var(--vscode-textLink-foreground) 15%, transparent);
+      padding: 2px 6px 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+    }
+    .filter-chip-text {
+      white-space: nowrap;
+    }
+    .filter-chip-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      font-size: 10px;
+      color: var(--vscode-descriptionForeground);
+      cursor: pointer;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .filter-chip-close:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+      color: var(--vscode-foreground);
+    }
+    .panel-header-breadcrumb {
+      font-size: 11px;
+      font-weight: 400;
+      text-transform: none;
+      color: var(--vscode-descriptionForeground);
+      margin-left: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .panel-header-breadcrumb .breadcrumb-value {
+      color: var(--vscode-textLink-foreground);
     }
     .panel-header-btns {
       display: flex;
       gap: 4px;
+      flex-shrink: 0;
     }
     .panel-header-btn {
       background: transparent;
@@ -271,8 +329,20 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     .trace-item {
       border-bottom: 1px solid var(--vscode-panel-border);
       padding: 8px 6px;
+      transition: background 0.15s ease;
     }
     .trace-item:hover { background: var(--vscode-list-hoverBackground); }
+    .trace-item.highlighted {
+      background: color-mix(in srgb, var(--vscode-textLink-foreground) 12%, transparent);
+      border-left: 3px solid var(--vscode-textLink-foreground);
+      padding-left: 5px;
+    }
+    .trace-item.highlighted:hover {
+      background: color-mix(in srgb, var(--vscode-textLink-foreground) 18%, transparent);
+    }
+    .trace-item.highlighted .trace-key {
+      font-weight: 600;
+    }
 
     .trace-header {
       display: flex;
@@ -284,8 +354,18 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       font-family: var(--vscode-editor-font-family);
       color: var(--vscode-textLink-foreground);
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
-    .trace-key:hover { text-decoration: underline; }
+    .trace-key:hover { background: var(--vscode-toolbar-hoverBackground); border-radius: 3px; padding: 0 4px; margin: 0 -4px; }
+    .trace-key-filter {
+      font-size: 9px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      color: var(--vscode-descriptionForeground);
+    }
+    .trace-key:hover .trace-key-filter { opacity: 0.7; }
     .trace-location,
     .location {
       font-size: 11px;
@@ -344,7 +424,10 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     <!-- 가운데: Tests -->
     <div class="panel tests-panel" id="testsPanel">
       <div class="panel-header">
-        <span>Tests</span>
+        <div class="panel-header-left">
+          <span class="panel-header-title">Tests</span>
+          <span class="panel-header-filter" id="testsFilterHint"></span>
+        </div>
         <div class="panel-header-btns">
           <button class="panel-header-btn" id="expandAllTests" title="모두 펼치기">▼</button>
           <button class="panel-header-btn" id="collapseAllTests" title="모두 접기">▶</button>
@@ -359,7 +442,12 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     <!-- 오른쪽: Traces -->
     <div class="panel traces-panel" id="tracesPanel">
-      <div class="panel-header" id="traceHeader">Traces</div>
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <span class="panel-header-title">Traces</span>
+          <div class="panel-header-breadcrumb" id="tracesBreadcrumb"></div>
+        </div>
+      </div>
       <div class="panel-content" id="traceList"></div>
       <div class="panel-footer" id="traceFooter">Select a test</div>
     </div>
@@ -554,8 +642,20 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
         container.querySelectorAll('.key-item').forEach(el => {
           el.addEventListener('click', () => {
-            state.selectedKey = state.selectedKey === el.dataset.key ? null : el.dataset.key;
-            state.selectedTest = null;
+            const newKey = state.selectedKey === el.dataset.key ? null : el.dataset.key;
+            state.selectedKey = newKey;
+
+            // 선택된 test가 새 key 필터에서도 유효한지 확인
+            if (state.selectedTest && newKey) {
+              const [suiteName, testName] = state.selectedTest.split('::');
+              const testResults = state.testResults || [];
+              const testResult = testResults.find(r => r.suiteName === suiteName && r.testName === testName);
+              // 해당 test가 새 key를 포함하지 않으면 선택 해제
+              if (!testResult || !testResult.traces.some(t => t.key === newKey)) {
+                state.selectedTest = null;
+              }
+            }
+
             saveState();
             renderAll();
           });
@@ -570,6 +670,23 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
       const { suiteMap, suiteFilePaths } = parseData();
       const container = document.getElementById('testList');
       const footer = document.getElementById('testFooter');
+      const filterHint = document.getElementById('testsFilterHint');
+
+      // 필터 칩 업데이트: 선택된 key 표시
+      if (state.selectedKey) {
+        filterHint.innerHTML = '<span class="filter-chip">' +
+          '<span class="filter-chip-text" title="' + escapeAttr(state.selectedKey) + '">' + escapeHtml(state.selectedKey) + '</span>' +
+          '<span class="filter-chip-close" id="clearKeyFilter" title="Clear filter">×</span>' +
+        '</span>';
+        filterHint.style.display = 'block';
+        document.getElementById('clearKeyFilter').addEventListener('click', () => {
+          state.selectedKey = null;
+          saveState();
+          renderAll();
+        });
+      } else {
+        filterHint.style.display = 'none';
+      }
 
       // 접힌 suite 상태 초기화 (없으면)
       if (!state.collapsedSuites) state.collapsedSuites = [];
@@ -690,11 +807,11 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     function renderTraces() {
       const { suiteMap } = parseData();
       const container = document.getElementById('traceList');
-      const header = document.getElementById('traceHeader');
+      const breadcrumb = document.getElementById('tracesBreadcrumb');
       const footer = document.getElementById('traceFooter');
 
       if (!state.selectedTest) {
-        header.textContent = 'Traces';
+        breadcrumb.innerHTML = '';
         container.innerHTML = '<div class="empty-message">Select a test to see traces</div>';
         footer.textContent = 'Select a test';
         return;
@@ -708,19 +825,15 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         // 선택된 테스트가 현재 데이터에 없으면 선택 초기화
         state.selectedTest = null;
         saveState();
-        header.textContent = 'Traces';
+        breadcrumb.innerHTML = '';
         container.innerHTML = '<div class="empty-message">Select a test to see traces</div>';
         footer.textContent = 'Select a test';
         return;
       }
 
-      // Key 필터링
-      let traces = testResult.traces;
-      if (state.selectedKey) {
-        traces = traces.filter(t => t.key === state.selectedKey);
-      }
-
-      header.textContent = 'Traces - ' + testName;
+      // 브레드크럼 업데이트: suite > test 표시 (평문)
+      breadcrumb.innerHTML = '› <span class="breadcrumb-value">' + escapeHtml(suiteName) + '</span>' +
+        ' › <span class="breadcrumb-value">' + escapeHtml(testName) + '</span>';
 
       // 에러 메시지 표시
       let errorHtml = '';
@@ -730,26 +843,43 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         '</div>';
       }
 
+      const traces = testResult.traces;
       if (traces.length === 0) {
         container.innerHTML = errorHtml + '<div class="empty-message">No traces in this test</div>';
         footer.textContent = '0 traces';
         return;
       }
 
+      // 하이라이트: 선택된 key와 일치하는 trace에 highlighted 클래스 추가
+      let highlightedCount = 0;
       container.innerHTML = errorHtml + traces.map(t => {
         const fileName = t.filePath ? t.filePath.split('/').pop() : '?';
         const valueStr = JSON.stringify(t.value, null, 2);
+        const isHighlighted = state.selectedKey && t.key === state.selectedKey;
+        if (isHighlighted) highlightedCount++;
 
-        return '<div class="trace-item">' +
+        return '<div class="trace-item' + (isHighlighted ? ' highlighted' : '') + '">' +
           '<div class="trace-header">' +
-            '<span class="trace-key" data-file="' + escapeAttr(t.filePath) + '" data-line="' + t.lineNumber + '">' + escapeHtml(t.key) + '</span>' +
+            '<span class="trace-key" data-key="' + escapeAttr(t.key) + '" title="Filter by this key">' + escapeHtml(t.key) + '<span class="trace-key-filter">⏎</span></span>' +
             '<span class="trace-location" data-file="' + escapeAttr(t.filePath) + '" data-line="' + t.lineNumber + '">' + escapeHtml(fileName) + ':' + t.lineNumber + '</span>' +
           '</div>' +
           '<div class="trace-value">' + escapeHtml(valueStr) + '</div>' +
         '</div>';
       }).join('');
 
-      container.querySelectorAll('[data-file]').forEach(el => {
+      // key 클릭 시 필터링
+      container.querySelectorAll('.trace-key[data-key]').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.key;
+          // 이미 선택된 key면 해제, 아니면 선택
+          state.selectedKey = state.selectedKey === key ? null : key;
+          saveState();
+          renderAll();
+        });
+      });
+
+      // location 클릭 시 파일로 이동
+      container.querySelectorAll('.trace-location[data-file]').forEach(el => {
         el.addEventListener('click', () => {
           vscode.postMessage({
             type: 'goToLocation',
@@ -759,7 +889,12 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
         });
       });
 
-      footer.textContent = traces.length + ' traces';
+      // Footer에 전체 traces 수 + 하이라이트된 개수 표시
+      if (state.selectedKey && highlightedCount > 0) {
+        footer.textContent = highlightedCount + ' / ' + traces.length + ' traces';
+      } else {
+        footer.textContent = traces.length + ' traces';
+      }
     }
 
     function renderAll() {
