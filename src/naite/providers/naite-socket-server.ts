@@ -64,7 +64,6 @@ function queueMessage(data: any) {
       processDebounceTimer = null;
     }
     if (pendingMessages.length > 0) {
-      pendingMessages.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
       for (const msg of pendingMessages) {
         processMessage(msg);
       }
@@ -90,8 +89,6 @@ function queueMessage(data: any) {
   processDebounceTimer = setTimeout(() => {
     processDebounceTimer = null;
 
-    // seq 기준 정렬 후 순서대로 처리
-    pendingMessages.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
     for (const msg of pendingMessages) {
       processMessage(msg);
     }
@@ -141,7 +138,7 @@ export function updateTraceLineNumbers(filePath: string, keyToLineMap: Map<strin
   }
 }
 
-// 메시지 처리 (seq 정렬 후 호출됨)
+// 메시지 처리
 function processMessage(data: any) {
   const type = data.type;
 
