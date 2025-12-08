@@ -1,18 +1,8 @@
 import vscode from "vscode";
 import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
-import {
-  getAllTraces,
-  getTracesForLine,
-  type NaiteTrace,
-  onTestResultChange,
-  startServer,
-  stopServer,
-  updateTraceLineNumbers,
-} from "./naite-socket-server";
-
-// Re-export for extension.ts
-export type { NaiteTrace };
-export { getTracesForLine, onTestResultChange as onTraceChange };
+import type { NaiteMessagingTypes } from "../messaging/messaging-types";
+import { NaiteSocketServer } from "../messaging/naite-socket-server";
+import { TraceStore } from "../messaging/trace-store";
 
 // decoration type (line 끝에 값 표시)
 let runtimeDecorationType: vscode.TextEditorDecorationType | null = null;
@@ -22,7 +12,7 @@ export async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument)
   if (doc.languageId !== "typescript") return;
 
   const filePath = doc.uri.fsPath;
-  const currentTraces = getAllTraces();
+  const currentTraces = TraceStore.getAllTraces();
   const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
 
   if (fileTraces.length === 0) return;
@@ -39,7 +29,7 @@ export async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument)
   }
 
   // trace 라인 번호 업데이트
-  updateTraceLineNumbers(filePath, keyToLineMap);
+  TraceStore.updateTraceLineNumbers(filePath, keyToLineMap);
 }
 
 function formatValue(value: unknown, maxLength: number = 50): string {
@@ -116,11 +106,11 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
   const decType = ensureDecorationType();
 
   const filePath = editor.document.uri.fsPath;
-  const currentTraces = getAllTraces();
+  const currentTraces = TraceStore.getAllTraces();
 
   const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
 
-  const tracesByLine = new Map<number, NaiteTrace[]>();
+  const tracesByLine = new Map<number, NaiteMessagingTypes.NaiteTrace[]>();
   for (const trace of fileTraces) {
     // trace의 라인 번호를 직접 사용 (파일 변경/저장 시마다 업데이트됨)
     const line = trace.lineNumber - 1; // 0-based
@@ -186,9 +176,9 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
 }
 
 export async function startRuntimeWatcher(context: vscode.ExtensionContext): Promise<string> {
-  const socketPath = await startServer();
+  const socketPath = await NaiteSocketServer.start();
 
-  const disposable = onTestResultChange(() => {
+  const disposable = TraceStore.onTestResultChange(() => {
     // 새로운 test result가 들어올 때 모든 에디터의 데코레이터 업데이트
     for (const editor of vscode.window.visibleTextEditors) {
       updateRuntimeDecorations(editor);
@@ -198,7 +188,7 @@ export async function startRuntimeWatcher(context: vscode.ExtensionContext): Pro
   context.subscriptions.push(disposable);
   context.subscriptions.push({
     dispose: () => {
-      stopServer();
+      void NaiteSocketServer.stop();
     },
   });
 
@@ -210,5 +200,5 @@ export function disposeRuntimeDecorations() {
     runtimeDecorationType.dispose();
     runtimeDecorationType = null;
   }
-  stopServer();
+  void NaiteSocketServer.stop();
 }

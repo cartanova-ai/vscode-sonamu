@@ -1,4 +1,5 @@
 import vscode from "vscode";
+import { TraceStore } from "./naite/messaging/trace-store";
 import {
   NaiteCodeLensProvider,
   showNaiteLocations,
@@ -11,13 +12,10 @@ import { NaiteHoverProvider } from "./naite/providers/naite-hover-provider";
 import { NaiteReferenceProvider } from "./naite/providers/naite-reference-provider";
 import {
   disposeRuntimeDecorations,
-  getTracesForLine,
-  onTraceChange,
   startRuntimeWatcher,
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
-import { getAllTestResults } from "./naite/providers/naite-socket-server";
 import {
   NaiteDocumentSymbolProvider,
   NaiteWorkspaceSymbolProvider,
@@ -76,7 +74,7 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
   sendTraceDataToWebview();
 
   // trace 변경 시 업데이트
-  globalTraceDisposable = onTraceChange(() => {
+  globalTraceDisposable = TraceStore.onTestResultChange(() => {
     sendTraceDataToWebview();
   });
   context.subscriptions.push(globalTraceDisposable);
@@ -88,7 +86,7 @@ function createGlobalTraceViewer(context: vscode.ExtensionContext): vscode.Webvi
 function sendTraceDataToWebview() {
   if (!globalTracePanel) return;
 
-  const testResults = getAllTestResults();
+  const testResults = TraceStore.getAllTestResults();
 
   globalTracePanel.webview.postMessage({
     type: "updateTestResults",
@@ -925,7 +923,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "sonamu.openTraceInEditor",
       async (args: { filePath: string; lineNumber: number }) => {
-        const traces = getTracesForLine(args.filePath, args.lineNumber);
+        const traces = TraceStore.getTracesForLine(args.filePath, args.lineNumber);
         if (traces.length === 0) {
           vscode.window.showWarningMessage("No trace data available");
           return;

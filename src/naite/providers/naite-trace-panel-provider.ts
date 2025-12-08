@@ -1,5 +1,6 @@
 import vscode from "vscode";
-import { getAllTestResults, onTestResultChange, type TestResultEntry } from "./naite-socket-server";
+import type { NaiteMessagingTypes } from "../messaging/messaging-types";
+import { TraceStore } from "../messaging/trace-store";
 
 /**
  * 하단 패널용 Trace 뷰어 (3-Column)
@@ -12,7 +13,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
   private _view?: vscode.WebviewView;
   private _disposables: vscode.Disposable[] = [];
-  private _lastTestResults: TestResultEntry[] = [];
+  private _lastTestResults: NaiteMessagingTypes.TestResult[] = [];
 
   resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -51,13 +52,13 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     // test result 변경 시 업데이트
     this._disposables.push(
-      onTestResultChange(() => {
-        this._lastTestResults = getAllTestResults();
+      TraceStore.onTestResultChange(() => {
+        this._lastTestResults = TraceStore.getAllTestResults();
         this._sendData();
       }),
     );
 
-    this._lastTestResults = getAllTestResults();
+    this._lastTestResults = TraceStore.getAllTestResults();
   }
 
   private _sendData(): void {
