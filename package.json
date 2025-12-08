@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/cartanova-ai/vscode-sonamu.git"
   },
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "potados99",
   "engines": {
     "vscode": "^1.85.0"
@@ -26,7 +26,7 @@
     "pretest": "tsc -p ./",
     "test": "vscode-test",
     "package": "vsce package",
-    "install-local": "code --install-extension vscode-sonamu-0.0.1.vsix"
+    "install-local": "code --install-extension sonamu-0.0.1.vsix"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
