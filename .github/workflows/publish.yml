@@ -1,0 +1,49 @@
+name: Publish Extension
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install ovsx globally
+        run: npm install -g ovsx
+
+      - name: Publish to Open VSX Registry
+        id: publish
+        run: |
+          OUTPUT=$(ovsx publish -p "${{ secrets.OVSX_TOKEN }}" 2>&1) || EXIT_CODE=$?
+          echo "$OUTPUT"
+          
+          # 출력에 "already published"가 포함되어 있는지 확인 (대소문자 무시)
+          if echo "$OUTPUT" | grep -qi "already published"; then
+            echo "::notice::Extension already published, treating as success"
+            exit 0
+          fi
+          
+          # 종료 코드가 0이면 성공
+          if [ "${EXIT_CODE:-0}" -eq 0 ]; then
+            exit 0
+          fi
+          
+          # 그 외의 경우는 실패로 처리
+          echo "::error::Publish failed"
+          exit $EXIT_CODE
