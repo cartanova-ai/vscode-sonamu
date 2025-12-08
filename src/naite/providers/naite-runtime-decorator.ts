@@ -1,9 +1,9 @@
 import vscode from "vscode";
 import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
 import {
-  type NaiteTrace,
   getAllTraces,
   getTracesForLine,
+  type NaiteTrace,
   onTestResultChange,
   startServer,
   stopServer,
