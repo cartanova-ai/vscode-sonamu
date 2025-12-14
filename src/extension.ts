@@ -1,6 +1,9 @@
 import vscode from "vscode";
 import { NaiteCompletionProvider } from "./naite/features/key-completion/completion-provider";
-import { disposeDecorations, updateDecorations } from "./naite/features/key-highlighting/decorator";
+import {
+  disposeDecorations,
+  updateDecorations,
+} from "./naite/features/key-highlighting/key-decorator";
 import { NaiteHoverProvider } from "./naite/features/key-hover-info-box/hover-provider";
 import { NaiteDefinitionProvider } from "./naite/features/key-navigation/definition-provider";
 import { NaiteReferenceProvider } from "./naite/features/key-navigation/reference-provider";
@@ -9,14 +12,14 @@ import {
   NaiteWorkspaceSymbolProvider,
 } from "./naite/features/key-symbol-search/symbol-provider";
 import { NaiteDiagnosticProvider } from "./naite/features/key-undefined-warning/diagnostic-provider";
+import { NaiteTracePanelProvider } from "./naite/features/trace-viewer-panel/trace-panel-provider";
+import { NaiteTraceTabProvider } from "./naite/features/trace-viewer-tab/trace-tab-provider";
 import {
   disposeRuntimeDecorations,
   setupRuntimeDecorationListeners,
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
-} from "./naite/features/trace-value-inline-display/runtime-decorator";
-import { NaiteTracePanelProvider } from "./naite/features/trace-viewer/viewer-panel/provider";
-import { NaiteTraceTabProvider } from "./naite/features/trace-viewer/viewer-tab/provider";
+} from "./naite/features/value-inline-display/value-decorator";
 import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
 import NaiteTracker from "./naite/lib/tracking/tracker";

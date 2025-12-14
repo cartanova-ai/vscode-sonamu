@@ -1,6 +1,6 @@
 import vscode from "vscode";
-import { TraceStore } from "../../../lib/messaging/trace-store";
-import traceViewerHtml from "./index.html";
+import { TraceStore } from "../../lib/messaging/trace-store";
+import traceTabHtml from "./ui/index.html";
 
 /**
  * 에디터 탭용 Trace Viewer (WebviewPanel)
@@ -35,7 +35,7 @@ export class NaiteTraceTabProvider {
       },
     );
 
-    this._panel.webview.html = traceViewerHtml;
+    this._panel.webview.html = traceTabHtml;
 
     this._panel.onDidDispose(() => {
       this._panel = null;

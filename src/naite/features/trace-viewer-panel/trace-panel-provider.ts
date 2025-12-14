@@ -1,7 +1,7 @@
 import vscode from "vscode";
-import type { NaiteMessagingTypes } from "../../../lib/messaging/messaging-types";
-import { TraceStore } from "../../../lib/messaging/trace-store";
-import tracePanelHtml from "./index.html";
+import type { NaiteMessagingTypes } from "../../lib/messaging/messaging-types";
+import { TraceStore } from "../../lib/messaging/trace-store";
+import tracePanelHtml from "./ui/index.html";
 
 /**
  * 하단 패널용 Trace 뷰어 (3-Column)
