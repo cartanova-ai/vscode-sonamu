@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>/* __STYLE__ */</style>
+</head>
+<body>
+  <div class="container">
+    <!-- 왼쪽: Keys -->
+    <div class="panel keys-panel" id="keysPanel">
+      <div class="panel-header">
+        <input type="text" class="search-box" id="keySearch" placeholder="Search keys...">
+      </div>
+      <div class="panel-content" id="keyList"></div>
+      <div class="panel-footer" id="keyFooter">0 keys</div>
+    </div>
+
+    <!-- 리사이저 1 -->
+    <div class="resizer" id="resizer1"></div>
+
+    <!-- 가운데: Tests -->
+    <div class="panel tests-panel" id="testsPanel">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <span class="panel-header-title">Tests</span>
+          <span class="panel-header-filter" id="testsFilterHint"></span>
+        </div>
+        <div class="panel-header-btns">
+          <button class="panel-header-btn" id="expandAllTests" title="모두 펼치기">▼</button>
+          <button class="panel-header-btn" id="collapseAllTests" title="모두 접기">▶</button>
+        </div>
+      </div>
+      <div class="panel-content" id="testList"></div>
+      <div class="panel-footer" id="testFooter">0 tests</div>
+    </div>
+
+    <!-- 리사이저 2 -->
+    <div class="resizer" id="resizer2"></div>
+
+    <!-- 오른쪽: Traces -->
+    <div class="panel traces-panel" id="tracesPanel">
+      <div class="panel-header">
+        <div class="panel-header-left">
+          <span class="panel-header-title">Traces</span>
+          <div class="panel-header-breadcrumb" id="tracesBreadcrumb"></div>
+        </div>
+      </div>
+      <div class="panel-content" id="traceList"></div>
+      <div class="panel-footer" id="traceFooter">Select a test</div>
+    </div>
+  </div>
+
+  <script>/* __SCRIPT__ */</script>
+</body>
+</html>
