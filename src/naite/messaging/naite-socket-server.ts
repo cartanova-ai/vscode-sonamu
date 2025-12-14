@@ -5,6 +5,13 @@ import path from "path";
 import type { NaiteMessagingTypes } from "./messaging-types";
 import { TraceStore } from "./trace-store";
 
+/**
+ * Sonamu에서 보내는 Naite 메시지를 받아서 처리하는 친구입니다.
+ * net이 제공하는 Unix domain socket을 사용합니다.
+ *
+ * 주고받는 메시지의 타입은 messaging-types.ts에 정의되어 있습니다.
+ * 해당 파일은 동일한 이름과 내용으로 Sonamu에도 존재합니다.
+ */
 class NaiteSocketServerClass {
   private readonly SOCKET_DIR = path.join(os.homedir(), ".sonamu");
   private readonly SOCKET_PATH =

@@ -1,5 +1,8 @@
 import type vscode from "vscode";
 
+/**
+ * Document와 위치가 주어졌을 때, 해당 위치에서 Naite 호출문의 key를 추출(extract)해주는 친구입니다.
+ */
 export default class NaiteExpressionExtractor {
   constructor(private readonly document: vscode.TextDocument) {}
 
