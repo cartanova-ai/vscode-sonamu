@@ -1,7 +1,6 @@
 import vscode from "vscode";
 import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
 import type { NaiteMessagingTypes } from "../messaging/messaging-types";
-import { NaiteSocketServer } from "../messaging/naite-socket-server";
 import { TraceStore } from "../messaging/trace-store";
 
 // decoration type (line 끝에 값 표시)
@@ -175,9 +174,7 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(decType, decorations);
 }
 
-export async function startRuntimeWatcher(context: vscode.ExtensionContext): Promise<string> {
-  const socketPath = await NaiteSocketServer.start();
-
+export function setupRuntimeDecorationListeners(context: vscode.ExtensionContext): void {
   const disposable = TraceStore.onTestResultChange(() => {
     // 새로운 test result가 들어올 때 모든 에디터의 데코레이터 업데이트
     for (const editor of vscode.window.visibleTextEditors) {
@@ -186,13 +183,6 @@ export async function startRuntimeWatcher(context: vscode.ExtensionContext): Pro
   });
 
   context.subscriptions.push(disposable);
-  context.subscriptions.push({
-    dispose: () => {
-      void NaiteSocketServer.stop();
-    },
-  });
-
-  return socketPath;
 }
 
 export function disposeRuntimeDecorations() {
@@ -200,5 +190,4 @@ export function disposeRuntimeDecorations() {
     runtimeDecorationType.dispose();
     runtimeDecorationType = null;
   }
-  void NaiteSocketServer.stop();
 }

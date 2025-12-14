@@ -1,4 +1,5 @@
 import vscode from "vscode";
+import { NaiteSocketServer } from "./naite/messaging/naite-socket-server";
 import { TraceStore } from "./naite/messaging/trace-store";
 import {
   NaiteCodeLensProvider,
@@ -12,7 +13,7 @@ import { NaiteHoverProvider } from "./naite/providers/naite-hover-provider";
 import { NaiteReferenceProvider } from "./naite/providers/naite-reference-provider";
 import {
   disposeRuntimeDecorations,
-  startRuntimeWatcher,
+  setupRuntimeDecorationListeners,
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
 } from "./naite/providers/naite-runtime-decorator";
@@ -782,9 +783,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(diagnosticProvider);
 
-  // Runtime value watcher 시작 (Unix Socket 서버)
-  const socketPath = await startRuntimeWatcher(context);
+  // Naite Socket 서버 시작 (Sonamu에서 trace 메시지 수신)
+  const socketPath = await NaiteSocketServer.start();
   console.log(`[Sonamu] Naite Socket server started at ${socketPath}`);
+
+  // Runtime decoration 리스너 등록
+  setupRuntimeDecorationListeners(context);
 
   // 상태바에 소켓 상태 표시
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -949,7 +953,8 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {
+export async function deactivate() {
   disposeDecorations();
   disposeRuntimeDecorations();
+  await NaiteSocketServer.stop();
 }
