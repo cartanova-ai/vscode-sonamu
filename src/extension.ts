@@ -1,29 +1,25 @@
 import vscode from "vscode";
-import { NaiteSocketServer } from "./naite/messaging/naite-socket-server";
-import { TraceStore } from "./naite/messaging/trace-store";
+import { NaiteCompletionProvider } from "./naite/features/key-completion/completion-provider";
+import { disposeDecorations, updateDecorations } from "./naite/features/key-highlighting/decorator";
+import { NaiteHoverProvider } from "./naite/features/key-hover-info-box/hover-provider";
+import { NaiteDefinitionProvider } from "./naite/features/key-navigation/definition-provider";
+import { NaiteReferenceProvider } from "./naite/features/key-navigation/reference-provider";
 import {
-  NaiteCodeLensProvider,
-  showNaiteLocations,
-} from "./naite/providers/naite-codelens-provider";
-import { NaiteCompletionProvider } from "./naite/providers/naite-completion-provider";
-import { disposeDecorations, updateDecorations } from "./naite/providers/naite-decorator";
-import { NaiteDefinitionProvider } from "./naite/providers/naite-definition-provider";
-import { NaiteDiagnosticProvider } from "./naite/providers/naite-diagnostic-provider";
-import { NaiteHoverProvider } from "./naite/providers/naite-hover-provider";
-import { NaiteReferenceProvider } from "./naite/providers/naite-reference-provider";
+  NaiteDocumentSymbolProvider,
+  NaiteWorkspaceSymbolProvider,
+} from "./naite/features/key-symbol-search/symbol-provider";
+import { NaiteDiagnosticProvider } from "./naite/features/key-undefined-warning/diagnostic-provider";
 import {
   disposeRuntimeDecorations,
   setupRuntimeDecorationListeners,
   syncTraceLineNumbersWithDocument,
   updateRuntimeDecorations,
-} from "./naite/providers/naite-runtime-decorator";
-import {
-  NaiteDocumentSymbolProvider,
-  NaiteWorkspaceSymbolProvider,
-} from "./naite/providers/naite-symbol-provider";
-import { NaiteTracePanelProvider } from "./naite/providers/naite-trace-panel-provider";
-import { NaiteTraceViewerProvider } from "./naite/providers/naite-trace-viewer-provider";
-import NaiteTracker from "./naite/tracking/tracker";
+} from "./naite/features/trace-value-inline-display/runtime-decorator";
+import { NaiteTracePanelProvider } from "./naite/features/trace-viewer/viewer-panel/provider";
+import { NaiteTraceTabProvider } from "./naite/features/trace-viewer/viewer-tab/provider";
+import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
+import { TraceStore } from "./naite/lib/messaging/trace-store";
+import NaiteTracker from "./naite/lib/tracking/tracker";
 
 let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
@@ -44,8 +40,8 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
   );
 
-  // Trace Viewer (사이드 패널)
-  const traceViewerProvider = new NaiteTraceViewerProvider(context);
+  // Trace Viewer (에디터 탭)
+  const traceTabProvider = new NaiteTraceTabProvider(context);
 
   // 위치로 이동하는 명령어
   context.subscriptions.push(
@@ -104,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = `$(plug) Naite`;
   statusBarItem.tooltip = `Naite Socket: ${socketPath}\nClick to open Trace Viewer`;
-  statusBarItem.command = "sonamu.openGlobalTraceViewer";
+  statusBarItem.command = "sonamu.openTraceViewerTab";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
@@ -211,7 +207,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider(tracker)),
     vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider(tracker)),
     vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider(tracker)),
-    vscode.languages.registerCodeLensProvider(selector, new NaiteCodeLensProvider(tracker)),
     vscode.languages.registerDocumentSymbolProvider(
       selector,
       new NaiteDocumentSymbolProvider(tracker),
@@ -221,12 +216,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 명령어
   context.subscriptions.push(
-    vscode.commands.registerCommand("sonamu.showNaiteLocations", showNaiteLocations),
-    vscode.commands.registerCommand("sonamu.showNaiteLocationsByKey", (key: string) => {
-      const setLocs = tracker.getKeyLocations(key, "set");
-      const getLocs = tracker.getKeyLocations(key, "get");
-      showNaiteLocations(key, setLocs, getLocs);
-    }),
     vscode.commands.registerCommand("sonamu.rescanNaite", async () => {
       await tracker.scanWorkspace();
       vscode.window.showInformationMessage(`Found ${tracker.getAllKeys().length} Naite keys`);
@@ -244,12 +233,12 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         // Trace Viewer 열고 해당 trace 하이라이트
-        traceViewerProvider.show();
-        traceViewerProvider.highlightTrace(args.filePath, args.lineNumber, traces[0].key);
+        traceTabProvider.show();
+        traceTabProvider.highlightTrace(args.filePath, args.lineNumber, traces[0].key);
       },
     ),
-    vscode.commands.registerCommand("sonamu.openGlobalTraceViewer", () => {
-      traceViewerProvider.show();
+    vscode.commands.registerCommand("sonamu.openTraceViewerTab", () => {
+      traceTabProvider.show();
     }),
   );
 }

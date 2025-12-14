@@ -1,7 +1,7 @@
 import vscode from "vscode";
-import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
-import type { NaiteMessagingTypes } from "../messaging/messaging-types";
-import { TraceStore } from "../messaging/trace-store";
+import NaiteExpressionSearcher from "../../lib/code-parsing/expression-searcher";
+import type { NaiteMessagingTypes } from "../../lib/messaging/messaging-types";
+import { TraceStore } from "../../lib/messaging/trace-store";
 
 // decoration type (line 끝에 값 표시)
 let runtimeDecorationType: vscode.TextEditorDecorationType | null = null;

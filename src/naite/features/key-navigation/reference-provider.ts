@@ -1,23 +1,26 @@
 import type vscode from "vscode";
-import type NaiteTracker from "../tracking/tracker";
+import type NaiteTracker from "../../lib/tracking/tracker";
 
-export class NaiteDefinitionProvider implements vscode.DefinitionProvider {
+/**
+ * Naite 키의 사용처를 찾습니다 (Find All References)
+ */
+export class NaiteReferenceProvider implements vscode.ReferenceProvider {
   constructor(private tracker: NaiteTracker) {}
 
-  async provideDefinition(
+  async provideReferences(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): Promise<vscode.Location[] | undefined> {
     const key = this.tracker.getKeyAtPosition(document, position);
     if (!key) return undefined;
 
-    // Definition = 정의된 곳 (set, 즉 Naite.t)
-    let locations = this.tracker.getKeyLocations(key, "set");
+    // References = 사용된 곳 (get, 즉 Naite.get/expect 등)
+    let locations = this.tracker.getKeyLocations(key, "get");
 
     // 없으면 현재 문서 스캔 후 재시도
     if (locations.length === 0) {
       await this.tracker.scanFile(document.uri);
-      locations = this.tracker.getKeyLocations(key, "set");
+      locations = this.tracker.getKeyLocations(key, "get");
     }
 
     if (locations.length === 0) return undefined;

@@ -1,13 +1,16 @@
 import vscode from "vscode";
-import { TraceStore } from "../messaging/trace-store";
-import traceViewerHtml from "../ui/trace-viewer/index.html";
+import { TraceStore } from "../../../lib/messaging/trace-store";
+import traceViewerHtml from "./index.html";
 
 /**
- * 사이드 패널용 Trace Viewer (WebviewPanel)
+ * 에디터 탭용 Trace Viewer (WebviewPanel)
  * - 상태바 클릭 또는 명령어로 열림
  * - Suite > Test > Trace 계층 구조
+ *
+ * 얘는 사실 Provider 모양의 클래스로 만들 필요는 없었습니다만,
+ * 일관성을 맞추기 위해 이렇게 했습니다.
  */
-export class NaiteTraceViewerProvider {
+export class NaiteTraceTabProvider {
   private _panel: vscode.WebviewPanel | null = null;
   private _disposable: vscode.Disposable | null = null;
 

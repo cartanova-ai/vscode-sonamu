@@ -8,7 +8,7 @@ const production = process.argv.includes('--production');
 const webviewHtmlLoader = {
   name: 'webview-html-loader',
   setup(build) {
-    build.onLoad({ filter: /\/ui\/.*\/index\.html$/ }, async (args) => {
+    build.onLoad({ filter: /\/viewer-.*\/index\.html$/ }, async (args) => {
       const dir = path.dirname(args.path);
 
       const html = await fs.promises.readFile(args.path, 'utf8');

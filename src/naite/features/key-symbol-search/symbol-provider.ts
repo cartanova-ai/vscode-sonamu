@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type NaiteTracker from "../tracking/tracker";
+import type NaiteTracker from "../../lib/tracking/tracker";
 
 /**
  * 문서 내 Naite 키를 심볼로 제공합니다 (Cmd+Shift+O)
