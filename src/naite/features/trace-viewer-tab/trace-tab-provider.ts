@@ -47,9 +47,26 @@ export class NaiteTraceTabProvider {
     // 새 탭이 열렸으므로 탭 그룹 잠금
     vscode.commands.executeCommand("workbench.action.lockEditorGroup");
 
-    this._panel.webview.html = traceTabHtml;
+    this._setupPanel(this._panel);
 
-    this._panel.onDidDispose(() => {
+    return this._panel;
+  }
+
+  /**
+   * VSCode 재시작 시 패널 복원
+   */
+  restorePanel(panel: vscode.WebviewPanel): void {
+    this._panel = panel;
+    this._setupPanel(panel);
+  }
+
+  /**
+   * 패널 공통 설정 (생성/복원 시 모두 사용)
+   */
+  private _setupPanel(panel: vscode.WebviewPanel): void {
+    panel.webview.html = traceTabHtml;
+
+    panel.onDidDispose(() => {
       this._panel = null;
       if (this._disposable) {
         this._disposable.dispose();
@@ -58,7 +75,7 @@ export class NaiteTraceTabProvider {
     });
 
     // 메시지 핸들러
-    this._panel.webview.onDidReceiveMessage(async (message) => {
+    panel.webview.onDidReceiveMessage(async (message) => {
       if (message.type === "goToLocation") {
         const uri = vscode.Uri.file(message.filePath);
         const doc = await vscode.workspace.openTextDocument(uri);
@@ -81,8 +98,6 @@ export class NaiteTraceTabProvider {
       this._sendData();
     });
     this._context.subscriptions.push(this._disposable);
-
-    return this._panel;
   }
 
   /**

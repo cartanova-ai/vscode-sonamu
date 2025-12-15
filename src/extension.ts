@@ -46,6 +46,16 @@ export async function activate(context: vscode.ExtensionContext) {
   // Trace Viewer (에디터 탭)
   const traceTabProvider = new NaiteTraceTabProvider(context);
 
+  // WebviewPanel serializer 등록 (reload 후 탭 복원)
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer("naiteTraceViewer", {
+      async deserializeWebviewPanel(panel: vscode.WebviewPanel, _state: unknown) {
+        // 복원된 패널 설정
+        traceTabProvider.restorePanel(panel);
+      },
+    }),
+  );
+
   // 위치로 이동하는 명령어
   context.subscriptions.push(
     vscode.commands.registerCommand(

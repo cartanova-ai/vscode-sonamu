@@ -17,7 +17,8 @@
     "Visualization"
   ],
   "activationEvents": [
-    "workspaceContains:**/sonamu.config.ts"
+    "workspaceContains:**/sonamu.config.ts",
+    "onWebviewPanel:naiteTraceViewer"
   ],
   "main": "./out/extension.js",
   "scripts": {
