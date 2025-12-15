@@ -102,9 +102,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(diagnosticProvider);
 
-  // Naite Socket 서버 시작 (Sonamu에서 trace 메시지 수신)
-  const socketPath = await NaiteSocketServer.start();
-  console.log(`[Sonamu] Naite Socket server started at ${socketPath}`);
+  // sonamu.config.ts 찾기 (소켓 서버 식별용)
+  const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
+  if (configFiles.length === 0) {
+    vscode.window.showWarningMessage("sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다.");
+    return;
+  }
+  const configPaths = configFiles.map((f) => f.fsPath);
+
+  // Naite Socket 서버 시작 (여러 프로젝트 동시 지원)
+  const socketPaths = await NaiteSocketServer.startAll(configPaths);
+  console.log(`[Sonamu] Naite Socket servers started: ${socketPaths.length}개`);
 
   // Runtime decoration 리스너 등록
   setupRuntimeDecorationListeners(context);
@@ -122,7 +130,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 상태바에 소켓 상태 표시
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = `$(plug) Naite`;
-  statusBarItem.tooltip = `Naite Socket: ${socketPath}\nClick to open Trace Viewer`;
+  statusBarItem.tooltip = `Naite Sockets: ${socketPaths.length}개\nClick to open Trace Viewer`;
   statusBarItem.command = "sonamu.openTraceViewerTab";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
