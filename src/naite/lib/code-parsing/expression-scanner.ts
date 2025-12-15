@@ -14,7 +14,7 @@ type NaiteExpression = {
  * 코드 속에서 Naite 관련 호출문들을 찾아내주는 친구입니다.
  * TypeScript가 제공하는 AST를 사용합니다.
  */
-export default class NaiteExpressionSearcher {
+export default class NaiteExpressionScanner {
   constructor(private readonly document: vscode.TextDocument) {}
 
   /**
@@ -27,7 +27,7 @@ export default class NaiteExpressionSearcher {
    *
    * @param patterns - 패턴 목록. 예시: ['Naite.t', 'Naite.get', 'Naite.del']
    */
-  *searchNaiteCalls(patterns: string[]): Generator<NaiteExpression, void, undefined> {
+  *scanNaiteCalls(patterns: string[]): Generator<NaiteExpression, void, undefined> {
     const doc = this.document;
     const sourceFile = ts.createSourceFile(
       doc.uri.fsPath,

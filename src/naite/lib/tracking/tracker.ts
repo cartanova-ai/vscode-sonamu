@@ -1,7 +1,7 @@
 import assert from "assert";
 import vscode from "vscode";
 import NaiteExpressionExtractor from "../code-parsing/expression-extractor";
-import NaiteExpressionSearcher from "../code-parsing/expression-searcher";
+import NaiteExpressionScanner from "../code-parsing/expression-scanner";
 import type { NaiteKey, NaiteKeysMap, NaitePatternConfig } from "./types";
 
 /**
@@ -119,10 +119,10 @@ export default class NaiteTracker {
     this.forgetKeysInFile(uri);
 
     const document = await vscode.workspace.openTextDocument(uri);
-    const searcher = new NaiteExpressionSearcher(document);
+    const scanner = new NaiteExpressionScanner(document);
     const patterns = [...this.config.setPatterns, ...this.config.getPatterns];
 
-    const naiteCalls = Array.from(searcher.searchNaiteCalls(patterns));
+    const naiteCalls = Array.from(scanner.scanNaiteCalls(patterns));
 
     for (const { key, location, pattern } of naiteCalls) {
       const type = this.config.setPatterns.includes(pattern)

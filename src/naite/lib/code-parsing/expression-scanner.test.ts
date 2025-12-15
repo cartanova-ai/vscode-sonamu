@@ -1,14 +1,14 @@
 import assert from "node:assert";
 import vscode from "vscode";
-import NaiteExpressionSearcher from "./expression-searcher";
+import NaiteExpressionScanner from "./expression-scanner";
 
-suite("NaiteExpressionSearcher", () => {
+suite("NaiteExpressionScanner", () => {
   test("calculator.ts에서 Naite.t 호출을 잘 물어옵니다.", async () => {
     const [uri] = await vscode.workspace.findFiles("calculator.ts");
 
     const document = await vscode.workspace.openTextDocument(uri);
-    const searcher = new NaiteExpressionSearcher(document);
-    const results = Array.from(searcher.searchNaiteCalls(["Naite.t"]));
+    const scanner = new NaiteExpressionScanner(document);
+    const results = Array.from(scanner.scanNaiteCalls(["Naite.t"]));
 
     assert.strictEqual(results.length, 2);
 
@@ -37,8 +37,8 @@ suite("NaiteExpressionSearcher", () => {
     const [uri] = await vscode.workspace.findFiles("calculator.test.ts");
 
     const document = await vscode.workspace.openTextDocument(uri);
-    const searcher = new NaiteExpressionSearcher(document);
-    const results = Array.from(searcher.searchNaiteCalls(["Naite.get"]));
+    const scanner = new NaiteExpressionScanner(document);
+    const results = Array.from(scanner.scanNaiteCalls(["Naite.get"]));
 
     assert.strictEqual(results.length, 3);
 

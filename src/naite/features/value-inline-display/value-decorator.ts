@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import NaiteExpressionSearcher from "../../lib/code-parsing/expression-searcher";
+import NaiteExpressionScanner from "../../lib/code-parsing/expression-scanner";
 import type { NaiteMessagingTypes } from "../../lib/messaging/messaging-types";
 import { TraceStore } from "../../lib/messaging/trace-store";
 
@@ -17,8 +17,8 @@ export async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument)
   if (fileTraces.length === 0) return;
 
   // 현재 문서에서 Naite.t 호출 위치 스캔
-  const searcher = new NaiteExpressionSearcher(doc);
-  const naiteCalls = Array.from(searcher.searchNaiteCalls(["Naite.t"]));
+  const scanner = new NaiteExpressionScanner(doc);
+  const naiteCalls = Array.from(scanner.scanNaiteCalls(["Naite.t"]));
 
   // key -> 라인 번호 매핑 생성
   const keyToLineMap = new Map<string, number>();
