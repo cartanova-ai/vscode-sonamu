@@ -99,6 +99,16 @@ export async function activate(context: vscode.ExtensionContext) {
   // Runtime decoration 리스너 등록
   setupRuntimeDecorationListeners(context);
 
+  // 트레이스 수신 시 자동으로 Trace Viewer Tab 열기
+  context.subscriptions.push(
+    TraceStore.onTestResultChange((testResults) => {
+      // 트레이스가 있을 때만 탭 열기
+      if (testResults.length > 0) {
+        traceTabProvider.show();
+      }
+    }),
+  );
+
   // 상태바에 소켓 상태 표시
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = `$(plug) Naite`;

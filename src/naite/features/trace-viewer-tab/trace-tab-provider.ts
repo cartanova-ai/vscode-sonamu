@@ -21,10 +21,12 @@ export class NaiteTraceTabProvider {
    */
   show(): vscode.WebviewPanel {
     if (this._panel) {
-      this._panel.reveal();
+      if (!this._panel.visible) {
+        // 있는데 안 보고 있었다면 보이게 해줘요.
+        this._panel.reveal();
+      }
       return this._panel;
     }
-
     this._panel = vscode.window.createWebviewPanel(
       "naiteTraceViewer",
       "Naite Traces",
@@ -34,6 +36,9 @@ export class NaiteTraceTabProvider {
         retainContextWhenHidden: true,
       },
     );
+
+    // 새 탭이 열렸으므로 탭 그룹 잠금
+    vscode.commands.executeCommand("workbench.action.lockEditorGroup");
 
     this._panel.webview.html = traceTabHtml;
 
