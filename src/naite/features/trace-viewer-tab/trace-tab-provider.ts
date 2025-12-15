@@ -17,11 +17,18 @@ export class NaiteTraceTabProvider {
   constructor(private readonly _context: vscode.ExtensionContext) {}
 
   /**
+   * 패널이 열려있는지 확인
+   */
+  isVisible(): boolean {
+    return this._panel?.visible ?? false;
+  }
+
+  /**
    * Trace Viewer 패널을 열거나 기존 패널을 표시
    */
   show(): vscode.WebviewPanel {
     if (this._panel) {
-      if (!this._panel.visible) {
+      if (!this.isVisible()) {
         // 있는데 안 보고 있었다면 보이게 해줘요.
         this._panel.reveal();
       }
@@ -91,6 +98,35 @@ export class NaiteTraceTabProvider {
         filePath,
         lineNumber,
         key,
+      });
+    }, 100);
+  }
+
+  /**
+   * 특정 key의 모든 trace로 이동하고 펼치기
+   */
+  focusKey(key: string): void {
+    if (!this._panel) return;
+
+    setTimeout(() => {
+      this._panel?.webview.postMessage({
+        type: "focusKey",
+        key,
+      });
+    }, 100);
+  }
+
+  /**
+   * 특정 test case로 이동하고 펼치기 (trace는 닫힌 상태)
+   */
+  focusTest(suiteName: string, testName: string): void {
+    if (!this._panel) return;
+
+    setTimeout(() => {
+      this._panel?.webview.postMessage({
+        type: "focusTest",
+        suiteName,
+        testName,
       });
     }, 100);
   }

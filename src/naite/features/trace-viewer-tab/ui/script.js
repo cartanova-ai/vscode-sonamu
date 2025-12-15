@@ -433,6 +433,142 @@ window.addEventListener('message', (event) => {
       firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
+
+  if (message.type === 'focusKey') {
+    // 해당 key의 모든 trace 찾아서 펼치기
+    const items = document.querySelectorAll('.trace-item');
+    let firstMatch = null;
+
+    // 기존 하이라이트 제거
+    document.querySelectorAll('.trace-item.highlight').forEach(el => {
+      el.classList.remove('highlight');
+    });
+
+    for (const item of items) {
+      if (item.dataset.key === message.key) {
+        if (!firstMatch) firstMatch = item;
+
+        // 부모 suite/test 열기
+        let parent = item.parentElement;
+        while (parent) {
+          if (parent.classList.contains('suite-content')) {
+            parent.classList.remove('collapsed');
+            const suiteName = parent.id.replace('suite-content-', '');
+            const arrow = document.getElementById('suite-arrow-' + suiteName);
+            if (arrow) arrow.textContent = '▼';
+            // state 업데이트
+            state.collapsedSuites = state.collapsedSuites.filter(s => s !== suiteName);
+          }
+          if (parent.classList.contains('test-content')) {
+            parent.classList.remove('collapsed');
+            const testId = parent.id.replace('test-content-', '');
+            const arrow = document.getElementById('test-arrow-' + testId);
+            if (arrow) arrow.textContent = '▼';
+            // state 업데이트: expandedTests에 추가
+            if (!state.expandedTests) state.expandedTests = [];
+            // testId에서 원래 키 복원 (onclick에서 파싱)
+            const testHeader = parent.previousElementSibling;
+            if (testHeader) {
+              const onclick = testHeader.getAttribute('onclick');
+              const match = onclick && onclick.match(/toggleTest\('(.+?)', '(.+?)'\)/);
+              if (match) {
+                const testKey = match[1].replace(/\\'/g, "'") + '::' + match[2].replace(/\\'/g, "'");
+                if (!state.expandedTests.includes(testKey)) {
+                  state.expandedTests.push(testKey);
+                }
+              }
+            }
+          }
+          parent = parent.parentElement;
+        }
+
+        // trace 내용 열기 (lazy rendering 적용)
+        const traceId = item.id.replace('item-', '');
+        const content = document.getElementById('trace-content-' + traceId);
+        const arrow = document.getElementById('trace-arrow-' + traceId);
+        if (content) {
+          // lazy rendering
+          if (!content.dataset.rendered) {
+            const onclick = item.querySelector('.trace-header').getAttribute('onclick');
+            const match = onclick && onclick.match(/toggleTrace\('(.+?)', '(.+?)', '(.+?)', '(.+?)', (\d+)\)/);
+            if (match) {
+              const suite = match[1].replace(/\\'/g, "'");
+              const testName = match[2].replace(/\\'/g, "'");
+              const traceIdx = parseInt(match[5]);
+              const trace = findTrace(suite, testName, traceIdx);
+              if (trace) {
+                content.innerHTML = '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
+                content.dataset.rendered = 'true';
+              }
+            }
+          }
+          content.classList.remove('collapsed');
+          // state 업데이트
+          if (!state.expandedTraces.includes(traceId)) {
+            state.expandedTraces.push(traceId);
+          }
+        }
+        if (arrow) arrow.classList.add('expanded');
+
+        // 하이라이트
+        item.classList.add('highlight');
+      }
+    }
+
+    saveState();
+
+    // 첫 번째 매칭으로 스크롤
+    if (firstMatch) {
+      firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  if (message.type === 'focusTest') {
+    // 해당 test case로 이동하고 펼치기 (trace는 닫힌 상태 유지)
+    const testKey = message.suiteName + '::' + message.testName;
+    const testId = escapeId(testKey);
+    const testContent = document.getElementById('test-content-' + testId);
+    const testArrow = document.getElementById('test-arrow-' + testId);
+
+    if (!testContent) return;
+
+    // 기존 하이라이트 제거
+    document.querySelectorAll('.test-group.highlight').forEach(el => {
+      el.classList.remove('highlight');
+    });
+
+    // 부모 suite 열기
+    let parent = testContent.parentElement;
+    while (parent) {
+      if (parent.classList.contains('suite-content')) {
+        parent.classList.remove('collapsed');
+        const suiteName = parent.id.replace('suite-content-', '');
+        const arrow = document.getElementById('suite-arrow-' + suiteName);
+        if (arrow) arrow.textContent = '▼';
+        state.collapsedSuites = state.collapsedSuites.filter(s => s !== suiteName);
+      }
+      parent = parent.parentElement;
+    }
+
+    // test 펼치기
+    testContent.classList.remove('collapsed');
+    if (testArrow) testArrow.textContent = '▼';
+
+    // state 업데이트
+    if (!state.expandedTests) state.expandedTests = [];
+    if (!state.expandedTests.includes(testKey)) {
+      state.expandedTests.push(testKey);
+    }
+
+    saveState();
+
+    // test-group에 하이라이트
+    const testGroup = testContent.closest('.test-group');
+    if (testGroup) {
+      testGroup.classList.add('highlight');
+      testGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 });
 
 // 초기화: 저장된 상태가 있으면 렌더링

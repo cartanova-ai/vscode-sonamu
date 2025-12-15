@@ -200,6 +200,41 @@ export async function activate(context: vscode.ExtensionContext) {
         updateDecorationsForEditor(vscode.window.activeTextEditor);
       }
     }),
+
+    // 에디터 선택 변경 시: Naite 호출 또는 test case 라인 클릭 감지
+    vscode.window.onDidChangeTextEditorSelection((e) => {
+      // Trace Viewer Tab이 열려있지 않으면 무시
+      if (!traceTabProvider.isVisible()) return;
+
+      const editor = e.textEditor;
+      if (!editor || editor.document.languageId !== "typescript") return;
+
+      // 선택이 아닌 커서 이동만 처리 (클릭)
+      if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) return;
+      if (e.selections.length !== 1 || !e.selections[0].isEmpty) return;
+
+      const line = e.selections[0].active.line;
+      const filePath = editor.document.uri.fsPath;
+
+      // 1. Naite 호출 라인인지 확인
+      const naiteEntries = tracker.getEntriesForFile(editor.document.uri);
+      const naiteEntry = naiteEntries.find(
+        (entry) => entry.location.range.start.line === line,
+      );
+      if (naiteEntry) {
+        traceTabProvider.focusKey(naiteEntry.key);
+        return;
+      }
+
+      // 2. Test case 라인인지 확인
+      const testResults = TraceStore.getAllTestResults();
+      const testResult = testResults.find(
+        (result) => result.testFilePath === filePath && result.testLine - 1 === line,
+      );
+      if (testResult) {
+        traceTabProvider.focusTest(testResult.suiteName, testResult.testName);
+      }
+    }),
   );
 
   // 초기 데코레이터 업데이트
