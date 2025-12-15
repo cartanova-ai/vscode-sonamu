@@ -81,12 +81,12 @@
     "configuration": {
       "title": "Sonamu",
       "properties": {
-        "sonamu.decoration.enabled": {
+        "sonamu.naite.decoration.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Naite 키에 텍스트 데코레이션 표시 여부"
         },
-        "sonamu.decoration.style": {
+        "sonamu.naite.decoration.style": {
           "type": "string",
           "default": "underline",
           "enum": [
@@ -99,17 +99,17 @@
           ],
           "description": "Naite 키 텍스트 데코레이션 스타일"
         },
-        "sonamu.runtimeValue.enabled": {
+        "sonamu.naite.runtimeValue.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Naite.t() 호출 옆에 실행 시 값 표시 여부"
         },
-        "sonamu.runtimeValue.maxLength": {
+        "sonamu.naite.runtimeValue.maxLength": {
           "type": "number",
           "default": 50,
           "description": "표시할 값의 최대 문자 길이"
         },
-        "sonamu.statusBarMessages.enabled": {
+        "sonamu.naite.statusBarMessages.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Naite tracker 액션 발생 시 상태창에 메시지 표시 여부"

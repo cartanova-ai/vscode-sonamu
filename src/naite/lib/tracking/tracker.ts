@@ -77,21 +77,51 @@ export default class NaiteTracker {
 
   /**
    * 워크스페이스의 모든 TypeScript 파일에서 Naite 호출을 스캔합니다.
+   * - sonamu.config.ts가 있는 프로젝트 루트의 .ts 파일들
+   * - 해당 프로젝트의 node_modules/sonamu/src 내의 .ts 파일들
    */
   async scanWorkspace(): Promise<void> {
     this.keys.clear();
 
-    // 모든 .ts 파일 찾기 (node_modules, build, out, dist, .d.ts 제외)
-    const files = await vscode.workspace.findFiles(
-      "**/*.ts",
-      "{**/node_modules/**,**/build/**,**/out/**,**/dist/**,**/*.d.ts}",
+    // sonamu.config.ts 위치 찾기 (프로젝트 루트 결정)
+    const configFiles = await vscode.workspace.findFiles(
+      "**/sonamu.config.ts",
+      "**/node_modules/**",
     );
-
-    const scanningMessage = this.showStatusBarMessage(`스캔 중: ${files.length}개 파일...`);
-    for (const file of files) {
-      await this.scanFile(file);
+    if (configFiles.length === 0) {
+      this.showStatusBarMessage("sonamu.config.ts를 찾을 수 없습니다", {
+        timeout: 2000,
+        done: true,
+      });
+      return;
     }
-    scanningMessage.dispose();
+
+    for (const configFile of configFiles) {
+      // sonamu.config.ts가 있는 디렉토리 = 프로젝트 루트
+      const projectRoot = vscode.Uri.joinPath(configFile, "..", "..");
+
+      // RelativePattern을 사용하여 프로젝트 루트 기준으로 검색
+      const projectPattern = new vscode.RelativePattern(projectRoot, "**/*.ts");
+      const projectExclude = "{**/node_modules/**,**/build/**,**/out/**,**/dist/**,**/*.d.ts}";
+
+      // 1. 프로젝트 루트의 .ts 파일들 스캔
+      const projectFiles = await vscode.workspace.findFiles(projectPattern, projectExclude);
+
+      // 2. 해당 프로젝트의 node_modules/sonamu/src 내의 .ts 파일들 스캔
+      const sonamuPattern = new vscode.RelativePattern(
+        projectRoot,
+        "node_modules/sonamu/src/**/*.ts",
+      );
+      const sonamuFiles = await vscode.workspace.findFiles(sonamuPattern, "**/*.d.ts");
+      
+      const allFiles = [...projectFiles, ...sonamuFiles];
+
+      const scanningMessage = this.showStatusBarMessage(`스캔 중: ${allFiles.length}개 파일...`);
+      for (const file of allFiles) {
+        await this.scanFile(file);
+      }
+      scanningMessage.dispose();
+    }
 
     const keyCount = this.getAllKeys().length;
     this.showStatusBarMessage(`스캔 완료: ${keyCount}개 키 발견`, { timeout: 1000, done: true });

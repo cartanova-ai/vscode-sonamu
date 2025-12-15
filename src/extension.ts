@@ -80,7 +80,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 상태창 메시지 표시 설정 적용
   const updateStatusBarMessagesEnabled = () => {
-    const config = vscode.workspace.getConfiguration("sonamu.statusBarMessages");
+    const config = vscode.workspace.getConfiguration("sonamu.naite.statusBarMessages");
     tracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
   };
   updateStatusBarMessagesEnabled();
@@ -88,7 +88,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 설정 변경 시 업데이트
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("sonamu.statusBarMessages.enabled")) {
+      if (e.affectsConfiguration("sonamu.naite.statusBarMessages.enabled")) {
         updateStatusBarMessagesEnabled();
       }
     }),

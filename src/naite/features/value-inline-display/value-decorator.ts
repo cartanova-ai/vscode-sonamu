@@ -93,7 +93,7 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
 export function updateRuntimeDecorations(editor: vscode.TextEditor) {
   if (editor.document.languageId !== "typescript") return;
 
-  const config = vscode.workspace.getConfiguration("sonamu");
+  const config = vscode.workspace.getConfiguration("sonamu.naite");
   if (!config.get<boolean>("runtimeValue.enabled", true)) {
     if (runtimeDecorationType) {
       editor.setDecorations(runtimeDecorationType, []);
