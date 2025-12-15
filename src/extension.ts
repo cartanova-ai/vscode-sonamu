@@ -213,8 +213,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 에디터 선택 변경 시: Naite 호출 또는 test case 라인 클릭 감지
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      // Trace Viewer Tab이 열려있지 않으면 무시
-      if (!traceTabProvider.isVisible()) return;
+      // Trace Viewer Tab이 열려있지 않거나 follow가 꺼져있으면 무시
+      if (!traceTabProvider.isVisible() || !traceTabProvider.isFollowEnabled()) return;
 
       const editor = e.textEditor;
       if (!editor || editor.document.languageId !== "typescript") return;

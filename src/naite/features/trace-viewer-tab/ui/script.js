@@ -5,8 +5,29 @@ let state = vscode.getState() || {
   testResults: [],
   collapsedSuites: [],   // 닫힌 suite 이름
   expandedTests: [],     // 열린 "suite::testName" (기본 닫힘)
-  expandedTraces: []     // 열린 trace key
+  expandedTraces: [],    // 열린 trace key
+  followEnabled: true    // 에디터 클릭 시 트레이스 따라가기 (기본 켜짐)
 };
+
+// follow 버튼 초기 상태 반영
+function updateFollowButton() {
+  const btn = document.getElementById('follow-btn');
+  if (btn) {
+    if (state.followEnabled) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  }
+}
+
+function toggleFollow() {
+  state.followEnabled = !state.followEnabled;
+  updateFollowButton();
+  saveState();
+  // extension에 상태 전달
+  vscode.postMessage({ type: 'followStateChanged', enabled: state.followEnabled });
+}
 
 function saveState() {
   vscode.setState(state);
@@ -253,25 +274,19 @@ function collapseAll() {
   saveState();
 }
 
+function updateStats(suiteCount, testCount, traceCount) {
+  const stats = document.getElementById('stats');
+  if (stats) {
+    stats.textContent = suiteCount + ' suites · ' + testCount + ' tests · ' + traceCount + ' traces';
+  }
+}
+
 function renderTestResults(testResults) {
-  // 전체 trace 개수 계산
+  // Suite > Test 구조로 그룹화 (먼저 집계)
+  const suiteMap = new Map();
+  let totalTests = 0;
   let totalTraces = 0;
-  for (const result of testResults) {
-    totalTraces += result.traces.length;
-  }
 
-  // count 업데이트
-  document.getElementById('trace-count').textContent = totalTraces + '개';
-
-  // 데이터가 없으면 empty
-  if (testResults.length === 0) {
-    document.getElementById('traces-container').innerHTML =
-      '<div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>';
-    return;
-  }
-
-  // Suite > Test 구조로 그룹화
-  const suiteMap = new Map();  // suiteName -> { testMap, suiteFilePath }
   for (const result of testResults) {
     const suiteName = result.suiteName || '(no suite)';
     const testName = result.testName || '(no test)';
@@ -280,9 +295,22 @@ function renderTestResults(testResults) {
       suiteMap.set(suiteName, { testMap: new Map(), suiteFilePath: result.suiteFilePath });
     }
     const suiteData = suiteMap.get(suiteName);
-
-    // 같은 테스트가 여러번 실행될 수 있으므로 마지막 것만 사용
     suiteData.testMap.set(testName, result);
+    totalTraces += result.traces.length;
+  }
+
+  for (const suiteData of suiteMap.values()) {
+    totalTests += suiteData.testMap.size;
+  }
+
+  // stats 업데이트
+  updateStats(suiteMap.size, totalTests, totalTraces);
+
+  // 데이터가 없으면 empty
+  if (testResults.length === 0) {
+    document.getElementById('traces-container').innerHTML =
+      '<div class="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>';
+    return;
   }
 
   // HTML 생성
@@ -566,12 +594,13 @@ window.addEventListener('message', (event) => {
     const testGroup = testContent.closest('.test-group');
     if (testGroup) {
       testGroup.classList.add('highlight');
-      testGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      testGroup.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 });
 
-// 초기화: 저장된 상태가 있으면 렌더링
+// 초기화
+updateFollowButton();
 if (state.testResults && state.testResults.length > 0) {
   renderTestResults(state.testResults);
 }

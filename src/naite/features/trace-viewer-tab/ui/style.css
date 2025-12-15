@@ -9,17 +9,23 @@
 }
 body {
   font-family: var(--vscode-font-family);
-  padding: 16px;
+  padding: 0;
   color: var(--fg);
   background: var(--bg);
 }
 .header {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+#traces-container {
+  padding: 16px;
 }
 .header-left {
   display: flex;
@@ -31,12 +37,11 @@ body {
   align-items: center;
   gap: 4px;
 }
-.header h2 {
-  margin: 0;
-  font-size: 16px;
+.title {
+  font-size: 13px;
   font-weight: 500;
 }
-.header .count {
+.stats {
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
 }
@@ -51,6 +56,19 @@ body {
 }
 .header-btn:hover {
   background: var(--vscode-button-secondaryHoverBackground);
+}
+.header-btn.icon-btn {
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.header-btn.icon-btn.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+.header-btn.icon-btn.active:hover {
+  background: var(--vscode-button-hoverBackground);
 }
 .empty {
   color: var(--vscode-descriptionForeground);
@@ -122,6 +140,7 @@ body {
 /* Test level */
 .test-group {
   border-bottom: 1px solid var(--border);
+  scroll-margin-top: 40px; /* 스티키 헤더 높이 고려 */
 }
 .test-group:last-child {
   border-bottom: none;

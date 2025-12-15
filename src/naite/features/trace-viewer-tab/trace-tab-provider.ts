@@ -13,8 +13,16 @@ import traceTabHtml from "./ui/index.html";
 export class NaiteTraceTabProvider {
   private _panel: vscode.WebviewPanel | null = null;
   private _disposable: vscode.Disposable | null = null;
+  private _followEnabled: boolean = true;
 
   constructor(private readonly _context: vscode.ExtensionContext) {}
+
+  /**
+   * 에디터 클릭 시 트레이스 따라가기 활성화 여부
+   */
+  isFollowEnabled(): boolean {
+    return this._followEnabled;
+  }
 
   /**
    * 패널이 열려있는지 확인
@@ -87,6 +95,8 @@ export class NaiteTraceTabProvider {
           new vscode.Range(position, position),
           vscode.TextEditorRevealType.InCenter,
         );
+      } else if (message.type === "followStateChanged") {
+        this._followEnabled = message.enabled;
       }
     });
 

@@ -7,12 +7,17 @@
 <body>
   <div class="header">
     <div class="header-left">
-      <h2>Naite Traces</h2>
-      <span class="count" id="trace-count">0개</span>
+      <span class="title">Traces</span>
+      <span class="stats" id="stats">0 suites · 0 tests · 0 traces</span>
     </div>
     <div class="header-right">
-      <button class="header-btn" onclick="expandAll()">모두 펼치기</button>
-      <button class="header-btn" onclick="collapseAll()">모두 접기</button>
+      <button class="header-btn icon-btn active" id="follow-btn" onclick="toggleFollow()" title="에디터 클릭 시 트레이스 따라가기">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M6 1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm4 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm-8 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zM8 5v3M5 8h6" stroke="currentColor" stroke-width="1" fill="none"/>
+          <path d="M8 5v3M5 8h6" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="header-btn" onclick="collapseAll()" title="모두 접기">접기</button>
     </div>
   </div>
   <div id="traces-container">
