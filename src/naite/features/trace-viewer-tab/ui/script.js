@@ -4,7 +4,7 @@ const vscode = acquireVsCodeApi();
 let state = vscode.getState() || {
   testResults: [],
   collapsedSuites: [],   // 닫힌 suite 이름
-  collapsedTests: [],    // 닫힌 "suite::testName"
+  expandedTests: [],     // 열린 "suite::testName" (기본 닫힘)
   expandedTraces: []     // 열린 trace key
 };
 
@@ -87,17 +87,19 @@ function toggleTest(suite, testName) {
   const arrow = document.getElementById('test-arrow-' + id);
   if (!content || !arrow) return;
 
+  if (!state.expandedTests) state.expandedTests = [];
+
   const isExpanded = !content.classList.contains('collapsed');
   if (isExpanded) {
     content.classList.add('collapsed');
     arrow.textContent = '▶';
-    if (!state.collapsedTests.includes(key)) {
-      state.collapsedTests.push(key);
-    }
+    state.expandedTests = state.expandedTests.filter(t => t !== key);
   } else {
     content.classList.remove('collapsed');
     arrow.textContent = '▼';
-    state.collapsedTests = state.collapsedTests.filter(t => t !== key);
+    if (!state.expandedTests.includes(key)) {
+      state.expandedTests.push(key);
+    }
   }
   saveState();
 }
@@ -156,13 +158,21 @@ function expandAll() {
   state.collapsedSuites = [];
 
   // 모든 test 펼치기
+  const testKeys = [];
+  document.querySelectorAll('.test-header').forEach(el => {
+    const onclick = el.getAttribute('onclick');
+    const match = onclick && onclick.match(/toggleTest\('(.+?)', '(.+?)'\)/);
+    if (match) {
+      testKeys.push(match[1].replace(/\\'/g, "'") + '::' + match[2].replace(/\\'/g, "'"));
+    }
+  });
+  state.expandedTests = testKeys;
   document.querySelectorAll('.test-content').forEach(el => {
     el.classList.remove('collapsed');
   });
   document.querySelectorAll('.test-arrow').forEach(el => {
     el.textContent = '▼';
   });
-  state.collapsedTests = [];
 
   // 모든 trace 펼치기 (lazy rendering 적용)
   const expandedList = [];
@@ -222,16 +232,7 @@ function collapseAll() {
   });
 
   // 모든 test 접기
-  const testKeys = [];
-  document.querySelectorAll('.test-header').forEach(el => {
-    const onclick = el.getAttribute('onclick');
-    // toggleTest('Suite', 'Test') 형식에서 키 추출
-    const match = onclick && onclick.match(/toggleTest\('(.+?)', '(.+?)'\)/);
-    if (match) {
-      testKeys.push(match[1].replace(/\\'/g, "'") + '::' + match[2].replace(/\\'/g, "'"));
-    }
-  });
-  state.collapsedTests = testKeys;
+  state.expandedTests = [];
   document.querySelectorAll('.test-content').forEach(el => {
     el.classList.add('collapsed');
   });
@@ -312,7 +313,7 @@ function renderTestResults(testResults) {
 
     for (const [testName, result] of testMap) {
       const testKey = suiteName + '::' + testName;
-      const testExpanded = !state.collapsedTests.includes(testKey);  // 기본 열림
+      const testExpanded = state.expandedTests?.includes(testKey) ?? false;  // 기본 닫힘
       const testId = escapeId(testKey);
       const testTraces = result.traces;
 
