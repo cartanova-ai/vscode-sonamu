@@ -1,13 +1,16 @@
 const vscode = acquireVsCodeApi();
 
-// 열림/닫힘 상태 저장
-// suite, test: 기본 열림 → 닫힌 것만 추적
-// trace: 기본 닫힘 → 열린 것만 추적
-const collapsedState = {
-  suites: new Set(),    // 닫힌 suite 이름
-  tests: new Set(),     // 닫힌 "suite::testName"
+// 상태 복원 (VSCode가 보관 중인 상태)
+let state = vscode.getState() || {
+  testResults: [],
+  collapsedSuites: [],   // 닫힌 suite 이름
+  collapsedTests: [],    // 닫힌 "suite::testName"
+  expandedTraces: []     // 열린 trace key
 };
-const expandedTraces = new Set();  // 열린 trace key
+
+function saveState() {
+  vscode.setState(state);
+}
 
 function escapeHtml(str) {
   return str
@@ -66,12 +69,15 @@ function toggleSuite(name) {
   if (isExpanded) {
     content.classList.add('collapsed');
     arrow.textContent = '▶';
-    collapsedState.suites.add(name);  // 닫힘 추가
+    if (!state.collapsedSuites.includes(name)) {
+      state.collapsedSuites.push(name);
+    }
   } else {
     content.classList.remove('collapsed');
     arrow.textContent = '▼';
-    collapsedState.suites.delete(name);  // 닫힘 제거
+    state.collapsedSuites = state.collapsedSuites.filter(s => s !== name);
   }
+  saveState();
 }
 
 function toggleTest(suite, testName) {
@@ -85,12 +91,15 @@ function toggleTest(suite, testName) {
   if (isExpanded) {
     content.classList.add('collapsed');
     arrow.textContent = '▶';
-    collapsedState.tests.add(key);  // 닫힘 추가
+    if (!state.collapsedTests.includes(key)) {
+      state.collapsedTests.push(key);
+    }
   } else {
     content.classList.remove('collapsed');
     arrow.textContent = '▼';
-    collapsedState.tests.delete(key);  // 닫힘 제거
+    state.collapsedTests = state.collapsedTests.filter(t => t !== key);
   }
+  saveState();
 }
 
 function toggleTrace(suite, testName, traceKey, traceAt, traceIdx) {
@@ -104,12 +113,15 @@ function toggleTrace(suite, testName, traceKey, traceAt, traceIdx) {
   if (isExpanded) {
     content.classList.add('collapsed');
     arrow.classList.remove('expanded');
-    expandedTraces.delete(stateKey);  // 열림 제거
+    state.expandedTraces = state.expandedTraces.filter(t => t !== stateKey);
   } else {
     content.classList.remove('collapsed');
     arrow.classList.add('expanded');
-    expandedTraces.add(stateKey);  // 열림 추가
+    if (!state.expandedTraces.includes(stateKey)) {
+      state.expandedTraces.push(stateKey);
+    }
   }
+  saveState();
 }
 
 function goToLocation(filePath, lineNumber) {
@@ -124,7 +136,7 @@ function expandAll() {
   document.querySelectorAll('.suite-arrow').forEach(el => {
     el.textContent = '▼';
   });
-  collapsedState.suites.clear();
+  state.collapsedSuites = [];
 
   // 모든 test 펼치기
   document.querySelectorAll('.test-content').forEach(el => {
@@ -133,34 +145,56 @@ function expandAll() {
   document.querySelectorAll('.test-arrow').forEach(el => {
     el.textContent = '▼';
   });
-  collapsedState.tests.clear();
+  state.collapsedTests = [];
 
   // 모든 trace 펼치기
+  const expandedList = [];
   document.querySelectorAll('.trace-content').forEach(el => {
     el.classList.remove('collapsed');
     const traceId = el.id.replace('trace-content-', '');
-    expandedTraces.add(traceId);
+    expandedList.push(traceId);
   });
+  state.expandedTraces = expandedList;
   document.querySelectorAll('.trace-item .arrow').forEach(el => {
     if (!el.classList.contains('suite-arrow') && !el.classList.contains('test-arrow')) {
       el.classList.add('expanded');
     }
   });
+  saveState();
 }
 
 function collapseAll() {
-  // 모든 suite 접기
+  // 모든 suite 접기 (상태에 모든 suite 이름 추가)
+  const suiteNames = [];
   document.querySelectorAll('.suite-content').forEach(el => {
     el.classList.add('collapsed');
-    const suiteId = el.id.replace('suite-content-', '');
-    // suiteId를 원래 이름으로 변환은 복잡하므로 상태 추적 생략
+    // suite-content-{escapedName} 형식이므로 data 속성으로 원래 이름 저장 필요
+    // 대신 suite-header에서 가져옴
   });
+  document.querySelectorAll('.suite-header').forEach(el => {
+    const onclick = el.getAttribute('onclick');
+    // toggleSuite('SuiteName') 형식에서 이름 추출
+    const match = onclick && onclick.match(/toggleSuite\('(.+?)'\)/);
+    if (match) {
+      suiteNames.push(match[1].replace(/\\'/g, "'"));
+    }
+  });
+  state.collapsedSuites = suiteNames;
   document.querySelectorAll('.suite-arrow').forEach(el => {
     el.textContent = '▶';
   });
-  // collapsedState.suites - 실제 이름 추적 어려우므로 리렌더링 시 상태 재구성
 
   // 모든 test 접기
+  const testKeys = [];
+  document.querySelectorAll('.test-header').forEach(el => {
+    const onclick = el.getAttribute('onclick');
+    // toggleTest('Suite', 'Test') 형식에서 키 추출
+    const match = onclick && onclick.match(/toggleTest\('(.+?)', '(.+?)'\)/);
+    if (match) {
+      testKeys.push(match[1].replace(/\\'/g, "'") + '::' + match[2].replace(/\\'/g, "'"));
+    }
+  });
+  state.collapsedTests = testKeys;
   document.querySelectorAll('.test-content').forEach(el => {
     el.classList.add('collapsed');
   });
@@ -177,7 +211,8 @@ function collapseAll() {
       el.classList.remove('expanded');
     }
   });
-  expandedTraces.clear();
+  state.expandedTraces = [];
+  saveState();
 }
 
 function renderTestResults(testResults) {
@@ -233,7 +268,7 @@ function renderTestResults(testResults) {
       suiteTraceCount += result.traces.length;
     }
 
-    const suiteExpanded = !collapsedState.suites.has(suiteName);  // 기본 열림
+    const suiteExpanded = !state.collapsedSuites.includes(suiteName);  // 기본 열림
     const suiteId = escapeId(suiteName);
     const testFileName = suiteData.suiteFilePath ? suiteData.suiteFilePath.split('/').pop() : null;
 
@@ -250,7 +285,7 @@ function renderTestResults(testResults) {
 
     for (const [testName, result] of testMap) {
       const testKey = suiteName + '::' + testName;
-      const testExpanded = !collapsedState.tests.has(testKey);  // 기본 열림
+      const testExpanded = !state.collapsedTests.includes(testKey);  // 기본 열림
       const testId = escapeId(testKey);
       const testTraces = result.traces;
 
@@ -273,7 +308,7 @@ function renderTestResults(testResults) {
         const fileName = trace.filePath.split('/').pop() || trace.filePath;
         // 고유 식별자: suite + test + key + timestamp + index (같은 밀리초에 여러 trace 가능)
         const traceStateKey = suiteName + '::' + testName + '::' + trace.key + '::' + trace.at + '::' + traceIdx;
-        const traceExpanded = expandedTraces.has(traceStateKey);  // 기본 닫힘
+        const traceExpanded = state.expandedTraces.includes(traceStateKey);  // 기본 닫힘
         const traceId = escapeId(traceStateKey);
 
         html += '<div class="trace-item" id="item-' + traceId + '" data-filepath="' + escapeHtml(trace.filePath) + '" data-line="' + trace.lineNumber + '" data-key="' + escapeHtml(trace.key) + '">';
@@ -303,7 +338,9 @@ window.addEventListener('message', (event) => {
   const message = event.data;
 
   if (message.type === 'updateTestResults') {
-    renderTestResults(message.testResults);
+    state.testResults = message.testResults || [];
+    saveState();
+    renderTestResults(state.testResults);
   }
 
   if (message.type === 'highlightTrace') {
@@ -347,3 +384,8 @@ window.addEventListener('message', (event) => {
     }
   }
 });
+
+// 초기화: 저장된 상태가 있으면 렌더링
+if (state.testResults && state.testResults.length > 0) {
+  renderTestResults(state.testResults);
+}
