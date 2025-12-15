@@ -115,6 +115,14 @@ function toggleTrace(suite, testName, traceKey, traceAt, traceIdx) {
     arrow.classList.remove('expanded');
     state.expandedTraces = state.expandedTraces.filter(t => t !== stateKey);
   } else {
+    // lazy rendering: 처음 열 때만 JSON 렌더링
+    if (!content.dataset.rendered) {
+      const trace = findTrace(suite, testName, traceIdx);
+      if (trace) {
+        content.innerHTML = '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
+        content.dataset.rendered = 'true';
+      }
+    }
     content.classList.remove('collapsed');
     arrow.classList.add('expanded');
     if (!state.expandedTraces.includes(stateKey)) {
@@ -122,6 +130,15 @@ function toggleTrace(suite, testName, traceKey, traceAt, traceIdx) {
     }
   }
   saveState();
+}
+
+function findTrace(suite, testName, traceIdx) {
+  for (const result of state.testResults) {
+    if (result.suiteName === suite && result.testName === testName) {
+      return result.traces[traceIdx];
+    }
+  }
+  return null;
 }
 
 function goToLocation(filePath, lineNumber) {
@@ -147,12 +164,32 @@ function expandAll() {
   });
   state.collapsedTests = [];
 
-  // 모든 trace 펼치기
+  // 모든 trace 펼치기 (lazy rendering 적용)
   const expandedList = [];
   document.querySelectorAll('.trace-content').forEach(el => {
-    el.classList.remove('collapsed');
     const traceId = el.id.replace('trace-content-', '');
     expandedList.push(traceId);
+
+    // lazy rendering: 아직 렌더링 안 됐으면 렌더링
+    if (!el.dataset.rendered) {
+      // traceId에서 suite, testName, traceIdx 파싱
+      const item = el.closest('.trace-item');
+      if (item) {
+        const onclick = item.querySelector('.trace-header').getAttribute('onclick');
+        const match = onclick && onclick.match(/toggleTrace\('(.+?)', '(.+?)', '(.+?)', '(.+?)', (\d+)\)/);
+        if (match) {
+          const suite = match[1].replace(/\\'/g, "'");
+          const testName = match[2].replace(/\\'/g, "'");
+          const traceIdx = parseInt(match[5]);
+          const trace = findTrace(suite, testName, traceIdx);
+          if (trace) {
+            el.innerHTML = '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
+            el.dataset.rendered = 'true';
+          }
+        }
+      }
+    }
+    el.classList.remove('collapsed');
   });
   state.expandedTraces = expandedList;
   document.querySelectorAll('.trace-item .arrow').forEach(el => {
@@ -232,16 +269,6 @@ function renderTestResults(testResults) {
     return;
   }
 
-  // 300개 넘으면 자르기
-  const MAX_TRACES = 300;
-  let warningHtml = '';
-  if (totalTraces > MAX_TRACES) {
-    warningHtml = '<div class="warning-banner">' +
-      '<span class="icon">⚠️</span>' +
-      '<span>Trace가 ' + totalTraces + '개로 너무 많습니다. 테스트를 쪼개서 돌려보세요.</span>' +
-      '</div>';
-  }
-
   // Suite > Test 구조로 그룹화
   const suiteMap = new Map();  // suiteName -> { testMap, suiteFilePath }
   for (const result of testResults) {
@@ -258,7 +285,7 @@ function renderTestResults(testResults) {
   }
 
   // HTML 생성
-  let html = warningHtml;
+  let html = '';
 
   for (const [suiteName, suiteData] of suiteMap) {
     const testMap = suiteData.testMap;
@@ -318,9 +345,14 @@ function renderTestResults(testResults) {
         html += '<span class="location-link" onclick="event.stopPropagation(); goToLocation(\'' + escapeHtml(trace.filePath).replace(/'/g, "\\'") + '\', ' + trace.lineNumber + ')">' + escapeHtml(fileName) + ':' + trace.lineNumber + '</span>';
         html += '<span class="time">' + time + '</span>';
         html += '</div>';
-        html += '<div class="trace-content' + (traceExpanded ? '' : ' collapsed') + '" id="trace-content-' + traceId + '">';
-        html += '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
-        html += '</div>';
+        // lazy rendering: 펼쳐진 상태면 JSON 렌더링, 아니면 빈 div
+        if (traceExpanded) {
+          html += '<div class="trace-content" id="trace-content-' + traceId + '" data-rendered="true">';
+          html += '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
+          html += '</div>';
+        } else {
+          html += '<div class="trace-content collapsed" id="trace-content-' + traceId + '"></div>';
+        }
         html += '</div>';
       }
 
@@ -368,11 +400,28 @@ window.addEventListener('message', (event) => {
           }
           parent = parent.parentElement;
         }
-        // trace 내용 열기
+        // trace 내용 열기 (lazy rendering 적용)
         const traceId = item.id.replace('item-', '');
         const content = document.getElementById('trace-content-' + traceId);
         const arrow = document.getElementById('trace-arrow-' + traceId);
-        if (content) content.classList.remove('collapsed');
+        if (content) {
+          // lazy rendering
+          if (!content.dataset.rendered) {
+            const onclick = item.querySelector('.trace-header').getAttribute('onclick');
+            const match = onclick && onclick.match(/toggleTrace\('(.+?)', '(.+?)', '(.+?)', '(.+?)', (\d+)\)/);
+            if (match) {
+              const suite = match[1].replace(/\\'/g, "'");
+              const testName = match[2].replace(/\\'/g, "'");
+              const traceIdx = parseInt(match[5]);
+              const trace = findTrace(suite, testName, traceIdx);
+              if (trace) {
+                content.innerHTML = '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
+                content.dataset.rendered = 'true';
+              }
+            }
+          }
+          content.classList.remove('collapsed');
+        }
         if (arrow) arrow.classList.add('expanded');
         // 하이라이트
         item.classList.add('highlight');
