@@ -193,6 +193,12 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    // 문서 열기 시: 즉시 스캔 + trace 라인 번호 동기화 + 데코레이터 업데이트
+    vscode.workspace.onDidOpenTextDocument(async (doc) => {
+      await scanAndUpdate(doc);
+      await updateRuntimeDecorationsForDocument(doc);
+    }),
+
     // 문서 변경 시: 즉시 데코레이터 업데이트 + debounced 스캔 및 런타임 데코레이터 업데이트
     vscode.workspace.onDidChangeTextDocument((e) => {
       const editor = vscode.window.activeTextEditor;
@@ -211,7 +217,7 @@ export async function activate(context: vscode.ExtensionContext) {
       await scanAndUpdate(doc);
       await updateRuntimeDecorationsForDocument(doc);
     }),
-
+    
     // 설정 변경 시 데코레이터 업데이트
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("sonamu")) {
@@ -254,11 +260,6 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
-
-  // 초기 데코레이터 업데이트
-  if (vscode.window.activeTextEditor) {
-    updateDecorationsForEditor(vscode.window.activeTextEditor);
-  }
 
   // Provider 등록
   const selector = { language: "typescript", scheme: "file" };
