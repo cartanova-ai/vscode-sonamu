@@ -70,11 +70,11 @@
         "title": "Sonamu: Hello World"
       },
       {
-        "command": "sonamu.rescanNaite",
+        "command": "sonamu.rescanNaiteKeys",
         "title": "Sonamu: Rescan Naite Keys"
       },
       {
-        "command": "sonamu.openTraceViewerTab",
+        "command": "sonamu.openTraceViewer",
         "title": "Sonamu: Open Naite Trace Viewer"
       }
     ],

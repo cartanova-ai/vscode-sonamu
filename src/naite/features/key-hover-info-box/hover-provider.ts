@@ -20,7 +20,7 @@ export class NaiteHoverProvider implements vscode.HoverProvider {
 
     const args = encodeURIComponent(JSON.stringify([key]));
     md.appendMarkdown(
-      `[정의 ${setLocs.length}](command:naiteKey.goToDefinition?${args}) | [참조 ${getLocs.length}](command:naiteKey.goToReferences?${args})`,
+      `[정의 ${setLocs.length}](command:sonamu.naite.key.goToDefinition?${args}) | [참조 ${getLocs.length}](command:sonamu.naite.key.goToReferences?${args})`,
     );
 
     return new vscode.Hover(md);

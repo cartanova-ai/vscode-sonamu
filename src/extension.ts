@@ -56,24 +56,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // 위치로 이동하는 명령어
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "naiteTrace.goToLocation",
-      async (filePath: string, lineNumber: number) => {
-        const uri = vscode.Uri.file(filePath);
-        const doc = await vscode.workspace.openTextDocument(uri);
-        const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-        const line = lineNumber - 1;
-        const position = new vscode.Position(line, 0);
-        editor.selection = new vscode.Selection(position, position);
-        editor.revealRange(
-          new vscode.Range(position, position),
-          vscode.TextEditorRevealType.InCenter,
-        );
-      },
-    ),
-  );
 
   tracker = new NaiteTracker();
   diagnosticProvider = new NaiteDiagnosticProvider(tracker);
@@ -131,7 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = `$(plug) Naite`;
   statusBarItem.tooltip = `Naite Sockets: ${socketPaths.length}개\nClick to open Trace Viewer`;
-  statusBarItem.command = "sonamu.openTraceViewerTab";
+  statusBarItem.command = "sonamu.openTraceViewer";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
@@ -283,17 +265,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 명령어
   context.subscriptions.push(
-    vscode.commands.registerCommand("sonamu.rescanNaite", async () => {
+    vscode.commands.registerCommand("sonamu.rescanNaiteKeys", async () => {
       await tracker.scanWorkspace();
       vscode.window.showInformationMessage(`Found ${tracker.getAllKeys().length} Naite keys`);
     }),
     vscode.commands.registerCommand("sonamu.helloWorld", () => {
       vscode.window.showInformationMessage(`Sonamu: ${tracker.getAllKeys().length} keys`);
     }),
-    vscode.commands.registerCommand("sonamu.openTraceViewerTab", () => {
+    vscode.commands.registerCommand("sonamu.openTraceViewer", () => {
       traceTabProvider.show();
     }),
-    vscode.commands.registerCommand("naiteKey.goToDefinition", async (key: string) => {
+    vscode.commands.registerCommand("sonamu.naite.key.goToDefinition", async (key: string) => {
       const locs = tracker.getKeyLocations(key, "set");
 
       if (locs.length === 0) {
@@ -333,7 +315,7 @@ export async function activate(context: vscode.ExtensionContext) {
         editor.revealRange(selected.location.range, vscode.TextEditorRevealType.InCenter);
       }
     }),
-    vscode.commands.registerCommand("naiteKey.goToReferences", async (key: string) => {
+    vscode.commands.registerCommand("sonamu.naite.key.goToReferences", async (key: string) => {
       const locs = tracker.getKeyLocations(key, "get");
 
       if (locs.length === 0) {
