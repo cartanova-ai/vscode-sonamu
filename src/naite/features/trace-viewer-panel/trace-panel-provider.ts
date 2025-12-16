@@ -1,6 +1,7 @@
-import vscode from "vscode";
+import type vscode from "vscode";
 import type { NaiteMessagingTypes } from "../../lib/messaging/messaging-types";
 import { TraceStore } from "../../lib/messaging/trace-store";
+import { goToLocation } from "../../lib/utils/editor-navigation";
 import tracePanelHtml from "./ui/index.html";
 
 /**
@@ -33,16 +34,7 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(
       async (message) => {
         if (message.type === "goToLocation") {
-          const uri = vscode.Uri.file(message.filePath);
-          const doc = await vscode.workspace.openTextDocument(uri);
-          const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-          const line = message.lineNumber - 1;
-          const position = new vscode.Position(line, 0);
-          editor.selection = new vscode.Selection(position, position);
-          editor.revealRange(
-            new vscode.Range(position, position),
-            vscode.TextEditorRevealType.InCenter,
-          );
+          await goToLocation(message.filePath, message.lineNumber);
         } else if (message.type === "ready") {
           this._sendData();
         }

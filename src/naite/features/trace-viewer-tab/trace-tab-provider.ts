@@ -1,5 +1,6 @@
 import vscode from "vscode";
 import { TraceStore } from "../../lib/messaging/trace-store";
+import { goToLocation } from "../../lib/utils/editor-navigation";
 import traceTabHtml from "./ui/index.html";
 
 /**
@@ -85,16 +86,7 @@ export class NaiteTraceTabProvider {
     // 메시지 핸들러
     panel.webview.onDidReceiveMessage(async (message) => {
       if (message.type === "goToLocation") {
-        const uri = vscode.Uri.file(message.filePath);
-        const doc = await vscode.workspace.openTextDocument(uri);
-        const editor = await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-        const line = message.lineNumber - 1;
-        const position = new vscode.Position(line, 0);
-        editor.selection = new vscode.Selection(position, position);
-        editor.revealRange(
-          new vscode.Range(position, position),
-          vscode.TextEditorRevealType.InCenter,
-        );
+        await goToLocation(message.filePath, message.lineNumber);
       } else if (message.type === "followStateChanged") {
         this._followEnabled = message.enabled;
       }
