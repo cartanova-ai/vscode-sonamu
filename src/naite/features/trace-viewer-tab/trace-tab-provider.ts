@@ -111,23 +111,6 @@ export class NaiteTraceTabProvider {
   }
 
   /**
-   * 특정 위치의 trace를 하이라이트
-   */
-  highlightTrace(filePath: string, lineNumber: number, key: string): void {
-    if (!this._panel) return;
-
-    // 약간의 딜레이 후 메시지 전송 (webview 로드 대기)
-    setTimeout(() => {
-      this._panel?.webview.postMessage({
-        type: "highlightTrace",
-        filePath,
-        lineNumber,
-        key,
-      });
-    }, 100);
-  }
-
-  /**
    * 특정 key의 모든 trace로 이동하고 펼치기
    */
   focusKey(key: string): void {

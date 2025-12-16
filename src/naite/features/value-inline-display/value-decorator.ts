@@ -133,13 +133,9 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
     const hoverContent = new vscode.MarkdownString();
     hoverContent.isTrusted = true;
 
-    const commandArgs = encodeURIComponent(JSON.stringify({ filePath, lineNumber: line + 1 }));
     const reversedTraces = [...traces].reverse();
 
-    hoverContent.appendMarkdown(`**\`${lastTrace.key}\`** · ${traces.length}회 호출\n\n`);
-    hoverContent.appendMarkdown(
-      `[📊 Naite Traces에서 열기](command:sonamu.openTraceInEditor?${commandArgs})\n\n---\n\n`,
-    );
+    hoverContent.appendMarkdown(`**\`${lastTrace.key}\`** · ${traces.length}회 호출\n\n---\n\n`);
 
     reversedTraces.forEach((t, i) => {
       const time = new Date(t.at).toLocaleTimeString("ko-KR", {

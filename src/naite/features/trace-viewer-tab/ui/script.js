@@ -404,64 +404,6 @@ window.addEventListener('message', (event) => {
     renderTestResults(state.testResults);
   }
 
-  if (message.type === 'highlightTrace') {
-    // 해당 위치의 모든 trace 찾기
-    const items = document.querySelectorAll('.trace-item');
-    let firstMatch = null;
-    for (const item of items) {
-      if (item.dataset.filepath === message.filePath &&
-          parseInt(item.dataset.line) === message.lineNumber) {
-        if (!firstMatch) firstMatch = item;
-        // 부모 suite/test 열기
-        let parent = item.parentElement;
-        while (parent) {
-          if (parent.classList.contains('suite-content')) {
-            parent.classList.remove('collapsed');
-            const suiteName = parent.id.replace('suite-content-', '');
-            const arrow = document.getElementById('suite-arrow-' + suiteName);
-            if (arrow) arrow.textContent = '▼';
-          }
-          if (parent.classList.contains('test-content')) {
-            parent.classList.remove('collapsed');
-            const testId = parent.id.replace('test-content-', '');
-            const arrow = document.getElementById('test-arrow-' + testId);
-            if (arrow) arrow.textContent = '▼';
-          }
-          parent = parent.parentElement;
-        }
-        // trace 내용 열기 (lazy rendering 적용)
-        const traceId = item.id.replace('item-', '');
-        const content = document.getElementById('trace-content-' + traceId);
-        const arrow = document.getElementById('trace-arrow-' + traceId);
-        if (content) {
-          // lazy rendering
-          if (!content.dataset.rendered) {
-            const onclick = item.querySelector('.trace-header').getAttribute('onclick');
-            const match = onclick && onclick.match(/toggleTrace\('(.+?)', '(.+?)', '(.+?)', '(.+?)', (\d+)\)/);
-            if (match) {
-              const suite = match[1].replace(/\\'/g, "'");
-              const testName = match[2].replace(/\\'/g, "'");
-              const traceIdx = parseInt(match[5]);
-              const trace = findTrace(suite, testName, traceIdx);
-              if (trace) {
-                content.innerHTML = '<div class="json-viewer">' + renderJsonValue(trace.value) + '</div>';
-                content.dataset.rendered = 'true';
-              }
-            }
-          }
-          content.classList.remove('collapsed');
-        }
-        if (arrow) arrow.classList.add('expanded');
-        // 하이라이트
-        item.classList.add('highlight');
-      }
-    }
-    // 첫 번째 매칭으로 스크롤
-    if (firstMatch) {
-      firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
-
   if (message.type === 'focusKey') {
     // 해당 key의 모든 trace 찾아서 펼치기
     const items = document.querySelectorAll('.trace-item');
