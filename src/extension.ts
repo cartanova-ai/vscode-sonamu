@@ -290,22 +290,88 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("sonamu.helloWorld", () => {
       vscode.window.showInformationMessage(`Sonamu: ${tracker.getAllKeys().length} keys`);
     }),
-    vscode.commands.registerCommand(
-      "sonamu.openTraceInEditor",
-      async (args: { filePath: string; lineNumber: number }) => {
-        const traces = TraceStore.getTracesForLine(args.filePath, args.lineNumber);
-        if (traces.length === 0) {
-          vscode.window.showWarningMessage("No trace data available");
-          return;
-        }
-
-        // Trace Viewer 열고 해당 trace 하이라이트
-        traceTabProvider.show();
-        traceTabProvider.highlightTrace(args.filePath, args.lineNumber, traces[0].key);
-      },
-    ),
     vscode.commands.registerCommand("sonamu.openTraceViewerTab", () => {
       traceTabProvider.show();
+    }),
+    vscode.commands.registerCommand("naiteKey.goToDefinition", async (key: string) => {
+      const locs = tracker.getKeyLocations(key, "set");
+
+      if (locs.length === 0) {
+        vscode.window.showInformationMessage(`"${key}" 정의를 찾을 수 없습니다.`);
+        return;
+      }
+
+      if (locs.length === 1) {
+        const loc = locs[0];
+        const doc = await vscode.workspace.openTextDocument(loc.uri);
+        const editor = await vscode.window.showTextDocument(doc);
+        editor.selection = new vscode.Selection(loc.range.start, loc.range.start);
+        editor.revealRange(loc.range, vscode.TextEditorRevealType.InCenter);
+        return;
+      }
+
+      const items = locs.map((loc) => {
+        const relativePath = vscode.workspace.asRelativePath(loc.uri);
+        const line = loc.range.start.line + 1;
+        return {
+          label: `$(symbol-method) ${relativePath}:${line}`,
+          location: loc,
+        };
+      });
+
+      const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: `"${key}" 정의 선택`,
+      });
+
+      if (selected) {
+        const doc = await vscode.workspace.openTextDocument(selected.location.uri);
+        const editor = await vscode.window.showTextDocument(doc);
+        editor.selection = new vscode.Selection(
+          selected.location.range.start,
+          selected.location.range.start,
+        );
+        editor.revealRange(selected.location.range, vscode.TextEditorRevealType.InCenter);
+      }
+    }),
+    vscode.commands.registerCommand("naiteKey.goToReferences", async (key: string) => {
+      const locs = tracker.getKeyLocations(key, "get");
+
+      if (locs.length === 0) {
+        vscode.window.showInformationMessage(`"${key}" 참조를 찾을 수 없습니다.`);
+        return;
+      }
+
+      if (locs.length === 1) {
+        const loc = locs[0];
+        const doc = await vscode.workspace.openTextDocument(loc.uri);
+        const editor = await vscode.window.showTextDocument(doc);
+        editor.selection = new vscode.Selection(loc.range.start, loc.range.start);
+        editor.revealRange(loc.range, vscode.TextEditorRevealType.InCenter);
+        return;
+      }
+
+      const items = locs.map((loc) => {
+        const relativePath = vscode.workspace.asRelativePath(loc.uri);
+        const line = loc.range.start.line + 1;
+        return {
+          label: `$(references) ${relativePath}:${line}`,
+          location: loc,
+        };
+      });
+
+      const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: `"${key}" 참조 선택`,
+      });
+
+      if (selected) {
+        const doc = await vscode.workspace.openTextDocument(selected.location.uri);
+        const editor = await vscode.window.showTextDocument(doc);
+        editor.selection = new vscode.Selection(
+          selected.location.range.start,
+          selected.location.range.start,
+        );
+        editor.revealRange(selected.location.range, vscode.TextEditorRevealType.InCenter);
+      }
     }),
   );
 }
