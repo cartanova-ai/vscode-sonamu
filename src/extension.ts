@@ -23,8 +23,6 @@ import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
 import { NaiteTracker } from "./naite/lib/tracking/tracker";
 
-let diagnosticProvider: NaiteDiagnosticProvider;
-
 // ============================================================================
 // 익스텐션의 엔트리 포인트! IDE가 실행해주는건 아래 두개밖에 없어요.
 // ============================================================================
@@ -39,20 +37,14 @@ let diagnosticProvider: NaiteDiagnosticProvider;
 export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "sonamu:isActive", true);
 
-  diagnosticProvider = new NaiteDiagnosticProvider();
   await NaiteTracker.scanWorkspace();
-  diagnosticProvider.updateAllDiagnostics();
-  context.subscriptions.push(diagnosticProvider);
-
-  const socketPaths = await startSocketServers();
-  if (!socketPaths) {
-    return;
-  }
 
   const { traceTabProvider } = registerTraceViewers(context);
+  const diagnosticProvider = registerDiagnosticProvider(context);
+  diagnosticProvider.updateAllDiagnostics();
 
   registerConfigListeners(context);
-  registerDocumentEventHandlers(context, traceTabProvider);
+  registerDocumentEventHandlers(context, traceTabProvider, diagnosticProvider);
   registerLanguageProviders(context);
   registerCommands(context, traceTabProvider);
 
@@ -72,6 +64,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
+
+  const socketPaths = await startSocketServers();
 
   console.log(`[Sonamu] Naite Socket servers started: ${socketPaths.length}개`);
 }
@@ -97,14 +91,13 @@ export async function deactivate() {
  *
  * @returns 시작된 서버들의 unix domain socket 경로들의 배열
  */
-async function startSocketServers(): Promise<string[] | null> {
+async function startSocketServers(): Promise<string[]> {
   const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
 
   if (configFiles.length === 0) {
-    vscode.window.showWarningMessage(
-      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다.",
+    throw new Error(
+      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다. 그치만 sonamu.config.ts가 없으면 extension 자체가 activate되지 않아야 함이 타당합니다. 어딘가에서 변경이 일어난 것으로 추정됩니다.",
     );
-    return null;
   }
 
   const configPaths = configFiles.map((f) => f.fsPath);
@@ -114,6 +107,18 @@ async function startSocketServers(): Promise<string[] | null> {
 // ============================================================================
 // register 시리즈! 아래 친구들로 인해 extension의 기능들이 실제로 작동하게 됩니다.
 // ============================================================================
+
+/**
+ * Diagnostic Provider를 등록합니다.
+ *
+ * @param context
+ * @returns NaiteDiagnosticProvider 인스턴스
+ */
+function registerDiagnosticProvider(context: vscode.ExtensionContext): NaiteDiagnosticProvider {
+  const provider = new NaiteDiagnosticProvider();
+  context.subscriptions.push(provider);
+  return provider;
+}
 
 /**
  * Naite Trace Viewer(panel, tab)를 등록합니다.
@@ -184,28 +189,29 @@ function registerConfigListeners(context: vscode.ExtensionContext) {
 function registerDocumentEventHandlers(
   context: vscode.ExtensionContext,
   traceTabProvider: NaiteTraceTabProvider,
+  diagnosticProvider: NaiteDiagnosticProvider,
 ) {
   context.subscriptions.push(
     // 에디터 변경 시
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
-        debouncedScanAndUpdate(editor.document);
+        debouncedScanAndUpdate(editor.document, diagnosticProvider);
       }
     }),
 
     // 문서 열기 시
     vscode.workspace.onDidOpenTextDocument((doc) => {
-      debouncedScanAndUpdate(doc);
+      debouncedScanAndUpdate(doc, diagnosticProvider);
     }),
 
     // 문서 변경 시
     vscode.workspace.onDidChangeTextDocument((e) => {
-      debouncedScanAndUpdate(e.document);
+      debouncedScanAndUpdate(e.document, diagnosticProvider);
     }),
 
     // 파일 저장 시
     vscode.workspace.onDidSaveTextDocument((doc) => {
-      debouncedScanAndUpdate(doc);
+      debouncedScanAndUpdate(doc, diagnosticProvider);
     }),
 
     // 에디터 선택 변경 시 (Trace Viewer 연동)
@@ -258,10 +264,7 @@ function registerLanguageProviders(context: vscode.ExtensionContext) {
     vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider()),
     vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider()),
     vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider()),
-    vscode.languages.registerDocumentSymbolProvider(
-      selector,
-      new NaiteDocumentSymbolProvider(),
-    ),
+    vscode.languages.registerDocumentSymbolProvider(selector, new NaiteDocumentSymbolProvider()),
     vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider()),
   );
 }
@@ -344,7 +347,10 @@ function updateDecorationsForDocument(doc: vscode.TextDocument) {
  * @param doc
  * @returns
  */
-async function scanAndUpdate(doc: vscode.TextDocument) {
+async function scanAndUpdate(
+  doc: vscode.TextDocument,
+  diagnosticProvider: NaiteDiagnosticProvider,
+) {
   if (doc.languageId !== "typescript") {
     return;
   }
@@ -421,14 +427,17 @@ async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promi
 
 const scanDebounceMap = new Map<string, NodeJS.Timeout>();
 
-function debouncedScanAndUpdate(doc: vscode.TextDocument) {
+function debouncedScanAndUpdate(
+  doc: vscode.TextDocument,
+  diagnosticProvider: NaiteDiagnosticProvider,
+) {
   const key = doc.uri.toString();
   const existing = scanDebounceMap.get(key);
   if (existing) clearTimeout(existing);
   scanDebounceMap.set(
     key,
     setTimeout(async () => {
-      await scanAndUpdate(doc);
+      await scanAndUpdate(doc, diagnosticProvider);
       scanDebounceMap.delete(key);
     }, 200),
   );
