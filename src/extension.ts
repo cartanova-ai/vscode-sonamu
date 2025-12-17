@@ -22,6 +22,7 @@ import NaiteExpressionScanner from "./naite/lib/code-parsing/expression-scanner"
 import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
 import { NaiteTracker } from "./naite/lib/tracking/tracker";
+import { goToKeyLocations } from "./naite/lib/utils/editor-navigation";
 
 // ============================================================================
 // 익스텐션의 엔트리 포인트! IDE가 실행해주는건 아래 두개밖에 없어요.
@@ -363,42 +364,6 @@ async function scanAndUpdate(
   diagnosticProvider.updateDiagnostics(doc);
   updateDecorationsForDocument(doc);
   await syncTraceLineNumbersWithDocument(doc);
-}
-
-async function goToKeyLocations(key: string, type: "set" | "get", label: string) {
-  const locs = NaiteTracker.getKeyLocations(key, type);
-
-  if (locs.length === 0) {
-    vscode.window.showInformationMessage(`"${key}" ${label}를 찾을 수 없습니다.`);
-    return;
-  }
-
-  if (locs.length === 1) {
-    await revealLocation(locs[0]);
-    return;
-  }
-
-  // 여러 개일 때 QuickPick으로 선택
-  const icon = type === "set" ? "symbol-method" : "references";
-  const items = locs.map((loc) => ({
-    label: `$(${icon}) ${vscode.workspace.asRelativePath(loc.uri)}:${loc.range.start.line + 1}`,
-    location: loc,
-  }));
-
-  const selected = await vscode.window.showQuickPick(items, {
-    placeHolder: `"${key}" ${label} 선택`,
-  });
-
-  if (selected) {
-    await revealLocation(selected.location);
-  }
-}
-
-async function revealLocation(loc: vscode.Location) {
-  const doc = await vscode.workspace.openTextDocument(loc.uri);
-  const editor = await vscode.window.showTextDocument(doc);
-  editor.selection = new vscode.Selection(loc.range.start, loc.range.start);
-  editor.revealRange(loc.range, vscode.TextEditorRevealType.InCenter);
 }
 
 async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promise<void> {
