@@ -39,7 +39,7 @@ class NaiteSocketServerClass {
 
   /**
    * 여러 프로젝트의 소켓 서버를 시작합니다.
-   * @param configPaths sonamu.config.ts들의 절대 경로 배열
+   * @param configPaths unix domain socket 경로들의 배열
    */
   async startAll(configPaths: string[]): Promise<string[]> {
     const socketPaths: string[] = [];

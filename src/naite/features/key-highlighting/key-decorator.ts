@@ -41,7 +41,7 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
   return decorationType;
 }
 
-export function updateDecorations(editor: vscode.TextEditor, tracker: NaiteTracker) {
+export function updateKeyDecorations(editor: vscode.TextEditor, tracker: NaiteTracker) {
   if (editor.document.languageId !== "typescript") return;
 
   // 설정에서 decoration 활성화 여부 확인
@@ -81,7 +81,7 @@ export function updateDecorations(editor: vscode.TextEditor, tracker: NaiteTrack
   editor.setDecorations(decType, decorations);
 }
 
-export function disposeDecorations() {
+export function disposeKeyDecorations() {
   if (decorationType) {
     decorationType.dispose();
     decorationType = null;

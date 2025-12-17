@@ -1,35 +1,9 @@
 import vscode from "vscode";
-import NaiteExpressionScanner from "../../lib/code-parsing/expression-scanner";
 import type { NaiteMessagingTypes } from "../../lib/messaging/messaging-types";
 import { TraceStore } from "../../lib/messaging/trace-store";
 
 // decoration type (line 끝에 값 표시)
-let runtimeDecorationType: vscode.TextEditorDecorationType | null = null;
-
-// 파일 변경/저장 시 Naite.t 호출 위치를 스캔해서 trace 라인 번호 업데이트
-export async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promise<void> {
-  if (doc.languageId !== "typescript") return;
-
-  const filePath = doc.uri.fsPath;
-  const currentTraces = TraceStore.getAllTraces();
-  const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
-
-  if (fileTraces.length === 0) return;
-
-  // 현재 문서에서 Naite.t 호출 위치 스캔
-  const scanner = new NaiteExpressionScanner(doc);
-  const naiteCalls = Array.from(scanner.scanNaiteCalls(["Naite.t"]));
-
-  // key -> 라인 번호 매핑 생성
-  const keyToLineMap = new Map<string, number>();
-  for (const call of naiteCalls) {
-    const lineNumber = call.location.range.start.line + 1; // 1-based
-    keyToLineMap.set(call.key, lineNumber);
-  }
-
-  // trace 라인 번호 업데이트
-  TraceStore.updateTraceLineNumbers(filePath, keyToLineMap);
-}
+let inlineValueDecorationType: vscode.TextEditorDecorationType | null = null;
 
 function formatValue(value: unknown, maxLength: number = 50): string {
   try {
@@ -75,11 +49,11 @@ function truncate(str: string, maxLength: number): string {
 }
 
 function ensureDecorationType(): vscode.TextEditorDecorationType {
-  if (runtimeDecorationType) {
-    return runtimeDecorationType;
+  if (inlineValueDecorationType) {
+    return inlineValueDecorationType;
   }
 
-  runtimeDecorationType = vscode.window.createTextEditorDecorationType({
+  inlineValueDecorationType = vscode.window.createTextEditorDecorationType({
     after: {
       margin: "0 0 0 1em",
       color: new vscode.ThemeColor("editorCodeLens.foreground"),
@@ -87,16 +61,16 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
     },
   });
 
-  return runtimeDecorationType;
+  return inlineValueDecorationType;
 }
 
-export function updateRuntimeDecorations(editor: vscode.TextEditor) {
+export function updateInlineValueDecorations(editor: vscode.TextEditor) {
   if (editor.document.languageId !== "typescript") return;
 
   const config = vscode.workspace.getConfiguration("sonamu.naite");
   if (!config.get<boolean>("runtimeValue.enabled", true)) {
-    if (runtimeDecorationType) {
-      editor.setDecorations(runtimeDecorationType, []);
+    if (inlineValueDecorationType) {
+      editor.setDecorations(inlineValueDecorationType, []);
     }
     return;
   }
@@ -170,20 +144,9 @@ export function updateRuntimeDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(decType, decorations);
 }
 
-export function setupRuntimeDecorationListeners(context: vscode.ExtensionContext): void {
-  const disposable = TraceStore.onTestResultChange(() => {
-    // 새로운 test result가 들어올 때 모든 에디터의 데코레이터 업데이트
-    for (const editor of vscode.window.visibleTextEditors) {
-      updateRuntimeDecorations(editor);
-    }
-  });
-
-  context.subscriptions.push(disposable);
-}
-
-export function disposeRuntimeDecorations() {
-  if (runtimeDecorationType) {
-    runtimeDecorationType.dispose();
-    runtimeDecorationType = null;
+export function disposeInlineValueDecorations() {
+  if (inlineValueDecorationType) {
+    inlineValueDecorationType.dispose();
+    inlineValueDecorationType = null;
   }
 }

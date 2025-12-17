@@ -1,8 +1,12 @@
 import vscode from "vscode";
+import {
+  disposeInlineValueDecorations,
+  updateInlineValueDecorations,
+} from "./naite/features/inline-value-display/value-decorator";
 import { NaiteCompletionProvider } from "./naite/features/key-completion/completion-provider";
 import {
-  disposeDecorations,
-  updateDecorations,
+  disposeKeyDecorations,
+  updateKeyDecorations,
 } from "./naite/features/key-highlighting/key-decorator";
 import { NaiteHoverProvider } from "./naite/features/key-hover-info-box/hover-provider";
 import { NaiteDefinitionProvider } from "./naite/features/key-navigation/definition-provider";
@@ -14,12 +18,7 @@ import {
 import { NaiteDiagnosticProvider } from "./naite/features/key-undefined-warning/diagnostic-provider";
 import { NaiteTracePanelProvider } from "./naite/features/trace-viewer-panel/trace-panel-provider";
 import { NaiteTraceTabProvider } from "./naite/features/trace-viewer-tab/trace-tab-provider";
-import {
-  disposeRuntimeDecorations,
-  setupRuntimeDecorationListeners,
-  syncTraceLineNumbersWithDocument,
-  updateRuntimeDecorations,
-} from "./naite/features/value-inline-display/value-decorator";
+import NaiteExpressionScanner from "./naite/lib/code-parsing/expression-scanner";
 import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
 import NaiteTracker from "./naite/lib/tracking/tracker";
@@ -27,212 +26,211 @@ import NaiteTracker from "./naite/lib/tracking/tracker";
 let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
 
+// ============================================================================
+// 익스텐션의 엔트리 포인트! IDE가 실행해주는건 아래 두개밖에 없어요.
+// ============================================================================
+
+/**
+ * Extension의 시작점입니다.
+ * package.json의 activationEvents에 명시된 이벤트가 발생하면 activate이 실행됩니다.
+ *
+ * @param context
+ * @returns
+ */
 export async function activate(context: vscode.ExtensionContext) {
-  // 소나무 프로젝트에서만 UI 표시
   vscode.commands.executeCommand("setContext", "sonamu:isActive", true);
-
-  // 하단 패널 WebviewView 등록 (상태 유지됨)
-  const tracePanelProvider = new NaiteTracePanelProvider();
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      NaiteTracePanelProvider.viewType,
-      tracePanelProvider,
-      {
-        webviewOptions: { retainContextWhenHidden: true },
-      },
-    ),
-  );
-
-  // Trace Viewer (에디터 탭)
-  const traceTabProvider = new NaiteTraceTabProvider(context);
-
-  // WebviewPanel serializer 등록 (reload 후 탭 복원)
-  context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer("naiteTraceViewer", {
-      async deserializeWebviewPanel(panel: vscode.WebviewPanel, _state: unknown) {
-        // 복원된 패널 설정
-        traceTabProvider.restorePanel(panel);
-      },
-    }),
-  );
-
 
   tracker = new NaiteTracker();
   diagnosticProvider = new NaiteDiagnosticProvider(tracker);
+  await tracker.scanWorkspace();
+  diagnosticProvider.updateAllDiagnostics();
+  context.subscriptions.push(diagnosticProvider);
 
-  // 상태창 메시지 표시 설정 적용
-  const updateStatusBarMessagesEnabled = () => {
-    const config = vscode.workspace.getConfiguration("sonamu.naite.statusBarMessages");
-    tracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
-  };
-  updateStatusBarMessagesEnabled();
+  const socketPaths = await startSocketServers();
+  if (!socketPaths) {
+    return;
+  }
 
-  // 설정 변경 시 업데이트
+  const { traceTabProvider } = registerTraceViewers(context);
+
+  registerConfigListeners(context);
+  registerDocumentEventHandlers(context, traceTabProvider);
+  registerLanguageProviders(context);
+  registerCommands(context, traceTabProvider);
+
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("sonamu.naite.statusBarMessages.enabled")) {
-        updateStatusBarMessagesEnabled();
+    TraceStore.onTestResultChange(() => {
+      // 새로운 test result가 들어올 때 모든 에디터의 데코레이터 업데이트
+      for (const editor of vscode.window.visibleTextEditors) {
+        updateInlineValueDecorations(editor);
       }
     }),
   );
 
-  // 워크스페이스 스캔
-  await tracker.scanWorkspace();
-
-  // 초기 진단 실행
-  diagnosticProvider.updateAllDiagnostics();
-
-  context.subscriptions.push(diagnosticProvider);
-
-  // sonamu.config.ts 찾기 (소켓 서버 식별용)
-  const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
-  if (configFiles.length === 0) {
-    vscode.window.showWarningMessage("sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다.");
-    return;
-  }
-  const configPaths = configFiles.map((f) => f.fsPath);
-
-  // Naite Socket 서버 시작 (여러 프로젝트 동시 지원)
-  const socketPaths = await NaiteSocketServer.startAll(configPaths);
-  console.log(`[Sonamu] Naite Socket servers started: ${socketPaths.length}개`);
-
-  // Runtime decoration 리스너 등록
-  setupRuntimeDecorationListeners(context);
-
-  // 트레이스 수신 시 자동으로 Trace Viewer Tab 열기
   context.subscriptions.push(
     TraceStore.onTestResultChange((testResults) => {
-      // 트레이스가 있을 때만 탭 열기
       if (testResults.length > 0) {
         traceTabProvider.show();
       }
     }),
   );
 
-  // 상태바에 소켓 상태 표시
-  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  statusBarItem.text = `$(plug) Naite`;
-  statusBarItem.tooltip = `Naite Sockets: ${socketPaths.length}개\nClick to open Trace Viewer`;
-  statusBarItem.command = "sonamu.openTraceViewer";
-  statusBarItem.show();
-  context.subscriptions.push(statusBarItem);
+  console.log(`[Sonamu] Naite Socket servers started: ${socketPaths.length}개`);
+}
 
-  // 데코레이터 업데이트 함수 (일관된 진입점)
-  const updateDecorationsForEditor = (editor?: vscode.TextEditor) => {
-    if (!editor || editor.document.languageId !== "typescript") return;
-    updateDecorations(editor, tracker);
-    updateRuntimeDecorations(editor);
-  };
+/**
+ * Extension의 종료점입니다.
+ * 익스텐션 비활성화, VSCode 종료, 또는 창(workspace) 닫기 시 호출됩니다.
+ */
+export async function deactivate() {
+  disposeKeyDecorations();
+  disposeInlineValueDecorations();
+  await NaiteSocketServer.stop();
+}
 
-  // 특정 문서의 모든 에디터에 대해 데코레이터 업데이트
-  const updateDecorationsForDocument = (doc: vscode.TextDocument) => {
-    if (doc.languageId !== "typescript") return;
-    for (const editor of vscode.window.visibleTextEditors) {
-      if (editor.document === doc) {
-        updateDecorationsForEditor(editor);
-      }
-    }
-  };
+// ============================================================================
+// Socket Server
+// ============================================================================
 
-  // 스캔 후 데코레이터 업데이트를 포함한 완전한 파일 처리
-  const scanAndUpdate = async (doc: vscode.TextDocument) => {
-    if (doc.languageId !== "typescript") return;
-    await tracker.scanFile(doc.uri);
-    diagnosticProvider.updateDiagnostics(doc);
-    updateDecorationsForDocument(doc);
-  };
+/**
+ * Sonamu에서 보내는 테스트 정보를 받기 위한 socket 서버를 시작합니다.
+ * 각각의 프로젝트는 고유한 socket 서버를 가집니다.
+ * 만약 워크스페이스에 sonamu.config.ts가 여러 개 있다면 여러 개의 socket 서버를 시작합니다.
+ *
+ * @returns 시작된 서버들의 unix domain socket 경로들의 배열
+ */
+async function startSocketServers(): Promise<string[] | null> {
+  const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
 
-  // 런타임 데코레이터 업데이트 (trace 동기화 포함)
-  const updateRuntimeDecorationsForDocument = async (doc: vscode.TextDocument) => {
-    if (doc.languageId !== "typescript") return;
-    await syncTraceLineNumbersWithDocument(doc);
-    updateDecorationsForDocument(doc);
-  };
-
-  // 문서 변경 시 debounce된 스캔 및 런타임 데코레이터 업데이트
-  const scanDebounceMap = new Map<string, NodeJS.Timeout>();
-  const debouncedScanAndUpdate = (doc: vscode.TextDocument) => {
-    const key = doc.uri.toString();
-    const existing = scanDebounceMap.get(key);
-    if (existing) clearTimeout(existing);
-    scanDebounceMap.set(
-      key,
-      setTimeout(async () => {
-        await scanAndUpdate(doc);
-        await updateRuntimeDecorationsForDocument(doc);
-        scanDebounceMap.delete(key);
-      }, 200),
+  if (configFiles.length === 0) {
+    vscode.window.showWarningMessage(
+      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다.",
     );
-  };
+    return null;
+  }
 
-  // 이벤트 핸들러 등록
+  const configPaths = configFiles.map((f) => f.fsPath);
+  return NaiteSocketServer.startAll(configPaths);
+}
+
+// ============================================================================
+// register 시리즈! 아래 친구들로 인해 extension의 기능들이 실제로 작동하게 됩니다.
+// ============================================================================
+
+/**
+ * Naite Trace Viewer(panel, tab)를 등록합니다.
+ *
+ * @param context
+ * @returns 각 provider 인스턴스
+ */
+function registerTraceViewers(context: vscode.ExtensionContext): {
+  tracePanelProvider: NaiteTracePanelProvider;
+  traceTabProvider: NaiteTraceTabProvider;
+} {
+  // 하단 패널 WebviewView
+  const tracePanelProvider = new NaiteTracePanelProvider();
   context.subscriptions.push(
-    // 에디터 변경 시 데코레이터 업데이트
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
-      updateDecorationsForEditor(editor);
-      if (editor && editor.document.languageId === "typescript") {
-        diagnosticProvider.updateDiagnostics(editor.document);
-      }
-    }),
+    vscode.window.registerWebviewViewProvider(
+      NaiteTracePanelProvider.viewType,
+      tracePanelProvider,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
 
-    // 문서 열기 시: 즉시 스캔 + trace 라인 번호 동기화 + 데코레이터 업데이트
-    vscode.workspace.onDidOpenTextDocument(async (doc) => {
-      await scanAndUpdate(doc);
-      await updateRuntimeDecorationsForDocument(doc);
+  // 에디터 탭 WebviewPanel
+  const traceTabProvider = new NaiteTraceTabProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer("naiteTraceViewer", {
+      async deserializeWebviewPanel(panel: vscode.WebviewPanel, _state: unknown) {
+        traceTabProvider.restorePanel(panel);
+      },
     }),
+  );
 
-    // 문서 변경 시: 즉시 데코레이터 업데이트 + debounced 스캔 및 런타임 데코레이터 업데이트
-    vscode.workspace.onDidChangeTextDocument((e) => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor && e.document === editor.document) {
-        // 즉시 데코레이터 업데이트
-        updateDecorationsForEditor(editor);
-        // 스캔 및 런타임 데코레이터는 debounce (완료 후 자동 업데이트)
-        if (e.document.languageId === "typescript") {
-          debouncedScanAndUpdate(e.document);
-        }
-      }
-    }),
+  return { tracePanelProvider, traceTabProvider };
+}
 
-    // 파일 저장 시: 즉시 스캔 + trace 라인 번호 동기화 + 데코레이터 업데이트
-    vscode.workspace.onDidSaveTextDocument(async (doc) => {
-      await scanAndUpdate(doc);
-      await updateRuntimeDecorationsForDocument(doc);
-    }),
-    
-    // 설정 변경 시 데코레이터 업데이트
+/**
+ * 설정이 변경되었을 때 이를 감지해서 적절한 일을 하는 리스너를 등록합니다.
+ *
+ * @param context
+ */
+function registerConfigListeners(context: vscode.ExtensionContext) {
+  const updateStatusBarMessagesEnabled = () => {
+    const config = vscode.workspace.getConfiguration("sonamu.naite.statusBarMessages");
+    tracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
+  };
+  updateStatusBarMessagesEnabled();
+
+  context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("sonamu.naite.statusBarMessages.enabled")) {
+        updateStatusBarMessagesEnabled();
+      }
       if (e.affectsConfiguration("sonamu")) {
         updateDecorationsForEditor(vscode.window.activeTextEditor);
       }
     }),
+  );
+}
 
-    // 에디터 선택 변경 시: Naite 호출 또는 test case 라인 클릭 감지
+/**
+ * 문서 관련 이벤트(열기, 수정, 저장 등)가 발생하였을 때 적절한 일을 하는 리스너를 등록합니다.
+ *
+ * @param context
+ * @param traceTabProvider Naite Trace Viewer Tab 인스턴스입니다.
+ *                         왜 필요한가? 문서에서 Naite 호출문을 클릭(선택)하면 Naite Trace Viewer Tab 내에서
+ *                         해당하는 key의 trace를 포커스하는 기능을 구현하기 위해서입니다.
+ *                         이 기능은 provider 인스턴스를 통해 구현됩니다.
+ */
+function registerDocumentEventHandlers(
+  context: vscode.ExtensionContext,
+  traceTabProvider: NaiteTraceTabProvider,
+) {
+  context.subscriptions.push(
+    // 에디터 변경 시
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor) {
+        debouncedScanAndUpdate(editor.document);
+      }
+    }),
+
+    // 문서 열기 시
+    vscode.workspace.onDidOpenTextDocument((doc) => {
+      debouncedScanAndUpdate(doc);
+    }),
+
+    // 문서 변경 시
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      debouncedScanAndUpdate(e.document);
+    }),
+
+    // 파일 저장 시
+    vscode.workspace.onDidSaveTextDocument((doc) => {
+      debouncedScanAndUpdate(doc);
+    }),
+
+    // 에디터 선택 변경 시 (Trace Viewer 연동)
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      // Trace Viewer Tab이 열려있지 않거나 follow가 꺼져있으면 무시
       if (!traceTabProvider.isVisible() || !traceTabProvider.isFollowEnabled()) return;
 
       const editor = e.textEditor;
       if (!editor || editor.document.languageId !== "typescript") return;
-
-      // 선택이 아닌 커서 이동만 처리 (클릭)
       if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) return;
       if (e.selections.length !== 1 || !e.selections[0].isEmpty) return;
 
       const line = e.selections[0].active.line;
       const filePath = editor.document.uri.fsPath;
 
-      // 1. Naite 호출 라인인지 확인
+      // Naite 호출 라인인지 확인
       const naiteEntries = tracker.getEntriesForFile(editor.document.uri);
-      const naiteEntry = naiteEntries.find(
-        (entry) => entry.location.range.start.line === line,
-      );
+      const naiteEntry = naiteEntries.find((entry) => entry.location.range.start.line === line);
       if (naiteEntry) {
         traceTabProvider.focusKey(naiteEntry.key);
         return;
       }
 
-      // 2. Test case 라인인지 확인
+      // Test case 라인인지 확인
       const testResults = TraceStore.getAllTestResults();
       const testResult = testResults.find(
         (result) => result.testFilePath === filePath && result.testLine - 1 === line,
@@ -242,8 +240,14 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
+}
 
-  // Provider 등록
+/**
+ * 자동완성, 정의/참조로 이동, 호버링, 심볼 검색 등 언어 기능을 위한 provider들을 등록합니다.
+ *
+ * @param context
+ */
+function registerLanguageProviders(context: vscode.ExtensionContext) {
   const selector = { language: "typescript", scheme: "file" };
 
   context.subscriptions.push(
@@ -262,104 +266,172 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider(tracker)),
   );
+}
 
-  // 명령어
+/**
+ * 명령들을 등록합니다.
+ * 등록되는 명령 중에는 package.json에 명시된 공개된 명령들도 있고, 내부에서만 사용하는 명령들도 있습니다.
+ *
+ * @param context
+ * @param traceTabProvider
+ */
+function registerCommands(
+  context: vscode.ExtensionContext,
+  traceTabProvider: NaiteTraceTabProvider,
+) {
   context.subscriptions.push(
     vscode.commands.registerCommand("sonamu.rescanNaiteKeys", async () => {
       await tracker.scanWorkspace();
       vscode.window.showInformationMessage(`Found ${tracker.getAllKeys().length} Naite keys`);
     }),
+
     vscode.commands.registerCommand("sonamu.helloWorld", () => {
       vscode.window.showInformationMessage(`Sonamu: ${tracker.getAllKeys().length} keys`);
     }),
+
     vscode.commands.registerCommand("sonamu.openTraceViewer", () => {
       traceTabProvider.show();
     }),
+
     vscode.commands.registerCommand("sonamu.naite.key.goToDefinition", async (key: string) => {
-      const locs = tracker.getKeyLocations(key, "set");
-
-      if (locs.length === 0) {
-        vscode.window.showInformationMessage(`"${key}" 정의를 찾을 수 없습니다.`);
-        return;
-      }
-
-      if (locs.length === 1) {
-        const loc = locs[0];
-        const doc = await vscode.workspace.openTextDocument(loc.uri);
-        const editor = await vscode.window.showTextDocument(doc);
-        editor.selection = new vscode.Selection(loc.range.start, loc.range.start);
-        editor.revealRange(loc.range, vscode.TextEditorRevealType.InCenter);
-        return;
-      }
-
-      const items = locs.map((loc) => {
-        const relativePath = vscode.workspace.asRelativePath(loc.uri);
-        const line = loc.range.start.line + 1;
-        return {
-          label: `$(symbol-method) ${relativePath}:${line}`,
-          location: loc,
-        };
-      });
-
-      const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: `"${key}" 정의 선택`,
-      });
-
-      if (selected) {
-        const doc = await vscode.workspace.openTextDocument(selected.location.uri);
-        const editor = await vscode.window.showTextDocument(doc);
-        editor.selection = new vscode.Selection(
-          selected.location.range.start,
-          selected.location.range.start,
-        );
-        editor.revealRange(selected.location.range, vscode.TextEditorRevealType.InCenter);
-      }
+      await goToKeyLocations(key, "set", "정의");
     }),
+
     vscode.commands.registerCommand("sonamu.naite.key.goToReferences", async (key: string) => {
-      const locs = tracker.getKeyLocations(key, "get");
-
-      if (locs.length === 0) {
-        vscode.window.showInformationMessage(`"${key}" 참조를 찾을 수 없습니다.`);
-        return;
-      }
-
-      if (locs.length === 1) {
-        const loc = locs[0];
-        const doc = await vscode.workspace.openTextDocument(loc.uri);
-        const editor = await vscode.window.showTextDocument(doc);
-        editor.selection = new vscode.Selection(loc.range.start, loc.range.start);
-        editor.revealRange(loc.range, vscode.TextEditorRevealType.InCenter);
-        return;
-      }
-
-      const items = locs.map((loc) => {
-        const relativePath = vscode.workspace.asRelativePath(loc.uri);
-        const line = loc.range.start.line + 1;
-        return {
-          label: `$(references) ${relativePath}:${line}`,
-          location: loc,
-        };
-      });
-
-      const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: `"${key}" 참조 선택`,
-      });
-
-      if (selected) {
-        const doc = await vscode.workspace.openTextDocument(selected.location.uri);
-        const editor = await vscode.window.showTextDocument(doc);
-        editor.selection = new vscode.Selection(
-          selected.location.range.start,
-          selected.location.range.start,
-        );
-        editor.revealRange(selected.location.range, vscode.TextEditorRevealType.InCenter);
-      }
+      await goToKeyLocations(key, "get", "참조");
     }),
   );
 }
 
-export async function deactivate() {
-  disposeDecorations();
-  disposeRuntimeDecorations();
-  await NaiteSocketServer.stop();
+// ============================================================================
+// 기타 등등!
+// ============================================================================
+
+/**
+ * 주어진 에디터에서 보여지는 다음 decoration들을 업데이트합니다.
+ * - Naite 호출문에서 첫 번째 인자인 key를 강조하는 decoration
+ * - Naite 호출에 실제로 들어간 값을 우측에 인라인으로 표시하는 decoration
+ *
+ * @param editor
+ * @returns
+ */
+function updateDecorationsForEditor(editor?: vscode.TextEditor) {
+  if (!editor || editor.document.languageId !== "typescript") {
+    return;
+  }
+  updateKeyDecorations(editor, tracker);
+  updateInlineValueDecorations(editor);
+}
+
+/**
+ * 주어진 문서를 띄우고 있는 모든 에디터에 대해 {@link updateDecorationsForEditor}를 호출합니다.
+ *
+ * @param doc
+ * @returns
+ */
+function updateDecorationsForDocument(doc: vscode.TextDocument) {
+  if (doc.languageId !== "typescript") {
+    return;
+  }
+  for (const editor of vscode.window.visibleTextEditors) {
+    if (editor.document === doc) {
+      updateDecorationsForEditor(editor);
+    }
+  }
+}
+
+/**
+ * 문서의 변경에 대응하여 모든 것을 업데이트하고 새로 표시합니다.
+ * 코드 옆에 따라다녀야 하는 것들이 제 위치에 제대로 표시되도록 합니다.
+ * @param doc
+ * @returns
+ */
+async function scanAndUpdate(doc: vscode.TextDocument) {
+  if (doc.languageId !== "typescript") {
+    return;
+  }
+
+  // 일단 변경된 파일을 스캔하여 모든 Naite 호출을 찾아줍니다.
+  await tracker.scanFile(doc.uri);
+
+  // 이제 tracker가 최신입니다.
+  // 이를 기반으로 미사용 키 경고(diagnostic), 키 하이라이팅, 인라인 값 표시를 업데이트합니다.
+  diagnosticProvider.updateDiagnostics(doc);
+  updateDecorationsForDocument(doc);
+  await syncTraceLineNumbersWithDocument(doc);
+}
+
+async function goToKeyLocations(key: string, type: "set" | "get", label: string) {
+  const locs = tracker.getKeyLocations(key, type);
+
+  if (locs.length === 0) {
+    vscode.window.showInformationMessage(`"${key}" ${label}를 찾을 수 없습니다.`);
+    return;
+  }
+
+  if (locs.length === 1) {
+    await revealLocation(locs[0]);
+    return;
+  }
+
+  // 여러 개일 때 QuickPick으로 선택
+  const icon = type === "set" ? "symbol-method" : "references";
+  const items = locs.map((loc) => ({
+    label: `$(${icon}) ${vscode.workspace.asRelativePath(loc.uri)}:${loc.range.start.line + 1}`,
+    location: loc,
+  }));
+
+  const selected = await vscode.window.showQuickPick(items, {
+    placeHolder: `"${key}" ${label} 선택`,
+  });
+
+  if (selected) {
+    await revealLocation(selected.location);
+  }
+}
+
+async function revealLocation(loc: vscode.Location) {
+  const doc = await vscode.workspace.openTextDocument(loc.uri);
+  const editor = await vscode.window.showTextDocument(doc);
+  editor.selection = new vscode.Selection(loc.range.start, loc.range.start);
+  editor.revealRange(loc.range, vscode.TextEditorRevealType.InCenter);
+}
+
+async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promise<void> {
+  if (doc.languageId !== "typescript") return;
+
+  const filePath = doc.uri.fsPath;
+  const currentTraces = TraceStore.getAllTraces();
+  const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
+
+  if (fileTraces.length === 0) return;
+
+  // 현재 문서에서 Naite.t 호출 위치 스캔
+  const scanner = new NaiteExpressionScanner(doc);
+  const naiteCalls = Array.from(scanner.scanNaiteCalls(["Naite.t"]));
+
+  // key -> 라인 번호 매핑 생성
+  const keyToLineMap = new Map<string, number>();
+  for (const call of naiteCalls) {
+    const lineNumber = call.location.range.start.line + 1; // 1-based
+    keyToLineMap.set(call.key, lineNumber);
+  }
+
+  // trace 라인 번호 업데이트
+  TraceStore.updateTraceLineNumbers(filePath, keyToLineMap);
+}
+
+const scanDebounceMap = new Map<string, NodeJS.Timeout>();
+
+function debouncedScanAndUpdate(doc: vscode.TextDocument) {
+  const key = doc.uri.toString();
+  const existing = scanDebounceMap.get(key);
+  if (existing) clearTimeout(existing);
+  scanDebounceMap.set(
+    key,
+    setTimeout(async () => {
+      await scanAndUpdate(doc);
+      scanDebounceMap.delete(key);
+    }, 200),
+  );
 }
