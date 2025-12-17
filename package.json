@@ -2,11 +2,12 @@
   "name": "sonamu",
   "displayName": "Sonamu",
   "description": "Sonamu development support extension",
+  "icon": "images/sonamu.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/cartanova-ai/vscode-sonamu.git"
   },
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "cartanova",
   "engines": {
     "vscode": "^1.85.0"
