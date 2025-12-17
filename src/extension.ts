@@ -215,6 +215,16 @@ function registerDocumentEventHandlers(
       debouncedScanAndUpdate(doc, diagnosticProvider);
     }),
 
+    // 문서 닫힐 때 debounce timer 정리
+    vscode.workspace.onDidCloseTextDocument((doc) => {
+      const key = doc.uri.toString();
+      const timer = scanDebounceMap.get(key);
+      if (timer) {
+        clearTimeout(timer);
+        scanDebounceMap.delete(key);
+      }
+    }),
+
     // 에디터 선택 변경 시 (Trace Viewer 연동)
     vscode.window.onDidChangeTextEditorSelection((e) => {
       focusSelectionOnTraceTab(e, traceTabProvider);
