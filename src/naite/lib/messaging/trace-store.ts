@@ -48,16 +48,37 @@ class TraceStoreClass {
     }
   }
 
-  updateTraceLineNumbers(filePath: string, keyToLineMap: Map<string, number>): void {
+  /**
+   * trace의 라인 번호를 현재 문서 기준으로 업데이트합니다.
+   *
+   * @param filePath 대상 파일 경로
+   * @param keyLineEntries 현재 문서에서 스캔한 (key, lineNumber) 배열
+   */
+  updateTraceLineNumbers(
+    filePath: string,
+    keyLineEntries: Array<{ key: string; lineNumber: number }>,
+  ): void {
     let updated = false;
+
     for (const testResult of this.currentTestResults) {
       for (const trace of testResult.traces) {
-        const newLineNumber = keyToLineMap.get(trace.key);
-        if (trace.filePath === filePath && newLineNumber !== undefined) {
-          if (trace.lineNumber !== newLineNumber) {
-            trace.lineNumber = newLineNumber;
-            updated = true;
-          }
+        if (trace.filePath !== filePath) continue;
+
+        // 같은 key를 가진 엔트리들 중에서 가장 가까운 라인 번호를 찾음
+        const matchingEntries = keyLineEntries.filter((e) => e.key === trace.key);
+        if (matchingEntries.length === 0) continue;
+
+        // 원래 라인 번호와 가장 가까운 엔트리 선택
+        const closest = matchingEntries.reduce((prev, curr) =>
+          Math.abs(curr.lineNumber - trace.lineNumber) <
+          Math.abs(prev.lineNumber - trace.lineNumber)
+            ? curr
+            : prev,
+        );
+
+        if (trace.lineNumber !== closest.lineNumber) {
+          trace.lineNumber = closest.lineNumber;
+          updated = true;
         }
       }
     }

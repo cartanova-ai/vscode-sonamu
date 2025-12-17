@@ -44,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const diagnosticProvider = registerDiagnosticProvider(context);
   diagnosticProvider.updateAllDiagnostics();
 
-  registerConfigListeners(context);
+  registerConfigListeners(context, diagnosticProvider);
   registerDocumentEventHandlers(context, traceTabProvider, diagnosticProvider);
   registerLanguageProviders(context);
   registerCommands(context, traceTabProvider);
@@ -159,7 +159,10 @@ function registerTraceViewers(context: vscode.ExtensionContext): {
  *
  * @param context
  */
-function registerConfigListeners(context: vscode.ExtensionContext) {
+function registerConfigListeners(
+  context: vscode.ExtensionContext,
+  diagnosticProvider: NaiteDiagnosticProvider,
+) {
   const updateStatusBarMessagesEnabled = () => {
     const config = vscode.workspace.getConfiguration("sonamu.naite.statusBarMessages");
     NaiteTracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
@@ -172,7 +175,9 @@ function registerConfigListeners(context: vscode.ExtensionContext) {
         updateStatusBarMessagesEnabled();
       }
       if (e.affectsConfiguration("sonamu")) {
-        updateDecorationsForEditor(vscode.window.activeTextEditor);
+        if (vscode.window.activeTextEditor) {
+          debouncedScanAndUpdate(vscode.window.activeTextEditor?.document, diagnosticProvider);
+        }
       }
     }),
   );
@@ -217,32 +222,7 @@ function registerDocumentEventHandlers(
 
     // 에디터 선택 변경 시 (Trace Viewer 연동)
     vscode.window.onDidChangeTextEditorSelection((e) => {
-      if (!traceTabProvider.isVisible() || !traceTabProvider.isFollowEnabled()) return;
-
-      const editor = e.textEditor;
-      if (!editor || editor.document.languageId !== "typescript") return;
-      if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) return;
-      if (e.selections.length !== 1 || !e.selections[0].isEmpty) return;
-
-      const line = e.selections[0].active.line;
-      const filePath = editor.document.uri.fsPath;
-
-      // Naite 호출 라인인지 확인
-      const naiteEntries = NaiteTracker.getEntriesForFile(editor.document.uri);
-      const naiteEntry = naiteEntries.find((entry) => entry.location.range.start.line === line);
-      if (naiteEntry) {
-        traceTabProvider.focusKey(naiteEntry.key);
-        return;
-      }
-
-      // Test case 라인인지 확인
-      const testResults = TraceStore.getAllTestResults();
-      const testResult = testResults.find(
-        (result) => result.testFilePath === filePath && result.testLine - 1 === line,
-      );
-      if (testResult) {
-        traceTabProvider.focusTest(testResult.suiteName, testResult.testName);
-      }
+      focusSelectionOnTraceTab(e, traceTabProvider);
     }),
   );
 }
@@ -306,41 +286,8 @@ function registerCommands(
 }
 
 // ============================================================================
-// 기타 등등!
+// 기타 루틴들!
 // ============================================================================
-
-/**
- * 주어진 에디터에서 보여지는 다음 decoration들을 업데이트합니다.
- * - Naite 호출문에서 첫 번째 인자인 key를 강조하는 decoration
- * - Naite 호출에 실제로 들어간 값을 우측에 인라인으로 표시하는 decoration
- *
- * @param editor
- * @returns
- */
-function updateDecorationsForEditor(editor?: vscode.TextEditor) {
-  if (!editor || editor.document.languageId !== "typescript") {
-    return;
-  }
-  updateKeyDecorations(editor);
-  updateInlineValueDecorations(editor);
-}
-
-/**
- * 주어진 문서를 띄우고 있는 모든 에디터에 대해 {@link updateDecorationsForEditor}를 호출합니다.
- *
- * @param doc
- * @returns
- */
-function updateDecorationsForDocument(doc: vscode.TextDocument) {
-  if (doc.languageId !== "typescript") {
-    return;
-  }
-  for (const editor of vscode.window.visibleTextEditors) {
-    if (editor.document === doc) {
-      updateDecorationsForEditor(editor);
-    }
-  }
-}
 
 /**
  * 문서의 변경에 대응하여 모든 것을 업데이트하고 새로 표시합니다.
@@ -360,34 +307,58 @@ async function scanAndUpdate(
   await NaiteTracker.scanFile(doc.uri);
 
   // 이제 tracker가 최신입니다.
-  // 이를 기반으로 미사용 키 경고(diagnostic), 키 하이라이팅, 인라인 값 표시를 업데이트합니다.
+  // 이를 기반으로 미사용 키 경고(diagnostic)를 업데이트합니다.
   diagnosticProvider.updateDiagnostics(doc);
-  updateDecorationsForDocument(doc);
+
+  // decoration들도 업데이트합니다.
+  for (const editor of vscode.window.visibleTextEditors) {
+    if (editor.document === doc) {
+      updateKeyDecorations(editor);
+      updateInlineValueDecorations(editor);
+    }
+  }
+
+  // 변경된 doc에 맞추어 trace 라인 번호를 업데이트합니다.
   await syncTraceLineNumbersWithDocument(doc);
 }
 
+/**
+ * 기존 trace에 기록된 라인 번호를 변경된 doc에 맞추어 업데이트합니다.
+ *
+ * 테스트를 실행한 다음에 코드 파일을 변경하는 경우를 상정해보겠습니다.
+ * 코드 변경으로 Naite.t 호출의 줄 번호가 바뀌더라도 테스트의 결과인 trace 속 Naite.t 호출의 줄 번호가 자동으로 바뀌지는 않습니다.
+ * 이 메소드는 현재 document 기준으로 Naite.t를 스캔하여 (key, lineNumber) 배열을 만든 뒤,
+ * TraceStore의 trace들이 가진 라인 번호를 가장 가까운 위치로 갱신합니다.
+ *
+ * 동일한 key가 여러 줄에 존재하더라도, 각 trace는 원래 라인 번호와 가장 가까운 위치로 매칭됩니다.
+ *
+ * @param doc
+ */
 async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promise<void> {
-  if (doc.languageId !== "typescript") return;
+  if (doc.languageId !== "typescript") {
+    return;
+  }
 
   const filePath = doc.uri.fsPath;
   const currentTraces = TraceStore.getAllTraces();
   const fileTraces = currentTraces.filter((t) => t.filePath === filePath);
 
-  if (fileTraces.length === 0) return;
+  if (fileTraces.length === 0) {
+    return;
+  }
 
   // 현재 문서에서 Naite.t 호출 위치 스캔
   const scanner = new NaiteExpressionScanner(doc);
   const naiteCalls = Array.from(scanner.scanNaiteCalls(["Naite.t"]));
 
-  // key -> 라인 번호 매핑 생성
-  const keyToLineMap = new Map<string, number>();
-  for (const call of naiteCalls) {
-    const lineNumber = call.location.range.start.line + 1; // 1-based
-    keyToLineMap.set(call.key, lineNumber);
-  }
+  // (key, lineNumber) 배열 생성
+  const keyLineEntries = naiteCalls.map((call) => ({
+    key: call.key,
+    lineNumber: call.location.range.start.line + 1, // 1-based
+  }));
 
   // trace 라인 번호 업데이트
-  TraceStore.updateTraceLineNumbers(filePath, keyToLineMap);
+  TraceStore.updateTraceLineNumbers(filePath, keyLineEntries);
 }
 
 const scanDebounceMap = new Map<string, NodeJS.Timeout>();
@@ -406,4 +377,35 @@ function debouncedScanAndUpdate(
       scanDebounceMap.delete(key);
     }, 200),
   );
+}
+
+function focusSelectionOnTraceTab(e: vscode.TextEditorSelectionChangeEvent, traceTabProvider: NaiteTraceTabProvider) {
+  if (!traceTabProvider.isVisible() || !traceTabProvider.isFollowEnabled()) {
+    return;
+  }
+
+  const editor = e.textEditor;
+  if (!editor || editor.document.languageId !== "typescript") return;
+  if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) return;
+  if (e.selections.length !== 1 || !e.selections[0].isEmpty) return;
+
+  const line = e.selections[0].active.line;
+  const filePath = editor.document.uri.fsPath;
+
+  // Naite 호출 라인인지 확인
+  const naiteEntries = NaiteTracker.getEntriesForFile(editor.document.uri);
+  const naiteEntry = naiteEntries.find((entry) => entry.location.range.start.line === line);
+  if (naiteEntry) {
+    traceTabProvider.focusKey(naiteEntry.key);
+    return;
+  }
+
+  // Test case 라인인지 확인
+  const testResults = TraceStore.getAllTestResults();
+  const testResult = testResults.find(
+    (result) => result.testFilePath === filePath && result.testLine - 1 === line,
+  );
+  if (testResult) {
+    traceTabProvider.focusTest(testResult.suiteName, testResult.testName);
+  }
 }
