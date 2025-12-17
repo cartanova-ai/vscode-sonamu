@@ -13,7 +13,7 @@ import traceTabHtml from "./ui/index.html";
  */
 export class NaiteTraceTabProvider {
   private _panel: vscode.WebviewPanel | null = null;
-  private _disposable: vscode.Disposable | null = null;
+  private _disposables: vscode.Disposable[] = [];
   private _followEnabled: boolean = true;
 
   constructor(private readonly _context: vscode.ExtensionContext) {}
@@ -76,11 +76,7 @@ export class NaiteTraceTabProvider {
     panel.webview.html = traceTabHtml;
 
     panel.onDidDispose(() => {
-      this._panel = null;
-      if (this._disposable) {
-        this._disposable.dispose();
-        this._disposable = null;
-      }
+      this.dispose();
     });
 
     // 메시지 핸들러
@@ -96,10 +92,15 @@ export class NaiteTraceTabProvider {
     this._sendData();
 
     // trace 변경 시 업데이트
-    this._disposable = TraceStore.onTestResultChange(() => {
-      this._sendData();
-    });
-    this._context.subscriptions.push(this._disposable);
+    this._disposables.push(
+      TraceStore.onTestResultAdded(() => {
+        this._sendData();
+      }),
+      TraceStore.onTestResultChange(() => {
+        this._sendData();
+      }),
+    );
+    this._context.subscriptions.push(...this._disposables);
   }
 
   /**
@@ -147,9 +148,8 @@ export class NaiteTraceTabProvider {
       this._panel.dispose();
       this._panel = null;
     }
-    if (this._disposable) {
-      this._disposable.dispose();
-      this._disposable = null;
+    for (const d of this._disposables) {
+      d.dispose();
     }
   }
 }

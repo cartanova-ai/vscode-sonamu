@@ -45,6 +45,10 @@ export class NaiteTracePanelProvider implements vscode.WebviewViewProvider {
 
     // test result 변경 시 업데이트
     this._disposables.push(
+      TraceStore.onTestResultAdded(() => {
+        this._lastTestResults = TraceStore.getAllTestResults();
+        this._sendData();
+      }),
       TraceStore.onTestResultChange(() => {
         this._lastTestResults = TraceStore.getAllTestResults();
         this._sendData();

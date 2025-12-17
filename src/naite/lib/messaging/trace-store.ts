@@ -1,10 +1,13 @@
 import type { NaiteMessagingTypes } from "./messaging-types";
 
-type TestResultChangeListener = (testResults: NaiteMessagingTypes.TestResult[]) => void;
+type TestListener = () => void;
 
 class TraceStoreClass {
   private currentTestResults: NaiteMessagingTypes.TestResult[] = [];
-  private testResultChangeListeners: TestResultChangeListener[] = [];
+  private testResultAddedListeners: TestListener[] = [];
+  private testResultChangeListeners: TestListener[] = [];
+  private testResultAddedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly TEST_RESULT_ADDED_DEBOUNCE_DELAY = 100;
 
   addRunStart(): void {
     this.currentTestResults = [];
@@ -12,6 +15,13 @@ class TraceStoreClass {
 
   addTestResult(testResult: NaiteMessagingTypes.TestResult): void {
     this.currentTestResults.push(testResult);
+
+    if (this.testResultAddedDebounceTimer) {
+      clearTimeout(this.testResultAddedDebounceTimer);
+    }
+    this.testResultAddedDebounceTimer = setTimeout(() => {
+      this.notifyTestResultAdded();
+    }, this.TEST_RESULT_ADDED_DEBOUNCE_DELAY);
   }
 
   addRunEnd(): void {
@@ -32,19 +42,39 @@ class TraceStoreClass {
     );
   }
 
-  onTestResultChange(listener: TestResultChangeListener): { dispose: () => void } {
-    this.testResultChangeListeners.push(listener);
+  onTestResultAdded(listener: TestListener): { dispose: () => void } {
+    this.testResultAddedListeners.push(listener);
     return {
       dispose: () => {
-        const index = this.testResultChangeListeners.indexOf(listener);
-        if (index >= 0) this.testResultChangeListeners.splice(index, 1);
+        const index = this.testResultAddedListeners.indexOf(listener);
+        if (index >= 0) {
+          this.testResultAddedListeners.splice(index, 1);
+        }
       },
     };
   }
 
-  notifyTestResultChange(): void {
+  onTestResultChange(listener: TestListener): { dispose: () => void } {
+    this.testResultChangeListeners.push(listener);
+    return {
+      dispose: () => {
+        const index = this.testResultChangeListeners.indexOf(listener);
+        if (index >= 0) {
+          this.testResultChangeListeners.splice(index, 1);
+        }
+      },
+    };
+  }
+
+  private notifyTestResultAdded(): void {
+    for (const listener of this.testResultAddedListeners) {
+      listener();
+    }
+  }
+
+  private notifyTestResultChange(): void {
     for (const listener of this.testResultChangeListeners) {
-      listener(this.currentTestResults);
+      listener();
     }
   }
 
@@ -62,11 +92,15 @@ class TraceStoreClass {
 
     for (const testResult of this.currentTestResults) {
       for (const trace of testResult.traces) {
-        if (trace.filePath !== filePath) continue;
+        if (trace.filePath !== filePath) {
+          continue;
+        }
 
         // 같은 key를 가진 엔트리들 중에서 가장 가까운 라인 번호를 찾음
         const matchingEntries = keyLineEntries.filter((e) => e.key === trace.key);
-        if (matchingEntries.length === 0) continue;
+        if (matchingEntries.length === 0) {
+          continue;
+        }
 
         // 원래 라인 번호와 가장 가까운 엔트리 선택
         const closest = matchingEntries.reduce((prev, curr) =>

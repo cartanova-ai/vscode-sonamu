@@ -65,7 +65,9 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
 }
 
 export function updateInlineValueDecorations(editor: vscode.TextEditor) {
-  if (editor.document.languageId !== "typescript") return;
+  if (editor.document.languageId !== "typescript") {
+    return;
+  }
 
   const config = vscode.workspace.getConfiguration("sonamu.naite");
   if (!config.get<boolean>("runtimeValue.enabled", true)) {
@@ -96,10 +98,14 @@ export function updateInlineValueDecorations(editor: vscode.TextEditor) {
   const decorations: vscode.DecorationOptions[] = [];
 
   for (const [line, traces] of tracesByLine) {
-    if (line < 0 || line >= editor.document.lineCount) continue;
+    if (line < 0 || line >= editor.document.lineCount) {
+      continue;
+    }
 
     const lineText = editor.document.lineAt(line).text;
-    if (!lineText.includes("Naite.t(")) continue;
+    if (!lineText.includes("Naite.t(")) {
+      continue;
+    }
 
     const lastTrace = traces[traces.length - 1];
     const contentText = ` // → ${formatValue(lastTrace.value, maxLength)}`;

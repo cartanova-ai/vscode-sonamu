@@ -112,7 +112,7 @@ class NaiteSocketServerClass {
             try {
               const data = JSON.parse(line);
               console.log(`[Naite Socket ${projectHash}] Received:`, data.type);
-              this.queueMessage(data);
+              this.processMessage(data);
             } catch (err) {
               console.error(`[Naite Socket ${projectHash}] Parse error:`, err);
             }
@@ -176,48 +176,6 @@ class NaiteSocketServerClass {
    */
   getSocketPaths(): string[] {
     return Array.from(this.sockets.values()).map((s) => s.socketPath);
-  }
-
-  private queueMessage(data: NaiteMessagingTypes.NaiteMessage): void {
-    // run/start는 즉시 처리 (데이터 클리어 + 리스너 알림)
-    if (data.type === "run/start") {
-      // 대기 중인 메시지 즉시 처리
-      if (this.processDebounceTimer) {
-        clearTimeout(this.processDebounceTimer);
-        this.processDebounceTimer = null;
-      }
-      if (this.pendingMessages.length > 0) {
-        for (const msg of this.pendingMessages) {
-          this.processMessage(msg);
-        }
-        this.pendingMessages = [];
-      }
-
-      // run/start 즉시 처리
-      this.processMessage(data);
-      TraceStore.notifyTestResultChange();
-      return;
-    }
-
-    this.pendingMessages.push(data);
-
-    // 이전 타이머 취소
-    if (this.processDebounceTimer) {
-      clearTimeout(this.processDebounceTimer);
-    }
-
-    // 새 타이머 설정
-    this.processDebounceTimer = setTimeout(() => {
-      this.processDebounceTimer = null;
-
-      for (const msg of this.pendingMessages) {
-        this.processMessage(msg);
-      }
-      this.pendingMessages = [];
-
-      // 리스너 알림
-      TraceStore.notifyTestResultChange();
-    }, this.DEBOUNCE_DELAY);
   }
 
   private processMessage(data: NaiteMessagingTypes.NaiteMessage): void {

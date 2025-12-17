@@ -50,18 +50,13 @@ export async function activate(context: vscode.ExtensionContext) {
   registerCommands(context, traceTabProvider);
 
   context.subscriptions.push(
-    TraceStore.onTestResultChange(() => {
-      // 새로운 test result가 들어올 때 모든 에디터의 데코레이터 업데이트
-      for (const editor of vscode.window.visibleTextEditors) {
-        updateInlineValueDecorations(editor);
-      }
-    }),
-  );
+    TraceStore.onTestResultAdded(() => {
+      // 테스트 결과가 도착하면 Trace Viewer Tab을 보여줍니다.
+      traceTabProvider.show();
 
-  context.subscriptions.push(
-    TraceStore.onTestResultChange((testResults) => {
-      if (testResults.length > 0) {
-        traceTabProvider.show();
+      for (const editor of vscode.window.visibleTextEditors) {
+        // 유일하게 영향 받는 inline value decoration만 업데이트합니다.
+        updateInlineValueDecorations(editor);
       }
     }),
   );
@@ -287,12 +282,39 @@ function registerCommands(
 
 // ============================================================================
 // 기타 루틴들!
+// 주로 glue 코드들입니다.
 // ============================================================================
+
+const scanDebounceMap = new Map<string, NodeJS.Timeout>();
+
+/**
+ * 적절한 debounce를 적용하여 {@link scanAndUpdate}를 호출합니다.
+ * @param doc
+ * @param diagnosticProvider
+ */
+function debouncedScanAndUpdate(
+  doc: vscode.TextDocument,
+  diagnosticProvider: NaiteDiagnosticProvider,
+) {
+  const key = doc.uri.toString();
+  const existing = scanDebounceMap.get(key);
+  if (existing) {
+    clearTimeout(existing);
+  }
+  scanDebounceMap.set(
+    key,
+    setTimeout(async () => {
+      await scanAndUpdate(doc, diagnosticProvider);
+      scanDebounceMap.delete(key);
+    }, 200),
+  );
+}
 
 /**
  * 문서의 변경에 대응하여 모든 것을 업데이트하고 새로 표시합니다.
  * 코드 옆에 따라다녀야 하는 것들이 제 위치에 제대로 표시되도록 합니다.
  * @param doc
+ * @param diagnosticProvider
  * @returns
  */
 async function scanAndUpdate(
@@ -306,6 +328,9 @@ async function scanAndUpdate(
   // 일단 변경된 파일을 스캔하여 모든 Naite 호출을 찾아줍니다.
   await NaiteTracker.scanFile(doc.uri);
 
+  // 변경된 doc에 맞추어 trace 라인 번호를 업데이트합니다.
+  await syncTraceLineNumbersWithDocument(doc);
+
   // 이제 tracker가 최신입니다.
   // 이를 기반으로 미사용 키 경고(diagnostic)를 업데이트합니다.
   diagnosticProvider.updateDiagnostics(doc);
@@ -317,9 +342,6 @@ async function scanAndUpdate(
       updateInlineValueDecorations(editor);
     }
   }
-
-  // 변경된 doc에 맞추어 trace 라인 번호를 업데이트합니다.
-  await syncTraceLineNumbersWithDocument(doc);
 }
 
 /**
@@ -327,7 +349,7 @@ async function scanAndUpdate(
  *
  * 테스트를 실행한 다음에 코드 파일을 변경하는 경우를 상정해보겠습니다.
  * 코드 변경으로 Naite.t 호출의 줄 번호가 바뀌더라도 테스트의 결과인 trace 속 Naite.t 호출의 줄 번호가 자동으로 바뀌지는 않습니다.
- * 이 메소드는 현재 document 기준으로 Naite.t를 스캔하여 (key, lineNumber) 배열을 만든 뒤,
+ * 이를 해결하기 위해 현재 document 기준으로 Naite.t를 스캔하여 (key, lineNumber) 배열을 만든 뒤,
  * TraceStore의 trace들이 가진 라인 번호를 가장 가까운 위치로 갱신합니다.
  *
  * 동일한 key가 여러 줄에 존재하더라도, 각 trace는 원래 라인 번호와 가장 가까운 위치로 매칭됩니다.
@@ -361,33 +383,33 @@ async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promi
   TraceStore.updateTraceLineNumbers(filePath, keyLineEntries);
 }
 
-const scanDebounceMap = new Map<string, NodeJS.Timeout>();
-
-function debouncedScanAndUpdate(
-  doc: vscode.TextDocument,
-  diagnosticProvider: NaiteDiagnosticProvider,
+/**
+ * 에디터에서 선택된 부분에 해당하는 엔트리를 Trace Viewer Tab에서 포커스합니다.
+ *
+ * 코드에서 Naite 호출문이나 테스트 케이스를 선택하면 그걸 Trace Viewer Tab에서 보여주는 기능을 구현합니다.
+ *
+ * @param e
+ * @param traceTabProvider
+ * @returns
+ */
+function focusSelectionOnTraceTab(
+  e: vscode.TextEditorSelectionChangeEvent,
+  traceTabProvider: NaiteTraceTabProvider,
 ) {
-  const key = doc.uri.toString();
-  const existing = scanDebounceMap.get(key);
-  if (existing) clearTimeout(existing);
-  scanDebounceMap.set(
-    key,
-    setTimeout(async () => {
-      await scanAndUpdate(doc, diagnosticProvider);
-      scanDebounceMap.delete(key);
-    }, 200),
-  );
-}
-
-function focusSelectionOnTraceTab(e: vscode.TextEditorSelectionChangeEvent, traceTabProvider: NaiteTraceTabProvider) {
   if (!traceTabProvider.isVisible() || !traceTabProvider.isFollowEnabled()) {
     return;
   }
 
   const editor = e.textEditor;
-  if (!editor || editor.document.languageId !== "typescript") return;
-  if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) return;
-  if (e.selections.length !== 1 || !e.selections[0].isEmpty) return;
+  if (!editor || editor.document.languageId !== "typescript") {
+    return;
+  }
+  if (e.kind !== vscode.TextEditorSelectionChangeKind.Mouse) {
+    return;
+  }
+  if (e.selections.length !== 1 || !e.selections[0].isEmpty) {
+    return;
+  }
 
   const line = e.selections[0].active.line;
   const filePath = editor.document.uri.fsPath;
