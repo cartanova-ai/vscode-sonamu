@@ -1,7 +1,6 @@
 import ts from "typescript";
 import vscode from "vscode";
-import type NaiteTracker from "../../lib/tracking/tracker";
-import { matchesWildcard } from "../../lib/tracking/tracker";
+import { NaiteTracker, matchesWildcard } from "../../lib/tracking/tracker";
 
 /**
  * 사용 패턴(get)에서 정의되지 않은 키 사용 시 경고를 표시합니다
@@ -9,7 +8,7 @@ import { matchesWildcard } from "../../lib/tracking/tracker";
 export class NaiteDiagnosticProvider {
   private diagnosticCollection: vscode.DiagnosticCollection;
 
-  constructor(private tracker: NaiteTracker) {
+  constructor() {
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection("naite");
   }
 
@@ -27,7 +26,7 @@ export class NaiteDiagnosticProvider {
 
     const diagnostics: vscode.Diagnostic[] = [];
     const sourceCode = document.getText();
-    const config = this.tracker.getConfig();
+    const config = NaiteTracker.getConfig();
 
     const sourceFile = ts.createSourceFile(
       document.uri.fsPath,
@@ -55,9 +54,9 @@ export class NaiteDiagnosticProvider {
                   const keyValue = firstArg.text;
 
                   // 와일드카드 패턴(*)을 지원하여 정의된 키들과 매칭 여부 확인
-                  const definedKeys = this.tracker
+                  const definedKeys = NaiteTracker
                     .getAllKeys()
-                    .filter((k) => this.tracker.getKeyLocations(k, "set").length > 0);
+                    .filter((k) => NaiteTracker.getKeyLocations(k, "set").length > 0);
 
                   if (!matchesWildcard(keyValue, definedKeys)) {
                     // 키 부분의 범위 계산

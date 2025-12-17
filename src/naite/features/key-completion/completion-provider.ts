@@ -1,11 +1,10 @@
 import vscode from "vscode";
-import type NaiteTracker from "../../lib/tracking/tracker";
+import { NaiteTracker } from "../../lib/tracking/tracker";
 
 /**
  * Naite 호출에서 자동완성을 제공합니다
  */
 export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
-  constructor(private tracker: NaiteTracker) {}
 
   provideCompletionItems(
     document: vscode.TextDocument,
@@ -14,7 +13,7 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
     const linePrefix = document.lineAt(position).text.substring(0, position.character);
 
     // 설정된 모든 패턴에 대해 체크
-    const config = this.tracker.getConfig();
+    const config = NaiteTracker.getConfig();
     const allPatterns = [...config.setPatterns, ...config.getPatterns];
 
     // 패턴 매칭 regex 생성 (예: /Naite\.(t|get|safeGet|expect|expectWithSnapshot)\(["']$/)
@@ -42,10 +41,10 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     // 모든 Naite 키를 자동완성 항목으로 변환
-    const keys = this.tracker.getAllKeys();
+    const keys = NaiteTracker.getAllKeys();
     const completionItems = keys.map((key) => {
-      const setLocs = this.tracker.getKeyLocations(key, "set");
-      const getLocs = this.tracker.getKeyLocations(key, "get");
+      const setLocs = NaiteTracker.getKeyLocations(key, "set");
+      const getLocs = NaiteTracker.getKeyLocations(key, "get");
 
       // 정의된 파일명 (첫 번째 set 위치)
       const definedIn =

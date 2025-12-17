@@ -19,7 +19,7 @@ export function matchesWildcard(pattern: string, keys: string[]): boolean {
 /**
  * TypeScript 파일을 파싱하여 Naite 호출을 찾습니다
  */
-export default class NaiteTracker {
+class NaiteTrackerClass {
   private keys: NaiteKeysMap = new Map();
   private config: NaitePatternConfig = {
     setPatterns: ["Naite.t"],
@@ -229,3 +229,5 @@ export default class NaiteTracker {
     return extractor.extractKeyAtPosition(position, patterns);
   }
 }
+
+export const NaiteTracker = new NaiteTrackerClass();

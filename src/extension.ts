@@ -21,9 +21,8 @@ import { NaiteTraceTabProvider } from "./naite/features/trace-viewer-tab/trace-t
 import NaiteExpressionScanner from "./naite/lib/code-parsing/expression-scanner";
 import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
-import NaiteTracker from "./naite/lib/tracking/tracker";
+import { NaiteTracker } from "./naite/lib/tracking/tracker";
 
-let tracker: NaiteTracker;
 let diagnosticProvider: NaiteDiagnosticProvider;
 
 // ============================================================================
@@ -40,9 +39,8 @@ let diagnosticProvider: NaiteDiagnosticProvider;
 export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "sonamu:isActive", true);
 
-  tracker = new NaiteTracker();
-  diagnosticProvider = new NaiteDiagnosticProvider(tracker);
-  await tracker.scanWorkspace();
+  diagnosticProvider = new NaiteDiagnosticProvider();
+  await NaiteTracker.scanWorkspace();
   diagnosticProvider.updateAllDiagnostics();
   context.subscriptions.push(diagnosticProvider);
 
@@ -158,7 +156,7 @@ function registerTraceViewers(context: vscode.ExtensionContext): {
 function registerConfigListeners(context: vscode.ExtensionContext) {
   const updateStatusBarMessagesEnabled = () => {
     const config = vscode.workspace.getConfiguration("sonamu.naite.statusBarMessages");
-    tracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
+    NaiteTracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
   };
   updateStatusBarMessagesEnabled();
 
@@ -223,7 +221,7 @@ function registerDocumentEventHandlers(
       const filePath = editor.document.uri.fsPath;
 
       // Naite 호출 라인인지 확인
-      const naiteEntries = tracker.getEntriesForFile(editor.document.uri);
+      const naiteEntries = NaiteTracker.getEntriesForFile(editor.document.uri);
       const naiteEntry = naiteEntries.find((entry) => entry.location.range.start.line === line);
       if (naiteEntry) {
         traceTabProvider.focusKey(naiteEntry.key);
@@ -253,18 +251,18 @@ function registerLanguageProviders(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
       selector,
-      new NaiteCompletionProvider(tracker),
+      new NaiteCompletionProvider(),
       '"',
       "'",
     ),
-    vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider(tracker)),
-    vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider(tracker)),
-    vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider(tracker)),
+    vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider()),
+    vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider()),
+    vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider()),
     vscode.languages.registerDocumentSymbolProvider(
       selector,
-      new NaiteDocumentSymbolProvider(tracker),
+      new NaiteDocumentSymbolProvider(),
     ),
-    vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider(tracker)),
+    vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider()),
   );
 }
 
@@ -281,12 +279,12 @@ function registerCommands(
 ) {
   context.subscriptions.push(
     vscode.commands.registerCommand("sonamu.rescanNaiteKeys", async () => {
-      await tracker.scanWorkspace();
-      vscode.window.showInformationMessage(`Found ${tracker.getAllKeys().length} Naite keys`);
+      await NaiteTracker.scanWorkspace();
+      vscode.window.showInformationMessage(`Found ${NaiteTracker.getAllKeys().length} Naite keys`);
     }),
 
     vscode.commands.registerCommand("sonamu.helloWorld", () => {
-      vscode.window.showInformationMessage(`Sonamu: ${tracker.getAllKeys().length} keys`);
+      vscode.window.showInformationMessage(`Sonamu: ${NaiteTracker.getAllKeys().length} keys`);
     }),
 
     vscode.commands.registerCommand("sonamu.openTraceViewer", () => {
@@ -319,7 +317,7 @@ function updateDecorationsForEditor(editor?: vscode.TextEditor) {
   if (!editor || editor.document.languageId !== "typescript") {
     return;
   }
-  updateKeyDecorations(editor, tracker);
+  updateKeyDecorations(editor);
   updateInlineValueDecorations(editor);
 }
 
@@ -352,7 +350,7 @@ async function scanAndUpdate(doc: vscode.TextDocument) {
   }
 
   // 일단 변경된 파일을 스캔하여 모든 Naite 호출을 찾아줍니다.
-  await tracker.scanFile(doc.uri);
+  await NaiteTracker.scanFile(doc.uri);
 
   // 이제 tracker가 최신입니다.
   // 이를 기반으로 미사용 키 경고(diagnostic), 키 하이라이팅, 인라인 값 표시를 업데이트합니다.
@@ -362,7 +360,7 @@ async function scanAndUpdate(doc: vscode.TextDocument) {
 }
 
 async function goToKeyLocations(key: string, type: "set" | "get", label: string) {
-  const locs = tracker.getKeyLocations(key, type);
+  const locs = NaiteTracker.getKeyLocations(key, type);
 
   if (locs.length === 0) {
     vscode.window.showInformationMessage(`"${key}" ${label}를 찾을 수 없습니다.`);

@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type NaiteTracker from "../../lib/tracking/tracker";
+import { NaiteTracker } from "../../lib/tracking/tracker";
 
 let decorationType: vscode.TextEditorDecorationType | null = null;
 let currentStyle: string = "";
@@ -41,7 +41,7 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
   return decorationType;
 }
 
-export function updateKeyDecorations(editor: vscode.TextEditor, tracker: NaiteTracker) {
+export function updateKeyDecorations(editor: vscode.TextEditor) {
   if (editor.document.languageId !== "typescript") return;
 
   // 설정에서 decoration 활성화 여부 확인
@@ -57,7 +57,7 @@ export function updateKeyDecorations(editor: vscode.TextEditor, tracker: NaiteTr
   const decType = ensureDecorationType();
 
   // tracker에서 스캔된 데이터 사용 (주석 자동 제외)
-  const entries = tracker.getEntriesForFile(editor.document.uri);
+  const entries = NaiteTracker.getEntriesForFile(editor.document.uri);
   const decorations: vscode.DecorationOptions[] = [];
 
   for (const entry of entries) {

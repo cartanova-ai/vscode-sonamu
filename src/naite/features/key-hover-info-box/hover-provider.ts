@@ -1,18 +1,16 @@
 import vscode from "vscode";
-import type NaiteTracker from "../../lib/tracking/tracker";
+import { NaiteTracker } from "../../lib/tracking/tracker";
 
 export class NaiteHoverProvider implements vscode.HoverProvider {
-  constructor(private tracker: NaiteTracker) {}
-
   async provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): Promise<vscode.Hover | undefined> {
-    const key = this.tracker.getKeyAtPosition(document, position);
+    const key = NaiteTracker.getKeyAtPosition(document, position);
     if (!key) return undefined;
 
-    const setLocs = this.tracker.getKeyLocations(key, "set");
-    const getLocs = this.tracker.getKeyLocations(key, "get");
+    const setLocs = NaiteTracker.getKeyLocations(key, "set");
+    const getLocs = NaiteTracker.getKeyLocations(key, "get");
 
     const md = new vscode.MarkdownString();
     md.isTrusted = true;
