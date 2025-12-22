@@ -568,8 +568,9 @@ export default function App() {
           // 검색 모드
           <>
             <div className="search-container">
-              <svg className="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/>
+              <svg className="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="7" cy="7" r="4.5" />
+                <line x1="10.5" y1="10.5" x2="14" y2="14" strokeLinecap="round" />
               </svg>
               <input
                 ref={searchInputRef}
@@ -597,9 +598,11 @@ export default function App() {
                 onClick={toggleFollow}
                 title="에디터 클릭 시 트레이스 따라가기"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M6 1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm4 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5-.5h-3a.5.5 0 0 1-.5-.5v-3zm-8 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zM8 5v3M5 8h6" stroke="currentColor" strokeWidth="1" fill="none"/>
-                  <path d="M8 5v3M5 8h6" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <rect x="5.5" y="1.5" width="5" height="3" rx="0.5" />
+                  <rect x="1.5" y="9.5" width="4" height="4" rx="0.5" />
+                  <rect x="10.5" y="9.5" width="4" height="4" rx="0.5" />
+                  <path d="M8 4.5v3.5M3.5 9.5V8h9v1.5" strokeLinecap="round" />
                 </svg>
               </button>
               <button type="button" className="header-btn" onClick={collapseAll} title="모두 접기">
@@ -623,8 +626,9 @@ export default function App() {
                 onClick={openSearch}
                 title="검색 (key 또는 value)"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="7" cy="7" r="4.5" />
+                  <line x1="10.5" y1="10.5" x2="14" y2="14" strokeLinecap="round" />
                 </svg>
               </button>
               <button
@@ -634,9 +638,11 @@ export default function App() {
                 onClick={toggleFollow}
                 title="에디터 클릭 시 트레이스 따라가기"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M6 1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm4 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5-.5h-3a.5.5 0 0 1-.5-.5v-3zm-8 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zM8 5v3M5 8h6" stroke="currentColor" strokeWidth="1" fill="none"/>
-                  <path d="M8 5v3M5 8h6" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <rect x="5.5" y="1.5" width="5" height="3" rx="0.5" />
+                  <rect x="1.5" y="9.5" width="4" height="4" rx="0.5" />
+                  <rect x="10.5" y="9.5" width="4" height="4" rx="0.5" />
+                  <path d="M8 4.5v3.5M3.5 9.5V8h9v1.5" strokeLinecap="round" />
                 </svg>
               </button>
               <button type="button" className="header-btn" onClick={collapseAll} title="모두 접기">
