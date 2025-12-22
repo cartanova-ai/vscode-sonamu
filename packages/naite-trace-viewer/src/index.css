@@ -4,6 +4,7 @@
    ============================================================================= */
 :root {
   /* 기본 색상 */
+  --vscode-editor-background: #1e1e1e;
   --vscode-editor-foreground: #cccccc;
   --vscode-list-hoverBackground: #2a2d2e;
   --vscode-textLink-foreground: #3794ff;
@@ -33,6 +34,7 @@
   --vscode-editor-font-family: Menlo, Monaco, "Courier New", monospace;
 
   /* 단축 변수 */
+  --bg: var(--vscode-editor-background);
   --fg: var(--vscode-editor-foreground);
   --hover: var(--vscode-list-hoverBackground);
   --accent: var(--vscode-textLink-foreground);
@@ -53,6 +55,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--bg);
 }
 #traces-container {
   padding: 16px;

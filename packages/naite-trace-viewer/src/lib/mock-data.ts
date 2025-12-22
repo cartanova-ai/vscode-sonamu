@@ -2,7 +2,7 @@ import type { NaiteMessagingTypes } from "naite-types";
 
 export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
   {
-    suiteName: "MathService",
+    suiteName: "MathService1",
     testName: "add 함수 테스트",
     testFilePath: "/src/services/math.test.ts",
     testLine: 10,
@@ -27,7 +27,82 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     ],
   },
   {
-    suiteName: "MathService",
+    suiteName: "MathService2",
+    testName: "add 함수 테스트",
+    testFilePath: "/src/services/math.test.ts",
+    testLine: 10,
+    status: "passed",
+    duration: 123,
+    receivedAt: new Date().toISOString(),
+    traces: [
+      {
+        key: "add:params",
+        value: { a: 1, b: 2 },
+        filePath: "/src/services/math.ts",
+        lineNumber: 10,
+        at: "math.ts:10",
+      },
+      {
+        key: "add:result",
+        value: 3,
+        filePath: "/src/services/math.ts",
+        lineNumber: 15,
+        at: "math.ts:15",
+      },
+    ],
+  },
+  {
+    suiteName: "MathService3",
+    testName: "add 함수 테스트",
+    testFilePath: "/src/services/math.test.ts",
+    testLine: 10,
+    status: "passed",
+    duration: 123,
+    receivedAt: new Date().toISOString(),
+    traces: [
+      {
+        key: "add:params",
+        value: { a: 1, b: 2 },
+        filePath: "/src/services/math.ts",
+        lineNumber: 10,
+        at: "math.ts:10",
+      },
+      {
+        key: "add:result",
+        value: 3,
+        filePath: "/src/services/math.ts",
+        lineNumber: 15,
+        at: "math.ts:15",
+      },
+    ],
+  },
+  {
+    suiteName: "MathService4",
+    testName: "add 함수 테스트",
+    testFilePath: "/src/services/math.test.ts",
+    testLine: 10,
+    status: "passed",
+    duration: 123,
+    receivedAt: new Date().toISOString(),
+    traces: [
+      {
+        key: "add:params",
+        value: { a: 1, b: 2 },
+        filePath: "/src/services/math.ts",
+        lineNumber: 10,
+        at: "math.ts:10",
+      },
+      {
+        key: "add:result",
+        value: 3,
+        filePath: "/src/services/math.ts",
+        lineNumber: 15,
+        at: "math.ts:15",
+      },
+    ],
+  },
+  {
+    suiteName: "MathService5",
     testName: "subtract 함수 테스트",
     testFilePath: "/src/services/math.test.ts",
     testLine: 20,
