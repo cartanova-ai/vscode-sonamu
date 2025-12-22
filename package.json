@@ -55,16 +55,6 @@
         }
       ]
     },
-    "views": {
-      "naitePanel": [
-        {
-          "type": "webview",
-          "id": "naiteTracePanelView",
-          "name": "Traces",
-          "when": "sonamu:isActive"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "sonamu.helloWorld",
