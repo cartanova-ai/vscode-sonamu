@@ -35,34 +35,20 @@ import { goToKeyLocations } from "./naite/lib/utils/editor-navigation";
  * @returns
  */
 export async function activate(context: vscode.ExtensionContext) {
-  vscode.commands.executeCommand("setContext", "sonamu:isActive", true);
-
   await NaiteTracker.scanWorkspace();
 
   const traceViewerProvider = registerTraceViewerProvider(context);
   const diagnosticProvider = registerDiagnosticProvider(context);
   diagnosticProvider.updateAllDiagnostics();
 
-  registerConfigListeners(context, diagnosticProvider);
-  registerDocumentEventHandlers(context, traceViewerProvider, diagnosticProvider);
-  registerLanguageProviders(context);
   registerCommands(context, traceViewerProvider);
+  registerConfigListeners(context, diagnosticProvider);
+  registerLanguageProviders(context);
+  registerDocumentEventHandlers(context, traceViewerProvider, diagnosticProvider);
+  registerTestResultAddedListener(context, traceViewerProvider);
 
-  context.subscriptions.push(
-    TraceStore.onTestResultAdded(() => {
-      // 테스트 결과가 도착하면 Trace Viewer Tab을 보여줍니다.
-      traceViewerProvider.show();
-
-      for (const editor of vscode.window.visibleTextEditors) {
-        // 유일하게 영향 받는 inline value decoration만 업데이트합니다.
-        updateInlineValueDecorations(editor);
-      }
-    }),
-  );
-
-  const socketPaths = await startSocketServers();
-
-  console.log(`[Sonamu] Naite Socket servers started: ${socketPaths.length}개`);
+  const configPaths = await findConfigPaths();
+  await NaiteSocketServer.startAll(configPaths);
 }
 
 /**
@@ -76,44 +62,8 @@ export async function deactivate() {
 }
 
 // ============================================================================
-// Socket Server
-// ============================================================================
-
-/**
- * Sonamu에서 보내는 테스트 정보를 받기 위한 socket 서버를 시작합니다.
- * 각각의 프로젝트는 고유한 socket 서버를 가집니다.
- * 만약 워크스페이스에 sonamu.config.ts가 여러 개 있다면 여러 개의 socket 서버를 시작합니다.
- *
- * @returns 시작된 서버들의 unix domain socket 경로들의 배열
- */
-async function startSocketServers(): Promise<string[]> {
-  const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
-
-  if (configFiles.length === 0) {
-    throw new Error(
-      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다. 그치만 sonamu.config.ts가 없으면 extension 자체가 activate되지 않아야 함이 타당합니다. 어딘가에서 변경이 일어난 것으로 추정됩니다.",
-    );
-  }
-
-  const configPaths = configFiles.map((f) => f.fsPath);
-  return NaiteSocketServer.startAll(configPaths);
-}
-
-// ============================================================================
 // register 시리즈! 아래 친구들로 인해 extension의 기능들이 실제로 작동하게 됩니다.
 // ============================================================================
-
-/**
- * Diagnostic Provider를 등록합니다.
- *
- * @param context
- * @returns NaiteDiagnosticProvider 인스턴스
- */
-function registerDiagnosticProvider(context: vscode.ExtensionContext): NaiteDiagnosticProvider {
-  const provider = new NaiteDiagnosticProvider();
-  context.subscriptions.push(provider);
-  return provider;
-}
 
 /**
  * Naite Trace Viewer를 등록합니다.
@@ -133,6 +83,53 @@ function registerTraceViewerProvider(context: vscode.ExtensionContext): NaiteTra
   );
 
   return traceViewerProvider;
+}
+
+/**
+ * Diagnostic Provider를 등록합니다.
+ *
+ * @param context
+ * @returns NaiteDiagnosticProvider 인스턴스
+ */
+function registerDiagnosticProvider(context: vscode.ExtensionContext): NaiteDiagnosticProvider {
+  const provider = new NaiteDiagnosticProvider();
+  context.subscriptions.push(provider);
+  return provider;
+}
+
+/**
+ * 명령들을 등록합니다.
+ * 등록되는 명령 중에는 package.json에 명시된 공개된 명령들도 있고, 내부에서만 사용하는 명령들도 있습니다.
+ *
+ * @param context
+ * @param traceTabProvider
+ */
+function registerCommands(
+  context: vscode.ExtensionContext,
+  traceTabProvider: NaiteTraceViewerProvider,
+) {
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sonamu.rescanNaiteKeys", async () => {
+      await NaiteTracker.scanWorkspace();
+      vscode.window.showInformationMessage(`Found ${NaiteTracker.getAllKeys().length} Naite keys`);
+    }),
+
+    vscode.commands.registerCommand("sonamu.helloWorld", () => {
+      vscode.window.showInformationMessage(`Sonamu: ${NaiteTracker.getAllKeys().length} keys`);
+    }),
+
+    vscode.commands.registerCommand("sonamu.openTraceViewer", () => {
+      traceTabProvider.show();
+    }),
+
+    vscode.commands.registerCommand("sonamu.naite.key.goToDefinition", async (key: string) => {
+      await goToKeyLocations(key, "set", "정의");
+    }),
+
+    vscode.commands.registerCommand("sonamu.naite.key.goToReferences", async (key: string) => {
+      await goToKeyLocations(key, "get", "참조");
+    }),
+  );
 }
 
 /**
@@ -161,6 +158,29 @@ function registerConfigListeners(
         }
       }
     }),
+  );
+}
+
+/**
+ * 자동완성, 정의/참조로 이동, 호버링, 심볼 검색 등 언어 기능을 위한 provider들을 등록합니다.
+ *
+ * @param context
+ */
+function registerLanguageProviders(context: vscode.ExtensionContext) {
+  const selector = { language: "typescript", scheme: "file" };
+
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      selector,
+      new NaiteCompletionProvider(),
+      '"',
+      "'",
+    ),
+    vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider()),
+    vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider()),
+    vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider()),
+    vscode.languages.registerDocumentSymbolProvider(selector, new NaiteDocumentSymbolProvider()),
+    vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider()),
   );
 }
 
@@ -219,59 +239,24 @@ function registerDocumentEventHandlers(
 }
 
 /**
- * 자동완성, 정의/참조로 이동, 호버링, 심볼 검색 등 언어 기능을 위한 provider들을 등록합니다.
+ * 테스트 결과가 추가되었을 때 적절한 일을 하는 리스너를 등록합니다.
  *
  * @param context
+ * @param traceViewerProvider
  */
-function registerLanguageProviders(context: vscode.ExtensionContext) {
-  const selector = { language: "typescript", scheme: "file" };
-
-  context.subscriptions.push(
-    vscode.languages.registerCompletionItemProvider(
-      selector,
-      new NaiteCompletionProvider(),
-      '"',
-      "'",
-    ),
-    vscode.languages.registerDefinitionProvider(selector, new NaiteDefinitionProvider()),
-    vscode.languages.registerReferenceProvider(selector, new NaiteReferenceProvider()),
-    vscode.languages.registerHoverProvider(selector, new NaiteHoverProvider()),
-    vscode.languages.registerDocumentSymbolProvider(selector, new NaiteDocumentSymbolProvider()),
-    vscode.languages.registerWorkspaceSymbolProvider(new NaiteWorkspaceSymbolProvider()),
-  );
-}
-
-/**
- * 명령들을 등록합니다.
- * 등록되는 명령 중에는 package.json에 명시된 공개된 명령들도 있고, 내부에서만 사용하는 명령들도 있습니다.
- *
- * @param context
- * @param traceTabProvider
- */
-function registerCommands(
+function registerTestResultAddedListener(
   context: vscode.ExtensionContext,
-  traceTabProvider: NaiteTraceViewerProvider,
+  traceViewerProvider: NaiteTraceViewerProvider,
 ) {
   context.subscriptions.push(
-    vscode.commands.registerCommand("sonamu.rescanNaiteKeys", async () => {
-      await NaiteTracker.scanWorkspace();
-      vscode.window.showInformationMessage(`Found ${NaiteTracker.getAllKeys().length} Naite keys`);
-    }),
+    TraceStore.onTestResultAdded(() => {
+      // 테스트 결과가 도착하면 Trace Viewer Tab을 보여줍니다.
+      traceViewerProvider.show();
 
-    vscode.commands.registerCommand("sonamu.helloWorld", () => {
-      vscode.window.showInformationMessage(`Sonamu: ${NaiteTracker.getAllKeys().length} keys`);
-    }),
-
-    vscode.commands.registerCommand("sonamu.openTraceViewer", () => {
-      traceTabProvider.show();
-    }),
-
-    vscode.commands.registerCommand("sonamu.naite.key.goToDefinition", async (key: string) => {
-      await goToKeyLocations(key, "set", "정의");
-    }),
-
-    vscode.commands.registerCommand("sonamu.naite.key.goToReferences", async (key: string) => {
-      await goToKeyLocations(key, "get", "참조");
+      for (const editor of vscode.window.visibleTextEditors) {
+        // 유일하게 영향 받는 inline value decoration만 업데이트합니다.
+        updateInlineValueDecorations(editor);
+      }
     }),
   );
 }
@@ -426,4 +411,21 @@ function focusSelectionOnTraceTab(
   if (testResult) {
     traceTabProvider.focusTest(testResult.suiteName, testResult.testName);
   }
+}
+
+/**
+ * 워크스페이스에서 Sonamu 설정 파일들의 경로를 찾습니다.
+ * 하나도 없으면 터뜨립니다.
+ * 
+ * @returns 
+ */
+async function findConfigPaths(): Promise<string[]> {
+  const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
+  if (configFiles.length === 0) {
+    throw new Error(
+      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다. 그치만 sonamu.config.ts가 없으면 extension 자체가 activate되지 않아야 함이 타당합니다. 어딘가에서 변경이 일어난 것으로 추정됩니다.",
+    );
+  }
+
+  return configFiles.map((f) => f.fsPath);
 }
