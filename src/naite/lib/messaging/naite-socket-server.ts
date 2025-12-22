@@ -197,7 +197,7 @@ class NaiteSocketServerClass {
           status: data.status,
           duration: data.duration,
           error: data.error,
-          traces: data.traces ?? [],
+          traces: data.traces,
           receivedAt: data.receivedAt,
         });
         break;
