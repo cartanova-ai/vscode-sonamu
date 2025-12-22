@@ -38,16 +38,18 @@ Naite.t("result", data);  // → { id: 1, name: "test" }
 
 ## 설치
 
+[Open VSX Registry](https://open-vsx.org/extension/cartanova/sonamu)에서 설치하거나, 직접 빌드:
+
 ```bash
 cd ~/Projects/vscode-sonamu
-pnpm install && pnpm run build
-npx @vscode/vsce package --allow-missing-repository
-code --install-extension vscode-sonamu-0.0.1.vsix
+pnpm install && pnpm build
+cd packages/extension && pnpm package
+code --install-extension sonamu-*.vsix
 ```
 
 업데이트 시 `--force` 옵션 추가:
 ```bash
-code --install-extension vscode-sonamu-0.0.1.vsix --force
+code --install-extension sonamu-*.vsix --force
 ```
 
 ## 활성화 조건
