@@ -1,5 +1,39 @@
+/* =============================================================================
+   Dev fallbacks (VSCode Dark+ 테마 근사치)
+   VSCode WebView에서는 VSCode가 이 변수들을 실제 테마 값으로 덮어씁니다.
+   ============================================================================= */
 :root {
-  --bg: var(--vscode-editor-background);
+  /* 기본 색상 */
+  --vscode-editor-foreground: #cccccc;
+  --vscode-panel-border: #3c3c3c;
+  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-textLink-foreground: #3794ff;
+  --vscode-badge-background: #4d4d4d;
+  --vscode-badge-foreground: #ffffff;
+  --vscode-sideBar-background: #252526;
+  --vscode-widget-border: rgba(128, 128, 128, 0.35);
+  --vscode-descriptionForeground: #808080;
+
+  /* 버튼 */
+  --vscode-button-background: #0e639c;
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-hoverBackground: #1177bb;
+  --vscode-button-secondaryBackground: #3a3d41;
+  --vscode-button-secondaryForeground: #cccccc;
+  --vscode-button-secondaryHoverBackground: #45494e;
+
+  /* 심볼 아이콘 색상 */
+  --vscode-symbolIcon-classForeground: #ee9d28;
+  --vscode-symbolIcon-functionForeground: #b180d7;
+
+  /* 하이라이트 */
+  --vscode-editor-findMatchHighlightBackground: rgba(234, 92, 0, 0.33);
+
+  /* 폰트 */
+  --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --vscode-editor-font-family: Menlo, Monaco, "Courier New", monospace;
+
+  /* 단축 변수 */
   --fg: var(--vscode-editor-foreground);
   --border: var(--vscode-panel-border);
   --hover: var(--vscode-list-hoverBackground);
@@ -11,7 +45,6 @@ body {
   font-family: var(--vscode-font-family);
   padding: 0;
   color: var(--fg);
-  background: var(--bg);
 }
 .header {
   position: sticky;
@@ -93,7 +126,7 @@ body {
 /* Suite level */
 .suite-group {
   margin-bottom: 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--vscode-sideBar-background);
   border-radius: 6px;
   overflow: hidden;
 }
