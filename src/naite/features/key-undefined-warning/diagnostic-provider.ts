@@ -1,7 +1,5 @@
-import ts from "typescript";
 import vscode from "vscode";
-import { NaiteCallPatterns } from "../../lib/tracking/patterns";
-import { matchesWildcard, NaiteTracker } from "../../lib/tracking/tracker";
+import { NaiteTracker } from "../../lib/tracking/tracker";
 
 /**
  * 사용 패턴(get)에서 정의되지 않은 키 사용 시 경고를 표시합니다
@@ -26,65 +24,23 @@ export class NaiteDiagnosticProvider {
     }
 
     const diagnostics: vscode.Diagnostic[] = [];
-    const sourceCode = document.getText();
 
-    const sourceFile = ts.createSourceFile(
-      document.uri.fsPath,
-      sourceCode,
-      ts.ScriptTarget.Latest,
-      true,
+    const expressions = NaiteTracker.getEntriesForFile(document.uri).filter(
+      (k) => k.type === "get",
     );
 
-    const visit = (node: ts.Node): void => {
-      if (ts.isCallExpression(node)) {
-        const callExpr = node;
-
-        if (ts.isPropertyAccessExpression(callExpr.expression)) {
-          const propAccess = callExpr.expression;
-
-          if (ts.isIdentifier(propAccess.expression) && ts.isIdentifier(propAccess.name)) {
-            const fullPattern = `${propAccess.expression.text}.${propAccess.name.text}`;
-
-            // 사용 패턴(get)인지 확인
-            if (NaiteCallPatterns.isGet(fullPattern)) {
-              if (callExpr.arguments.length > 0) {
-                const firstArg = callExpr.arguments[0];
-
-                if (ts.isStringLiteral(firstArg) || ts.isNoSubstitutionTemplateLiteral(firstArg)) {
-                  const keyValue = firstArg.text;
-
-                  // 와일드카드 패턴(*)을 지원하여 정의된 키들과 매칭 여부 확인
-                  const definedKeys = NaiteTracker.getAllKeys().filter(
-                    (k) => NaiteTracker.getKeyLocations(k, "set").length > 0,
-                  );
-
-                  if (!matchesWildcard(keyValue, definedKeys)) {
-                    // 키 부분의 범위 계산
-                    const start = document.positionAt(firstArg.getStart(sourceFile));
-                    const end = document.positionAt(firstArg.getEnd());
-                    const range = new vscode.Range(start, end);
-
-                    const diagnostic = new vscode.Diagnostic(
-                      range,
-                      `정의되지 않은 Naite 키: "${keyValue}"`,
-                      vscode.DiagnosticSeverity.Warning,
-                    );
-                    diagnostic.source = "sonamu";
-                    diagnostic.code = "undefined-naite-key";
-
-                    diagnostics.push(diagnostic);
-                  }
-                }
-              }
-            }
-          }
-        }
+    for (const expr of expressions) {
+      const definedKeys = NaiteTracker.getKeyLocations(expr.key, "set");
+      if (definedKeys.length === 0) {
+        const diagnostic = new vscode.Diagnostic(
+          expr.location.range,
+          `정의되지 않은 Naite 키: "${expr.key}"`,
+          vscode.DiagnosticSeverity.Warning,
+        );
+        diagnostics.push(diagnostic);
       }
+    }
 
-      ts.forEachChild(node, visit);
-    };
-
-    visit(sourceFile);
     this.diagnosticCollection.set(document.uri, diagnostics);
   }
 

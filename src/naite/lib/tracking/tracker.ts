@@ -8,15 +8,15 @@ import { NaiteCallPatterns } from "./patterns";
 import type { NaiteKey, NaiteKeysMap } from "./types";
 
 /**
- * 와일드카드 패턴(*)이 주어진 키들 중 하나라도 매칭되는지 확인합니다
+ * 와일드카드 패턴(*)이 주어진 키와 매칭되는지 확인합니다
  * 예: "puri:*"는 "puri:abc", "puri:def" 등과 매칭됨
  */
-export function matchesWildcard(pattern: string, keys: string[]): boolean {
-  if (!pattern.includes("*")) return keys.includes(pattern);
+function matchesKey(pattern: string, key: string): boolean {
+  if (!pattern.includes("*")) return pattern === key;
   const regex = new RegExp(
     `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
   );
-  return keys.some((key) => regex.test(key));
+  return regex.test(key);
 }
 
 /**
@@ -129,13 +129,22 @@ class NaiteTrackerClass {
 
   /**
    * 특정 키의 모든 사용 위치를 반환합니다.
+   * 와일드카드(*)를 지원합니다. 예: "puri:*"는 "puri:abc", "puri:def" 등과 매칭됨
    */
   getKeyLocations(key: string, type?: "set" | "get"): vscode.Location[] {
-    const naiteKeys = this.keys.get(key) || [];
-    if (type) {
-      return naiteKeys.filter((k) => k.type === type).map((k) => k.location);
+    const results: vscode.Location[] = [];
+
+    for (const [storedKey, naiteKeys] of this.keys) {
+      if (matchesKey(key, storedKey)) {
+        for (const k of naiteKeys) {
+          if (!type || k.type === type) {
+            results.push(k.location);
+          }
+        }
+      }
     }
-    return naiteKeys.map((k) => k.location);
+
+    return results;
   }
 
   /**
