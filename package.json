@@ -3,13 +3,6 @@
   "private": true,
   "packageManager": "pnpm@10.23.0",
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "dev:ui": "pnpm -F naite-trace-viewer dev",
-    "build": "pnpm -F naite-trace-viewer build && pnpm -F sonamu build",
-    "build:extension": "pnpm -F sonamu build",
-    "build:ui": "pnpm -F naite-trace-viewer build",
-    "test": "pnpm -F sonamu test",
-    "package": "pnpm -F sonamu package",
     "lint": "biome check .",
     "format": "biome format --write ."
   },

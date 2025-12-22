@@ -30,6 +30,8 @@ jobs:
       - name: Publish to Open VSX Registry
         id: publish
         run: |
+          cd packages/extension
+
           OUTPUT=$(ovsx publish -p "${{ secrets.OVSX_TOKEN }}" 2>&1) || EXIT_CODE=$?
           echo "$OUTPUT"
           
