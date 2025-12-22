@@ -22,6 +22,7 @@ import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
 import { NaiteTracker } from "./naite/lib/tracking/tracker";
 import { goToKeyLocations } from "./naite/lib/utils/editor-navigation";
+import { findConfigPaths } from "./naite/lib/utils/workspace";
 
 // ============================================================================
 // 익스텐션의 엔트리 포인트! IDE가 실행해주는건 아래 두개밖에 없어요.
@@ -47,8 +48,7 @@ export async function activate(context: vscode.ExtensionContext) {
   registerDocumentEventHandlers(context, traceViewerProvider, diagnosticProvider);
   registerTestResultAddedListener(context, traceViewerProvider);
 
-  const configPaths = await findConfigPaths();
-  await NaiteSocketServer.startAll(configPaths);
+  await NaiteSocketServer.startAll(await findConfigPaths());
 }
 
 /**
@@ -411,21 +411,4 @@ function focusSelectionOnTraceTab(
   if (testResult) {
     traceTabProvider.focusTest(testResult.suiteName, testResult.testName);
   }
-}
-
-/**
- * 워크스페이스에서 Sonamu 설정 파일들의 경로를 찾습니다.
- * 하나도 없으면 터뜨립니다.
- * 
- * @returns 
- */
-async function findConfigPaths(): Promise<string[]> {
-  const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
-  if (configFiles.length === 0) {
-    throw new Error(
-      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다. 그치만 sonamu.config.ts가 없으면 extension 자체가 activate되지 않아야 함이 타당합니다. 어딘가에서 변경이 일어난 것으로 추정됩니다.",
-    );
-  }
-
-  return configFiles.map((f) => f.fsPath);
 }

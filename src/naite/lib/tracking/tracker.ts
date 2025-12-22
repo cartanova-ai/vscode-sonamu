@@ -3,6 +3,7 @@ import vscode from "vscode";
 import NaiteExpressionExtractor from "../code-parsing/expression-extractor";
 import NaiteExpressionScanner from "../code-parsing/expression-scanner";
 import type { NaiteKey, NaiteKeysMap, NaitePatternConfig } from "./types";
+import { findConfigFiles, findConfigPaths } from "../utils/workspace";
 
 /**
  * 와일드카드 패턴(*)이 주어진 키들 중 하나라도 매칭되는지 확인합니다
@@ -84,17 +85,7 @@ class NaiteTrackerClass {
     this.keys.clear();
 
     // sonamu.config.ts 위치 찾기 (프로젝트 루트 결정)
-    const configFiles = await vscode.workspace.findFiles(
-      "**/sonamu.config.ts",
-      "**/node_modules/**",
-    );
-    if (configFiles.length === 0) {
-      this.showStatusBarMessage("sonamu.config.ts를 찾을 수 없습니다", {
-        timeout: 2000,
-        done: true,
-      });
-      return;
-    }
+    const configFiles = await findConfigFiles();
 
     for (const configFile of configFiles) {
       // sonamu.config.ts가 있는 디렉토리 = 프로젝트 루트
