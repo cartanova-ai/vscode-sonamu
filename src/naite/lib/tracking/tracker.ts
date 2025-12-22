@@ -2,8 +2,9 @@ import assert from "assert";
 import vscode from "vscode";
 import NaiteExpressionExtractor from "../code-parsing/expression-extractor";
 import NaiteExpressionScanner from "../code-parsing/expression-scanner";
+import { StatusBar } from "../utils/status-bar";
+import { findConfigFiles } from "../utils/workspace";
 import type { NaiteKey, NaiteKeysMap, NaitePatternConfig } from "./types";
-import { findConfigFiles, findConfigPaths } from "../utils/workspace";
 
 /**
  * 와일드카드 패턴(*)이 주어진 키들 중 하나라도 매칭되는지 확인합니다
@@ -26,41 +27,6 @@ class NaiteTrackerClass {
     setPatterns: ["Naite.t"],
     getPatterns: ["Naite.get", "Naite.del"],
   };
-  private statusBarMessagesEnabled: boolean = true;
-
-  /**
-   * 상태창 메시지 표시 여부를 설정합니다
-   */
-  setStatusBarMessagesEnabled(enabled: boolean): void {
-    this.statusBarMessagesEnabled = enabled;
-  }
-
-  /**
-   * 상태창에 메시지를 표시합니다 (설정이 활성화된 경우에만)
-   */
-  private showStatusBarMessage(
-    message: string,
-    options?: { timeout?: number; done?: boolean },
-  ): vscode.Disposable {
-    if (this.statusBarMessagesEnabled) {
-      const icon = options?.done ? "$(check)" : "$(sync~spin)";
-      const fullMessage = `${icon} ${message}`;
-      if (options?.timeout !== undefined) {
-        return vscode.window.setStatusBarMessage(fullMessage, options.timeout);
-      } else {
-        return vscode.window.setStatusBarMessage(fullMessage);
-      }
-    }
-    return vscode.Disposable.from();
-  }
-
-  /**
-   * 패턴 설정을 변경합니다
-   */
-  setConfig(config: Partial<NaitePatternConfig>): void {
-    if (config.setPatterns) this.config.setPatterns = config.setPatterns;
-    if (config.getPatterns) this.config.getPatterns = config.getPatterns;
-  }
 
   /**
    * 현재 패턴 설정을 반환합니다
@@ -104,10 +70,10 @@ class NaiteTrackerClass {
         "node_modules/sonamu/src/**/*.ts",
       );
       const sonamuFiles = await vscode.workspace.findFiles(sonamuPattern, "**/*.d.ts");
-      
+
       const allFiles = [...projectFiles, ...sonamuFiles];
 
-      const scanningMessage = this.showStatusBarMessage(`스캔 중: ${allFiles.length}개 파일...`);
+      const scanningMessage = StatusBar.show(`스캔 중: ${allFiles.length}개 파일...`);
       for (const file of allFiles) {
         await this.scanFile(file);
       }
@@ -115,7 +81,7 @@ class NaiteTrackerClass {
     }
 
     const keyCount = this.getAllKeys().length;
-    this.showStatusBarMessage(`스캔 완료: ${keyCount}개 키 발견`, { timeout: 1000, done: true });
+    StatusBar.show(`스캔 완료: ${keyCount}개 키 발견`, { timeout: 1000, done: true });
   }
 
   private forgetKeysInFile(uri: vscode.Uri): void {
@@ -135,7 +101,7 @@ class NaiteTrackerClass {
    */
   async scanFile(uri: vscode.Uri): Promise<void> {
     const fileName = uri.fsPath.split("/").pop() || uri.fsPath;
-    const statusMessage = this.showStatusBarMessage(`스캔 중: ${fileName}...`);
+    const statusMessage = StatusBar.show(`스캔 중: ${fileName}...`);
 
     this.forgetKeysInFile(uri);
 
@@ -164,7 +130,7 @@ class NaiteTrackerClass {
 
     const foundCount = naiteCalls.length;
     if (foundCount > 0) {
-      this.showStatusBarMessage(`${fileName}: ${foundCount}개 키 발견`, {
+      StatusBar.show(`${fileName}: ${foundCount}개 키 발견`, {
         timeout: 500,
         done: true,
       });

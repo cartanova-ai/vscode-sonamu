@@ -22,6 +22,7 @@ import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
 import { NaiteTracker } from "./naite/lib/tracking/tracker";
 import { goToKeyLocations } from "./naite/lib/utils/editor-navigation";
+import { StatusBar } from "./naite/lib/utils/status-bar";
 import { findConfigPaths } from "./naite/lib/utils/workspace";
 
 // ============================================================================
@@ -143,7 +144,7 @@ function registerConfigListeners(
 ) {
   const updateStatusBarMessagesEnabled = () => {
     const config = vscode.workspace.getConfiguration("sonamu.naite.statusBarMessages");
-    NaiteTracker.setStatusBarMessagesEnabled(config.get<boolean>("enabled", true));
+    StatusBar.setEnabled(config.get<boolean>("enabled", true));
   };
   updateStatusBarMessagesEnabled();
 
