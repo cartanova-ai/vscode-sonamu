@@ -45,7 +45,9 @@ body {
   font-family: var(--vscode-font-family);
   font-size: 13px;
   padding: 0;
+  margin: 0;
   color: var(--fg);
+  overflow-x: hidden; /* 가로 스크롤 방지 */
 }
 .header {
   position: sticky;
@@ -62,6 +64,7 @@ body {
 }
 #traces-container {
   padding: 16px;
+  /* 스티키가 제대로 작동하도록 overflow 설정 */
 }
 .header-left {
   display: flex;
@@ -126,14 +129,28 @@ body {
 .warning-banner .icon {
   font-size: 16px;
 }
+/* =============================================================================
+   스티키 헤더 높이 변수
+   ============================================================================= */
+:root {
+  --header-height: 40px;
+  --suite-header-height: 34px;
+  --test-header-height: 34px;
+  --trace-header-height: 28px;
+  --breadcrumb-height: 28px; /* 검색 결과 breadcrumb 높이 */
+}
+
 /* Suite level */
 .suite-group {
   margin-bottom: 12px;
   border: 1px solid var(--vscode-sideBar-background);
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible; /* 스티키가 작동하려면 visible 필요 */
 }
 .suite-header {
+  position: sticky;
+  top: calc(var(--header-height) - 1px); /* 1px 겹침으로 틈 방지 */
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -142,6 +159,7 @@ body {
   background: var(--vscode-sideBar-background);
   user-select: none;
   font-weight: 500;
+  border-radius: 6px 6px 0 0;
 }
 .suite-header:hover {
   background: var(--hover);
@@ -172,12 +190,15 @@ body {
 }
 /* Test level */
 .test-group {
-  scroll-margin-top: 40px; /* 스티키 헤더 높이 고려 */
+  scroll-margin-top: calc(var(--header-height) + var(--suite-header-height));
 }
 .test-group:last-child {
   border-bottom: none;
 }
 .test-header {
+  position: sticky;
+  top: calc(var(--header-height) + var(--suite-header-height) - 2px); /* 겹침으로 틈 방지 */
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -214,13 +235,17 @@ body {
   display: none;
 }
 .trace-header {
+  position: sticky;
+  top: calc(var(--header-height) + var(--suite-header-height) + var(--test-header-height) - 3px); /* 겹침으로 틈 방지 */
+  z-index: 10;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
   gap: 8px;
   padding: 6px 12px 6px 36px;
   cursor: pointer;
   user-select: none;
   font-size: 13px;
+  background: var(--bg);
 }
 .trace-header:hover {
   background: var(--hover);
@@ -230,6 +255,8 @@ body {
   transition: transform 0.2s;
   color: var(--vscode-descriptionForeground);
   width: 10px;
+  flex-shrink: 0;
+  margin-top: 4px; /* 첫 줄과 정렬 */
 }
 .arrow.expanded {
   transform: rotate(90deg);
@@ -237,12 +264,19 @@ body {
 .key {
   color: var(--accent);
   font-family: var(--vscode-editor-font-family);
+  word-break: break-word; /* 길면 여러 줄로 */
+  min-width: 0; /* flex 축소 허용 */
 }
 .location-link {
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
   font-family: var(--vscode-editor-font-family);
   cursor: pointer;
+  flex-shrink: 1;
+  min-width: 20px; /* 최소 "..." 정도는 보이도록 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .location-link:hover {
   color: var(--accent);
@@ -253,6 +287,8 @@ body {
   color: var(--vscode-descriptionForeground);
   font-size: 11px;
   font-family: var(--vscode-editor-font-family);
+  flex-shrink: 0; /* 절대 축소 안됨 */
+  white-space: nowrap;
 }
 .trace-content {
   margin-left: 48px;
@@ -378,16 +414,25 @@ body {
 .search-result-item {
   border: 1px solid var(--vscode-sideBar-background);
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible; /* 스티키 작동 위해 */
   background: var(--bg);
 }
 .search-result-breadcrumb {
+  position: sticky;
+  top: calc(var(--header-height) - 1px); /* 1px 겹침으로 틈 방지 */
+  z-index: 20;
   padding: 6px 12px;
   background: var(--vscode-sideBar-background);
   font-size: 12px;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
   gap: 6px;
+  border-radius: 6px 6px 0 0;
+}
+/* 타이틀 영역 (suite > test) - 내용에 맞게, 여러 줄 허용 */
+.breadcrumb-title {
+  display: inline;
+  word-break: break-word; /* 긴 타이틀은 여러 줄로 */
 }
 .breadcrumb-suite {
   color: var(--vscode-symbolIcon-classForeground, #ee9d28);
@@ -395,6 +440,7 @@ body {
 }
 .breadcrumb-separator {
   color: var(--vscode-descriptionForeground);
+  margin: 0 2px;
 }
 .breadcrumb-test {
   color: var(--vscode-symbolIcon-functionForeground, #b180d7);
@@ -404,24 +450,33 @@ body {
   font-size: 12px;
   font-family: var(--vscode-editor-font-family);
   cursor: pointer;
+  flex: 1; /* 남은 공간 채움 */
+  min-width: 0; /* 축소 허용 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .breadcrumb-location:hover {
   color: var(--accent);
   text-decoration: underline;
 }
 .breadcrumb-count {
-  margin-left: auto;
   background: var(--badge-bg);
   color: var(--badge-fg);
   padding: 2px 6px;
   border-radius: 10px;
   font-size: 11px;
+  flex-shrink: 0; /* 절대 축소 안됨 */
 }
 .search-result-traces {
   padding: 4px 0;
 }
 .search-result-trace .trace-header {
+  position: sticky;
+  top: calc(var(--header-height) + var(--breadcrumb-height) - 2px); /* breadcrumb 바로 아래 */
+  z-index: 10;
   padding-left: 12px;
+  background: var(--bg);
 }
 .search-result-trace .trace-content {
   margin-left: 12px;

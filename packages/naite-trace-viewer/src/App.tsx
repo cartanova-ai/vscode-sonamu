@@ -668,9 +668,11 @@ export default function App() {
                   return (
                     <div key={groupKey} className="search-result-item">
                       <div className="search-result-breadcrumb">
-                        <span className="breadcrumb-suite">{suiteName}</span>
-                        <span className="breadcrumb-separator">›</span>
-                        <span className="breadcrumb-test">{testName}</span>
+                        <span className="breadcrumb-title">
+                          <span className="breadcrumb-suite">{suiteName}</span>
+                          <span className="breadcrumb-separator">›</span>
+                          <span className="breadcrumb-test">{testName}</span>
+                        </span>
                         <span
                           className="breadcrumb-location"
                           onClick={() => goToLocation(result.testFilePath, result.testLine)}
