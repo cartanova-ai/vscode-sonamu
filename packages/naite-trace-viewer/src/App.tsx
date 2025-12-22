@@ -312,7 +312,7 @@ export default function App() {
         Number.parseInt(style.getPropertyValue("--test-header-height")) || 34;
       const breadcrumbHeight = Number.parseInt(style.getPropertyValue("--breadcrumb-height")) || 28;
 
-      const normalViewStickyTop = headerHeight + suiteHeaderHeight + testHeaderHeight - 3;
+      const normalViewStickyTop = headerHeight + suiteHeaderHeight + testHeaderHeight + 5;
       const searchViewStickyTop = headerHeight + breadcrumbHeight - 2;
 
       const headers = document.querySelectorAll(".trace-header");
