@@ -241,11 +241,14 @@ export default function App() {
 
   const openSearch = () => {
     setState((prev) => ({ ...prev, searchMode: true }));
-    setTimeout(() => searchInputRef.current?.focus(), 50);
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select(); // 이전 검색어가 있으면 전체 선택
+    }, 50);
   };
 
   const closeSearch = () => {
-    setState((prev) => ({ ...prev, searchMode: false, searchQuery: "" }));
+    setState((prev) => ({ ...prev, searchMode: false }));
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -266,6 +269,28 @@ export default function App() {
       closeSearch();
     }
   };
+
+  // 전역 키보드 단축키
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + F: 검색창 열기 또는 검색어 전체 선택
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        if (state.searchMode) {
+          searchInputRef.current?.select();
+        } else {
+          openSearch();
+        }
+      }
+      // Escape: 검색창 닫기 (검색창에 포커스 없어도)
+      if (e.key === "Escape" && state.searchMode) {
+        closeSearch();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [state.searchMode]);
 
   // ============================================================================
   // Collapse All
