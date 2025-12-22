@@ -31,11 +31,8 @@ interface SocketInstance {
  */
 class NaiteSocketServerClass {
   private readonly SOCKET_DIR = path.join(os.homedir(), ".sonamu");
-  private readonly DEBOUNCE_DELAY = 100;
 
   private sockets: Map<string, SocketInstance> = new Map(); // configPath -> SocketInstance
-  private pendingMessages: NaiteMessagingTypes.NaiteMessage[] = [];
-  private processDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * 여러 프로젝트의 소켓 서버를 시작합니다.
