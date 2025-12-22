@@ -5,12 +5,11 @@
 :root {
   /* 기본 색상 */
   --vscode-editor-foreground: #cccccc;
-  --vscode-panel-border: #3c3c3c;
   --vscode-list-hoverBackground: #2a2d2e;
   --vscode-textLink-foreground: #3794ff;
   --vscode-badge-background: #4d4d4d;
   --vscode-badge-foreground: #ffffff;
-  --vscode-sideBar-background: #252526;
+  --vscode-sideBar-background: #2c2c32;
   --vscode-widget-border: rgba(128, 128, 128, 0.35);
   --vscode-descriptionForeground: #808080;
 
@@ -35,7 +34,6 @@
 
   /* 단축 변수 */
   --fg: var(--vscode-editor-foreground);
-  --border: var(--vscode-panel-border);
   --hover: var(--vscode-list-hoverBackground);
   --accent: var(--vscode-textLink-foreground);
   --badge-bg: var(--vscode-badge-background);
@@ -50,7 +48,6 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--bg);
   padding: 8px 16px;
   border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
   display: flex;
@@ -164,15 +161,11 @@ body {
   font-size: 12px;
   font-weight: normal;
 }
-.suite-content {
-  border-top: 1px solid var(--border);
-}
 .suite-content.collapsed {
   display: none;
 }
 /* Test level */
 .test-group {
-  border-bottom: 1px solid var(--border);
   scroll-margin-top: 40px; /* 스티키 헤더 높이 고려 */
 }
 .test-group:last-child {
@@ -211,21 +204,14 @@ body {
   border-radius: 10px;
   font-size: 11px;
 }
-.test-content {
-  padding-left: 24px;
-}
 .test-content.collapsed {
   display: none;
-}
-/* Trace level */
-.trace-item {
-  border-top: 1px solid var(--border);
 }
 .trace-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 12px 6px 36px;
   cursor: pointer;
   user-select: none;
   font-size: 13px;
@@ -263,6 +249,11 @@ body {
   font-family: var(--vscode-editor-font-family);
 }
 .trace-content {
+  margin-left: 48px;
+  margin-right: 12px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  border-radius: 6px;
   padding: 8px 12px;
   background: var(--vscode-sideBar-background);
   overflow-x: auto;
@@ -271,6 +262,9 @@ body {
 }
 .trace-content.collapsed {
   display: none;
+}
+.trace-item {
+  padding-bottom: 4px;
 }
 .trace-item.highlight {
   background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
