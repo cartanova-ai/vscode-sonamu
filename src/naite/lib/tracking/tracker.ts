@@ -4,7 +4,8 @@ import NaiteExpressionExtractor from "../code-parsing/expression-extractor";
 import NaiteExpressionScanner from "../code-parsing/expression-scanner";
 import { StatusBar } from "../utils/status-bar";
 import { findConfigFiles } from "../utils/workspace";
-import type { NaiteKey, NaiteKeysMap, NaitePatternConfig } from "./types";
+import { NaiteCallPatterns } from "./patterns";
+import type { NaiteKey, NaiteKeysMap } from "./types";
 
 /**
  * 와일드카드 패턴(*)이 주어진 키들 중 하나라도 매칭되는지 확인합니다
@@ -23,24 +24,6 @@ export function matchesWildcard(pattern: string, keys: string[]): boolean {
  */
 class NaiteTrackerClass {
   private keys: NaiteKeysMap = new Map();
-  private config: NaitePatternConfig = {
-    setPatterns: ["Naite.t"],
-    getPatterns: ["Naite.get", "Naite.del"],
-  };
-
-  /**
-   * 현재 패턴 설정을 반환합니다
-   */
-  getConfig(): NaitePatternConfig {
-    return { ...this.config };
-  }
-
-  /**
-   * 모든 패턴을 반환합니다 (set + get)
-   */
-  getAllPatterns(): string[] {
-    return [...this.config.setPatterns, ...this.config.getPatterns];
-  }
 
   /**
    * 워크스페이스의 모든 TypeScript 파일에서 Naite 호출을 스캔합니다.
@@ -107,16 +90,12 @@ class NaiteTrackerClass {
 
     const document = await vscode.workspace.openTextDocument(uri);
     const scanner = new NaiteExpressionScanner(document);
-    const patterns = [...this.config.setPatterns, ...this.config.getPatterns];
+    const patterns = NaiteCallPatterns.all();
 
     const naiteCalls = Array.from(scanner.scanNaiteCalls(patterns));
 
     for (const { key, location, pattern } of naiteCalls) {
-      const type = this.config.setPatterns.includes(pattern)
-        ? "set"
-        : this.config.getPatterns.includes(pattern)
-          ? "get"
-          : undefined;
+      const type = NaiteCallPatterns.getType(pattern);
       assert(type, `있을 수 없는 일입니다.`);
 
       const naiteKey: NaiteKey = { key, location, type, pattern };
@@ -182,7 +161,7 @@ class NaiteTrackerClass {
    */
   getKeyAtPosition(document: vscode.TextDocument, position: vscode.Position): string | null {
     const extractor = new NaiteExpressionExtractor(document);
-    const patterns = [...this.config.setPatterns, ...this.config.getPatterns];
+    const patterns = NaiteCallPatterns.all();
     return extractor.extractKeyAtPosition(position, patterns);
   }
 }

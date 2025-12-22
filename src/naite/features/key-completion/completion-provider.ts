@@ -1,11 +1,11 @@
 import vscode from "vscode";
+import { NaiteCallPatterns } from "../../lib/tracking/patterns";
 import { NaiteTracker } from "../../lib/tracking/tracker";
 
 /**
  * Naite 호출에서 자동완성을 제공합니다
  */
 export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
-
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -13,8 +13,7 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
     const linePrefix = document.lineAt(position).text.substring(0, position.character);
 
     // 설정된 모든 패턴에 대해 체크
-    const config = NaiteTracker.getConfig();
-    const allPatterns = [...config.setPatterns, ...config.getPatterns];
+    const allPatterns = NaiteCallPatterns.all();
 
     // 패턴 매칭 regex 생성 (예: /Naite\.(t|get|safeGet|expect|expectWithSnapshot)\(["']$/)
     const methodsByObject = new Map<string, string[]>();
