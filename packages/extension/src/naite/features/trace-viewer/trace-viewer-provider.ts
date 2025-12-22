@@ -1,7 +1,8 @@
 import vscode from "vscode";
 import { TraceStore } from "../../lib/messaging/trace-store";
 import { goToLocation } from "../../lib/utils/editor-navigation";
-import traceTabHtml from "./ui/index.html";
+// esbuild 플러그인이 naite-trace-viewer 빌드 결과물을 주입합니다
+import traceViewerHtml from "@vscode-sonamu/naite-trace-viewer";
 
 /**
  * 에디터 탭용 Trace Viewer (WebviewPanel)
@@ -73,7 +74,7 @@ export class NaiteTraceViewerProvider {
    * 패널 공통 설정 (생성/복원 시 모두 사용)
    */
   private _setupPanel(panel: vscode.WebviewPanel): void {
-    panel.webview.html = traceTabHtml;
+    panel.webview.html = traceViewerHtml;
 
     panel.onDidDispose(() => {
       this.dispose();

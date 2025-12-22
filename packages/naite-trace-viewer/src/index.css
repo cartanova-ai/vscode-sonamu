@@ -243,6 +243,10 @@ body {
   background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
   animation: fadeHighlight 2s ease-out forwards;
 }
+.test-group.highlight {
+  background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
+  animation: fadeHighlight 2s ease-out forwards;
+}
 @keyframes fadeHighlight {
   0% { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33)); }
   100% { background: transparent; }

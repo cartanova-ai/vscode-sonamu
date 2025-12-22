@@ -1,4 +1,4 @@
-import type { NaiteMessagingTypes } from "./messaging-types";
+import type { NaiteMessagingTypes } from "naite-types";
 
 type TestListener = () => void;
 

@@ -1,5 +1,5 @@
 import vscode from "vscode";
-import type { NaiteMessagingTypes } from "../../lib/messaging/messaging-types";
+import type { NaiteMessagingTypes } from "naite-types";
 import { TraceStore } from "../../lib/messaging/trace-store";
 
 // decoration type (line 끝에 값 표시)

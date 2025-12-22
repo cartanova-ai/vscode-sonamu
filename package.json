@@ -1,112 +1,23 @@
 {
-  "name": "sonamu",
-  "displayName": "Sonamu",
-  "description": "Sonamu development support extension",
-  "icon": "images/sonamu.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/cartanova-ai/vscode-sonamu.git"
-  },
-  "version": "0.4.2",
-  "publisher": "cartanova",
-  "engines": {
-    "vscode": "^1.85.0"
-  },
-  "categories": [
-    "Testing",
-    "Linters",
-    "Visualization"
-  ],
-  "activationEvents": [
-    "workspaceContains:**/sonamu.config.ts",
-    "onWebviewPanel:naiteTraceViewer"
-  ],
-  "main": "./out/extension.js",
+  "name": "vscode-sonamu-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.23.0",
   "scripts": {
-    "vscode:prepublish": "pnpm run build",
-    "build": "tsc --noEmit && node esbuild.js --production",
-    "pretest": "tsc -p ./",
-    "test": "vscode-test",
-    "package": "vsce package",
-    "install-local": "code --install-extension sonamu-0.0.1.vsix"
+    "dev": "pnpm -r --parallel dev",
+    "dev:ui": "pnpm -F naite-trace-viewer dev",
+    "build": "pnpm -F naite-trace-viewer build && pnpm -F sonamu build",
+    "build:extension": "pnpm -F sonamu build",
+    "build:ui": "pnpm -F naite-trace-viewer build",
+    "test": "pnpm -F sonamu test",
+    "package": "pnpm -F sonamu package",
+    "lint": "biome check .",
+    "format": "biome format --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^20.x",
-    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.0",
-    "@vscode/vsce": "^3.7.1",
-    "esbuild": "^0.27.0",
     "eslint": "^9.0.0",
-    "mocha": "^11.7.5",
     "typescript": "^5.6.0"
-  },
-  "contributes": {
-    "viewsContainers": {
-      "panel": [
-        {
-          "id": "naitePanel",
-          "title": "Naite",
-          "icon": "resources/naite.svg"
-        }
-      ]
-    },
-    "commands": [
-      {
-        "command": "sonamu.helloWorld",
-        "title": "Sonamu: Hello World"
-      },
-      {
-        "command": "sonamu.rescanNaiteKeys",
-        "title": "Sonamu: Rescan Naite Keys"
-      },
-      {
-        "command": "sonamu.openTraceViewer",
-        "title": "Sonamu: Open Naite Trace Viewer"
-      }
-    ],
-    "configuration": {
-      "title": "Sonamu",
-      "properties": {
-        "sonamu.naite.decoration.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Naite 키에 텍스트 데코레이션 표시 여부"
-        },
-        "sonamu.naite.decoration.style": {
-          "type": "string",
-          "default": "underline",
-          "enum": [
-            "underline",
-            "none",
-            "bold",
-            "italic",
-            "underline bold",
-            "underline italic"
-          ],
-          "description": "Naite 키 텍스트 데코레이션 스타일"
-        },
-        "sonamu.naite.runtimeValue.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Naite.t() 호출 옆에 실행 시 값 표시 여부"
-        },
-        "sonamu.naite.runtimeValue.maxLength": {
-          "type": "number",
-          "default": 50,
-          "description": "표시할 값의 최대 문자 길이"
-        },
-        "sonamu.naite.statusBarMessages.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Naite tracker 액션 발생 시 상태창에 메시지 표시 여부"
-        }
-      }
-    }
-  },
-  "packageManager": "pnpm@10.23.0"
+  }
 }
