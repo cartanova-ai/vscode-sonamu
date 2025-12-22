@@ -1,5 +1,5 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { vscode } from "./lib/vscode-api";
 
 // ============================================================================
@@ -14,6 +14,18 @@ type AppState = {
   followEnabled: boolean; // 에디터 클릭 시 트레이스 따라가기 (기본 켜짐)
   searchQuery: string; // 검색어
   searchMode: boolean; // 검색 모드 활성화 여부
+};
+
+type MatchedTrace = {
+  trace: NaiteMessagingTypes.NaiteTrace;
+  traceIdx: number;
+};
+
+type SearchResultGroup = {
+  suiteName: string;
+  testName: string;
+  result: NaiteMessagingTypes.TestResult;
+  matchedTraces: MatchedTrace[];
 };
 
 // ============================================================================
@@ -107,9 +119,13 @@ export default function App() {
   const [highlightedTraces, setHighlightedTraces] = useState<Set<string>>(new Set());
   const [highlightedTest, setHighlightedTest] = useState<string | null>(null);
 
+  // 검색 관련 상태
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
   // ref로 DOM 접근
   const tracesContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 상태 저장
   const saveState = useCallback((newState: AppState) => {
@@ -233,7 +249,16 @@ export default function App() {
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setState((prev) => ({ ...prev, searchQuery: e.target.value }));
+    const value = e.target.value;
+    setState((prev) => ({ ...prev, searchQuery: value }));
+
+    // 디바운싱
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(value);
+    }, 100);
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -463,7 +488,6 @@ export default function App() {
   const suiteMap = new Map<string, { testMap: Map<string, NaiteMessagingTypes.TestResult>; suiteFilePath?: string }>();
   let totalTests = 0;
   let totalTraces = 0;
-  let matchCount = 0;
 
   for (const result of state.testResults) {
     const suiteName = result.suiteName || "(no suite)";
@@ -475,49 +499,38 @@ export default function App() {
     const suiteData = suiteMap.get(suiteName)!;
     suiteData.testMap.set(testName, result);
     totalTraces += result.traces.length;
-
-    // 매칭 카운트
-    if (state.searchQuery) {
-      for (const trace of result.traces) {
-        if (traceMatchesQuery(trace, state.searchQuery)) {
-          matchCount++;
-        }
-      }
-    }
   }
 
   for (const suiteData of suiteMap.values()) {
     totalTests += suiteData.testMap.size;
   }
 
-  // 검색 결과를 테스트 케이스별로 그룹핑
-  type MatchedTrace = {
-    trace: NaiteMessagingTypes.NaiteTrace;
-    traceIdx: number;
-  };
-  type SearchResultGroup = {
-    suiteName: string;
-    testName: string;
-    result: NaiteMessagingTypes.TestResult;
-    matchedTraces: MatchedTrace[];
-  };
+  // 검색 결과를 테스트 케이스별로 그룹핑 (useMemo로 캐싱)
+  const { searchResultGroups, matchCount } = useMemo(() => {
+    const groups: SearchResultGroup[] = [];
+    let count = 0;
 
-  const searchResultGroups: SearchResultGroup[] = [];
-  if (state.searchQuery) {
-    for (const result of state.testResults) {
-      const suiteName = result.suiteName || "(no suite)";
-      const testName = result.testName || "(no test)";
-      const matchedTraces: MatchedTrace[] = [];
-      result.traces.forEach((trace, traceIdx) => {
-        if (traceMatchesQuery(trace, state.searchQuery)) {
-          matchedTraces.push({ trace, traceIdx });
+    if (debouncedQuery) {
+      for (const result of state.testResults) {
+        const suiteName = result.suiteName || "(no suite)";
+        const testName = result.testName || "(no test)";
+        const matchedTraces: MatchedTrace[] = [];
+
+        result.traces.forEach((trace, traceIdx) => {
+          if (traceMatchesQuery(trace, debouncedQuery)) {
+            matchedTraces.push({ trace, traceIdx });
+            count++;
+          }
+        });
+
+        if (matchedTraces.length > 0) {
+          groups.push({ suiteName, testName, result, matchedTraces });
         }
-      });
-      if (matchedTraces.length > 0) {
-        searchResultGroups.push({ suiteName, testName, result, matchedTraces });
       }
     }
-  }
+
+    return { searchResultGroups: groups, matchCount: count };
+  }, [debouncedQuery, state.testResults]);
 
   // ============================================================================
   // 렌더링
@@ -618,55 +631,56 @@ export default function App() {
             {searchResultGroups.length === 0 ? (
               <div className="empty">검색 결과가 없습니다.</div>
             ) : (
-              searchResultGroups.map(({ suiteName, testName, result, matchedTraces }) => {
-                const groupKey = `${suiteName}::${testName}`;
-                return (
-                  <div key={groupKey} className="search-result-item">
-                    <div className="search-result-breadcrumb">
-                      <span className="breadcrumb-suite">{suiteName}</span>
-                      <span className="breadcrumb-separator">›</span>
-                      <span className="breadcrumb-test">{testName}</span>
-                      <span
-                        className="breadcrumb-location"
-                        onClick={() => goToLocation(result.testFilePath, result.testLine)}
-                      >
-                        {result.testFilePath.split("/").pop()}:{result.testLine}
-                      </span>
-                      <span className="breadcrumb-count">{matchedTraces.length}</span>
-                    </div>
-                    <div className="search-result-traces">
-                      {matchedTraces.map(({ trace, traceIdx }) => {
-                        const traceStateKey = `${suiteName}::${testName}::${trace.key}::${trace.at}::${traceIdx}`;
-                        const traceExpanded = state.expandedTraces.includes(traceStateKey);
-                        const traceId = escapeId(traceStateKey);
-                        const fileName = trace.filePath.split("/").pop() || trace.filePath;
-                        const time = new Date(trace.at).toLocaleTimeString("ko-KR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                          hour12: false,
-                        });
+              <>
+                {searchResultGroups.map(({ suiteName, testName, result, matchedTraces }) => {
+                  const groupKey = `${suiteName}::${testName}`;
+                  return (
+                    <div key={groupKey} className="search-result-item">
+                      <div className="search-result-breadcrumb">
+                        <span className="breadcrumb-suite">{suiteName}</span>
+                        <span className="breadcrumb-separator">›</span>
+                        <span className="breadcrumb-test">{testName}</span>
+                        <span
+                          className="breadcrumb-location"
+                          onClick={() => goToLocation(result.testFilePath, result.testLine)}
+                        >
+                          {result.testFilePath.split("/").pop()}:{result.testLine}
+                        </span>
+                        <span className="breadcrumb-count">{matchedTraces.length}</span>
+                      </div>
+                      <div className="search-result-traces">
+                        {matchedTraces.map(({ trace, traceIdx }) => {
+                          const traceStateKey = `${suiteName}::${testName}::${trace.key}::${trace.at}::${traceIdx}`;
+                          const traceExpanded = state.expandedTraces.includes(traceStateKey);
+                          const traceId = escapeId(traceStateKey);
+                          const fileName = trace.filePath.split("/").pop() || trace.filePath;
+                          const time = new Date(trace.at).toLocaleTimeString("ko-KR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false,
+                          });
 
-                        return (
-                          <div key={traceStateKey} className="search-result-trace">
-                            <div
-                              className="trace-header"
-                              onClick={() => toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)}
-                            >
-                              <span className={`arrow trace-arrow ${traceExpanded ? "expanded" : ""}`}>▶</span>
-                              <span className="key">{renderHighlightedText(trace.key, state.searchQuery)}</span>
-                              <span
-                                className="location-link"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  goToLocation(trace.filePath, trace.lineNumber);
-                                }}
+                          return (
+                            <div key={traceStateKey} className="search-result-trace">
+                              <div
+                                className="trace-header"
+                                onClick={() => toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)}
                               >
-                                {fileName}:{trace.lineNumber}
-                              </span>
-                              <span className="time">{time}</span>
-                            </div>
-                            {traceExpanded && (
+                                <span className={`arrow trace-arrow ${traceExpanded ? "expanded" : ""}`}>▶</span>
+                                <span className="key">{renderHighlightedText(trace.key, state.searchQuery)}</span>
+                                <span
+                                  className="location-link"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    goToLocation(trace.filePath, trace.lineNumber);
+                                  }}
+                                >
+                                  {fileName}:{trace.lineNumber}
+                                </span>
+                                <span className="time">{time}</span>
+                              </div>
+                              {traceExpanded && (
                               <div className="trace-content" id={`trace-content-${traceId}`}>
                                 <div className="json-viewer">
                                   <JsonValue value={trace.value} />
@@ -679,7 +693,8 @@ export default function App() {
                     </div>
                   </div>
                 );
-              })
+              })}
+            </>
             )}
           </div>
         ) : (
