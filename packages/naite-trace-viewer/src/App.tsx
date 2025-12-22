@@ -85,7 +85,8 @@ function JsonValue({ value }: { value: unknown }): JSX.Element {
         <div className="json-object">
           {keys.map((k) => (
             <span key={k} className="json-item">
-              <span className="json-key">"{k}"</span>: <JsonValue value={(value as Record<string, unknown>)[k]} />,
+              <span className="json-key">"{k}"</span>:{" "}
+              <JsonValue value={(value as Record<string, unknown>)[k]} />,
             </span>
           ))}
         </div>
@@ -202,7 +203,13 @@ export default function App() {
     });
   };
 
-  const toggleTrace = (suite: string, testName: string, traceKey: string, traceAt: string, traceIdx: number) => {
+  const toggleTrace = (
+    suite: string,
+    testName: string,
+    traceKey: string,
+    traceAt: string,
+    traceIdx: number,
+  ) => {
     const stateKey = `${suite}::${testName}::${traceKey}::${traceAt}::${traceIdx}`;
 
     setState((prev) => {
@@ -291,6 +298,50 @@ export default function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [state.searchMode]);
+
+  // 스티키 상태 감지 - trace-header가 스티키일 때 그림자 표시
+  useEffect(() => {
+    let ticking = false;
+
+    const updateStickyState = () => {
+      const style = getComputedStyle(document.documentElement);
+      const headerHeight = Number.parseInt(style.getPropertyValue("--header-height")) || 40;
+      const suiteHeaderHeight =
+        Number.parseInt(style.getPropertyValue("--suite-header-height")) || 34;
+      const testHeaderHeight =
+        Number.parseInt(style.getPropertyValue("--test-header-height")) || 34;
+      const breadcrumbHeight = Number.parseInt(style.getPropertyValue("--breadcrumb-height")) || 28;
+
+      const normalViewStickyTop = headerHeight + suiteHeaderHeight + testHeaderHeight - 3;
+      const searchViewStickyTop = headerHeight + breadcrumbHeight - 2;
+
+      const headers = document.querySelectorAll(".trace-header");
+      for (const header of headers) {
+        const rect = header.getBoundingClientRect();
+        const isSearchResult = header.closest(".search-result-trace") !== null;
+        const stickyTop = isSearchResult ? searchViewStickyTop : normalViewStickyTop;
+
+        // 약간의 여유를 두고 판단 (1px)
+        const isStuck = rect.top <= stickyTop + 1;
+        header.classList.toggle("stuck", isStuck);
+      }
+
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateStickyState);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    // 초기 상태 및 DOM 변경 후 업데이트
+    requestAnimationFrame(updateStickyState);
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [state.testResults, state.expandedTests, state.searchMode, debouncedQuery]);
 
   // ============================================================================
   // Collapse All
@@ -493,7 +544,7 @@ export default function App() {
       result.push(
         <span key={`h-${idx}`} className="fuzzy-match">
           {text[idx]}
-        </span>
+        </span>,
       );
       lastIdx = idx + 1;
     }
@@ -510,7 +561,10 @@ export default function App() {
   // ============================================================================
 
   // Suite > Test 구조로 그룹화
-  const suiteMap = new Map<string, { testMap: Map<string, NaiteMessagingTypes.TestResult>; suiteFilePath?: string }>();
+  const suiteMap = new Map<
+    string,
+    { testMap: Map<string, NaiteMessagingTypes.TestResult>; suiteFilePath?: string }
+  >();
   let totalTests = 0;
   let totalTraces = 0;
 
@@ -568,7 +622,15 @@ export default function App() {
           // 검색 모드
           <>
             <div className="search-container">
-              <svg className="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                className="search-icon"
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
                 <circle cx="7" cy="7" r="4.5" />
                 <line x1="10.5" y1="10.5" x2="14" y2="14" strokeLinecap="round" />
               </svg>
@@ -581,12 +643,15 @@ export default function App() {
                 onChange={handleSearchChange}
                 onKeyDown={handleSearchKeyDown}
               />
-              {state.searchQuery && (
-                <span className="search-count">{matchCount} matches</span>
-              )}
-              <button type="button" className="search-close" onClick={closeSearch} title="검색 닫기">
+              {state.searchQuery && <span className="search-count">{matchCount} matches</span>}
+              <button
+                type="button"
+                className="search-close"
+                onClick={closeSearch}
+                title="검색 닫기"
+              >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
                 </svg>
               </button>
             </div>
@@ -598,7 +663,14 @@ export default function App() {
                 onClick={toggleFollow}
                 title="에디터 클릭 시 트레이스 따라가기"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                >
                   <rect x="5.5" y="1.5" width="5" height="3" rx="0.5" />
                   <rect x="1.5" y="9.5" width="4" height="4" rx="0.5" />
                   <rect x="10.5" y="9.5" width="4" height="4" rx="0.5" />
@@ -626,7 +698,14 @@ export default function App() {
                 onClick={openSearch}
                 title="검색 (key 또는 value)"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
                   <circle cx="7" cy="7" r="4.5" />
                   <line x1="10.5" y1="10.5" x2="14" y2="14" strokeLinecap="round" />
                 </svg>
@@ -638,7 +717,14 @@ export default function App() {
                 onClick={toggleFollow}
                 title="에디터 클릭 시 트레이스 따라가기"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                >
                   <rect x="5.5" y="1.5" width="5" height="3" rx="0.5" />
                   <rect x="1.5" y="9.5" width="4" height="4" rx="0.5" />
                   <rect x="10.5" y="9.5" width="4" height="4" rx="0.5" />
@@ -698,10 +784,18 @@ export default function App() {
                             <div key={traceStateKey} className="search-result-trace">
                               <div
                                 className="trace-header"
-                                onClick={() => toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)}
+                                onClick={() =>
+                                  toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)
+                                }
                               >
-                                <span className={`arrow trace-arrow ${traceExpanded ? "expanded" : ""}`}>▶</span>
-                                <span className="key">{renderHighlightedText(trace.key, state.searchQuery)}</span>
+                                <span
+                                  className={`arrow trace-arrow ${traceExpanded ? "expanded" : ""}`}
+                                >
+                                  ▶
+                                </span>
+                                <span className="key">
+                                  {renderHighlightedText(trace.key, state.searchQuery)}
+                                </span>
                                 <span
                                   className="location-link"
                                   onClick={(e) => {
@@ -714,20 +808,20 @@ export default function App() {
                                 <span className="time">{time}</span>
                               </div>
                               {traceExpanded && (
-                              <div className="trace-content" id={`trace-content-${traceId}`}>
-                                <div className="json-viewer">
-                                  <JsonValue value={trace.value} />
+                                <div className="trace-content" id={`trace-content-${traceId}`}>
+                                  <div className="json-viewer">
+                                    <JsonValue value={trace.value} />
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </>
+                  );
+                })}
+              </>
             )}
           </div>
         ) : (
@@ -748,12 +842,16 @@ export default function App() {
               // 검색 모드에서 이 suite의 trace 중 매칭되는 것이 있는지 확인
               const hasSuiteMatchingTrace = state.searchQuery
                 ? Array.from(testMap.values()).some((result) =>
-                    result.traces.some((t) => traceMatchesQuery(t, state.searchQuery))
+                    result.traces.some((t) => traceMatchesQuery(t, state.searchQuery)),
                   )
                 : true;
 
               return (
-                <div key={suiteName} className={`suite-group ${state.searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`} data-suite={suiteName}>
+                <div
+                  key={suiteName}
+                  className={`suite-group ${state.searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`}
+                  data-suite={suiteName}
+                >
                   <div className="suite-header" onClick={() => toggleSuite(suiteName)}>
                     <span className="arrow suite-arrow" id={`suite-arrow-${suiteId}`}>
                       {suiteExpanded ? "▼" : "▶"}
@@ -798,7 +896,10 @@ export default function App() {
                           data-suite={suiteName}
                           data-test-name={testName}
                         >
-                          <div className="test-header" onClick={() => toggleTest(suiteName, testName)}>
+                          <div
+                            className="test-header"
+                            onClick={() => toggleTest(suiteName, testName)}
+                          >
                             <span className="arrow test-arrow" id={`test-arrow-${testId}`}>
                               {testExpanded ? "▼" : "▶"}
                             </span>
@@ -817,7 +918,10 @@ export default function App() {
                             <span className="test-count">{testTraces.length}</span>
                           </div>
 
-                          <div className={`test-content ${testExpanded ? "" : "collapsed"}`} id={`test-content-${testId}`}>
+                          <div
+                            className={`test-content ${testExpanded ? "" : "collapsed"}`}
+                            id={`test-content-${testId}`}
+                          >
                             {testTraces.map((trace, traceIdx) => {
                               const time = new Date(trace.at).toLocaleTimeString("ko-KR", {
                                 hour: "2-digit",
@@ -830,7 +934,9 @@ export default function App() {
                               const traceExpanded = state.expandedTraces.includes(traceStateKey);
                               const traceId = escapeId(traceStateKey);
                               const isTraceHighlighted = highlightedTraces.has(traceStateKey);
-                              const isSearchMatch = state.searchQuery ? traceMatchesQuery(trace, state.searchQuery) : true;
+                              const isSearchMatch = state.searchQuery
+                                ? traceMatchesQuery(trace, state.searchQuery)
+                                : true;
 
                               return (
                                 <div
@@ -847,7 +953,15 @@ export default function App() {
                                 >
                                   <div
                                     className="trace-header"
-                                    onClick={() => toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)}
+                                    onClick={() =>
+                                      toggleTrace(
+                                        suiteName,
+                                        testName,
+                                        trace.key,
+                                        trace.at,
+                                        traceIdx,
+                                      )
+                                    }
                                   >
                                     <span
                                       className={`arrow trace-arrow ${traceExpanded ? "expanded" : ""}`}

@@ -247,6 +247,9 @@ body {
   font-size: 13px;
   background: var(--bg);
 }
+.trace-header.stuck {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
 .trace-header:hover {
   background: var(--hover);
 }
@@ -477,6 +480,9 @@ body {
   z-index: 10;
   padding-left: 12px;
   background: var(--bg);
+}
+.search-result-trace .trace-header.stuck {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 .search-result-trace .trace-content {
   margin-left: 12px;
