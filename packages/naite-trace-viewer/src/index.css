@@ -51,6 +51,8 @@ body {
   top: 0;
   z-index: 100;
   padding: 8px 16px;
+  height: 40px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
   display: flex;
   align-items: center;
@@ -296,3 +298,72 @@ body {
 .json-bracket { color: var(--fg); }
 .json-object, .json-array { margin-left: 16px; }
 .json-item { display: block; }
+
+/* 검색 UI */
+.search-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--vscode-input-background, #3c3c3c);
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-right: 8px;
+}
+.search-container:focus-within {
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
+.search-icon {
+  color: var(--vscode-descriptionForeground);
+  flex-shrink: 0;
+}
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  min-width: 0;
+}
+.search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, #808080);
+}
+.search-count {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.search-close {
+  background: transparent;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+.search-close:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* 검색 매칭 하이라이트 */
+.fuzzy-match {
+  background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
+  border-radius: 1px;
+  font-weight: 600;
+}
+.trace-item.search-hidden {
+  display: none;
+}
+.test-group.search-hidden {
+  display: none;
+}
+.suite-group.search-hidden {
+  display: none;
+}

@@ -12,6 +12,8 @@ type AppState = {
   expandedTests: string[]; // 열린 "suite::testName" (기본 닫힘)
   expandedTraces: string[]; // 열린 trace key
   followEnabled: boolean; // 에디터 클릭 시 트레이스 따라가기 (기본 켜짐)
+  searchQuery: string; // 검색어
+  searchMode: boolean; // 검색 모드 활성화 여부
 };
 
 // ============================================================================
@@ -96,6 +98,8 @@ export default function App() {
       expandedTests: savedState?.expandedTests ?? [],
       expandedTraces: savedState?.expandedTraces ?? [],
       followEnabled: savedState?.followEnabled ?? true,
+      searchQuery: "", // 검색어는 저장하지 않음
+      searchMode: false, // 검색 모드도 저장하지 않음
     };
   });
 
@@ -105,6 +109,7 @@ export default function App() {
 
   // ref로 DOM 접근
   const tracesContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 상태 저장
   const saveState = useCallback((newState: AppState) => {
@@ -212,6 +217,29 @@ export default function App() {
       vscode.postMessage({ type: "followStateChanged", enabled: newFollowEnabled });
       return { ...prev, followEnabled: newFollowEnabled };
     });
+  };
+
+  // ============================================================================
+  // 검색 기능
+  // ============================================================================
+
+  const openSearch = () => {
+    setState((prev) => ({ ...prev, searchMode: true }));
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
+  const closeSearch = () => {
+    setState((prev) => ({ ...prev, searchMode: false, searchQuery: "" }));
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setState((prev) => ({ ...prev, searchQuery: e.target.value }));
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      closeSearch();
+    }
   };
 
   // ============================================================================
@@ -357,6 +385,91 @@ export default function App() {
   };
 
   // ============================================================================
+  // 검색 필터링 (퍼지 서치)
+  // ============================================================================
+
+  // value를 문자열로 변환하여 검색
+  const stringifyValue = (value: unknown): string => {
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    return JSON.stringify(value);
+  };
+
+  // 퍼지 매칭: 각 문자가 순서대로 존재하는지 확인하고 매칭 인덱스 반환
+  type FuzzyMatch = { matched: boolean; indices: number[]; score: number };
+
+  const fuzzyMatch = (text: string, query: string): FuzzyMatch => {
+    if (!query) return { matched: true, indices: [], score: 0 };
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const indices: number[] = [];
+    let queryIdx = 0;
+    let consecutiveBonus = 0;
+    let lastMatchIdx = -1;
+
+    for (let i = 0; i < lowerText.length && queryIdx < lowerQuery.length; i++) {
+      if (lowerText[i] === lowerQuery[queryIdx]) {
+        indices.push(i);
+        // 연속 매칭 보너스
+        if (lastMatchIdx === i - 1) {
+          consecutiveBonus += 10;
+        }
+        lastMatchIdx = i;
+        queryIdx++;
+      }
+    }
+
+    const matched = queryIdx === lowerQuery.length;
+    // 점수: 매칭 완료 + 연속 보너스 - 간격 패널티
+    const score = matched ? 100 + consecutiveBonus - (indices.length > 0 ? indices[indices.length - 1] - indices[0] : 0) : 0;
+
+    return { matched, indices, score };
+  };
+
+  // trace가 검색어와 매칭되는지 확인
+  const traceMatchesQuery = (trace: NaiteMessagingTypes.NaiteTrace, query: string): boolean => {
+    if (!query) return true;
+    // key 퍼지 매칭
+    if (fuzzyMatch(trace.key, query).matched) return true;
+    // value 퍼지 매칭
+    const valueStr = stringifyValue(trace.value);
+    if (fuzzyMatch(valueStr, query).matched) return true;
+    return false;
+  };
+
+  // 퍼지 매칭 결과로 하이라이트된 텍스트 생성
+  const renderHighlightedText = (text: string, query: string): JSX.Element => {
+    if (!query) return <>{text}</>;
+
+    const { matched, indices } = fuzzyMatch(text, query);
+    if (!matched || indices.length === 0) return <>{text}</>;
+
+    const result: JSX.Element[] = [];
+    let lastIdx = 0;
+
+    for (const idx of indices) {
+      if (idx > lastIdx) {
+        result.push(<span key={`t-${lastIdx}`}>{text.slice(lastIdx, idx)}</span>);
+      }
+      result.push(
+        <span key={`h-${idx}`} className="fuzzy-match">
+          {text[idx]}
+        </span>
+      );
+      lastIdx = idx + 1;
+    }
+
+    if (lastIdx < text.length) {
+      result.push(<span key={`t-${lastIdx}`}>{text.slice(lastIdx)}</span>);
+    }
+
+    return <>{result}</>;
+  };
+
+  // ============================================================================
   // 렌더링 데이터 준비
   // ============================================================================
 
@@ -364,6 +477,7 @@ export default function App() {
   const suiteMap = new Map<string, { testMap: Map<string, NaiteMessagingTypes.TestResult>; suiteFilePath?: string }>();
   let totalTests = 0;
   let totalTraces = 0;
+  let matchCount = 0;
 
   for (const result of state.testResults) {
     const suiteName = result.suiteName || "(no suite)";
@@ -375,6 +489,15 @@ export default function App() {
     const suiteData = suiteMap.get(suiteName)!;
     suiteData.testMap.set(testName, result);
     totalTraces += result.traces.length;
+
+    // 매칭 카운트
+    if (state.searchQuery) {
+      for (const trace of result.traces) {
+        if (traceMatchesQuery(trace, state.searchQuery)) {
+          matchCount++;
+        }
+      }
+    }
   }
 
   for (const suiteData of suiteMap.values()) {
@@ -388,29 +511,87 @@ export default function App() {
   return (
     <>
       <div className="header">
-        <div className="header-left">
-          <span className="title">Traces</span>
-          <span id="stats" className="stats">
-            {suiteMap.size} suites · {totalTests} tests · {totalTraces} traces
-          </span>
-        </div>
-        <div className="header-right">
-          <button
-            type="button"
-            id="follow-btn"
-            className={`header-btn icon-btn ${state.followEnabled ? "active" : ""}`}
-            onClick={toggleFollow}
-            title="에디터 클릭 시 트레이스 따라가기"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M6 1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm4 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5-.5h-3a.5.5 0 0 1-.5-.5v-3zm-8 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zM8 5v3M5 8h6" stroke="currentColor" strokeWidth="1" fill="none"/>
-              <path d="M8 5v3M5 8h6" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-            </svg>
-          </button>
-          <button type="button" className="header-btn" onClick={collapseAll} title="모두 접기">
-            접기
-          </button>
-        </div>
+        {state.searchMode ? (
+          // 검색 모드
+          <>
+            <div className="search-container">
+              <svg className="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/>
+              </svg>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="search-input"
+                placeholder="key 또는 value 검색..."
+                value={state.searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+              />
+              {state.searchQuery && (
+                <span className="search-count">{matchCount} matches</span>
+              )}
+              <button type="button" className="search-close" onClick={closeSearch} title="검색 닫기">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+              </button>
+            </div>
+            <div className="header-right">
+              <button
+                type="button"
+                id="follow-btn"
+                className={`header-btn icon-btn ${state.followEnabled ? "active" : ""}`}
+                onClick={toggleFollow}
+                title="에디터 클릭 시 트레이스 따라가기"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M6 1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm4 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5-.5h-3a.5.5 0 0 1-.5-.5v-3zm-8 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zM8 5v3M5 8h6" stroke="currentColor" strokeWidth="1" fill="none"/>
+                  <path d="M8 5v3M5 8h6" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <button type="button" className="header-btn" onClick={collapseAll} title="모두 접기">
+                접기
+              </button>
+            </div>
+          </>
+        ) : (
+          // 일반 모드
+          <>
+            <div className="header-left">
+              <span className="title">Traces</span>
+              <span id="stats" className="stats">
+                {suiteMap.size} suites · {totalTests} tests · {totalTraces} traces
+              </span>
+            </div>
+            <div className="header-right">
+              <button
+                type="button"
+                className="header-btn icon-btn"
+                onClick={openSearch}
+                title="검색 (key 또는 value)"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                id="follow-btn"
+                className={`header-btn icon-btn ${state.followEnabled ? "active" : ""}`}
+                onClick={toggleFollow}
+                title="에디터 클릭 시 트레이스 따라가기"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M6 1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zm4 8a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5-.5h-3a.5.5 0 0 1-.5-.5v-3zm-8 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-3zM8 5v3M5 8h6" stroke="currentColor" strokeWidth="1" fill="none"/>
+                  <path d="M8 5v3M5 8h6" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <button type="button" className="header-btn" onClick={collapseAll} title="모두 접기">
+                접기
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div id="traces-container" ref={tracesContainerRef}>
@@ -430,8 +611,15 @@ export default function App() {
               const suiteId = escapeId(suiteName);
               const testFileName = suiteFilePath ? suiteFilePath.split("/").pop() : null;
 
+              // 검색 모드에서 이 suite의 trace 중 매칭되는 것이 있는지 확인
+              const hasSuiteMatchingTrace = state.searchQuery
+                ? Array.from(testMap.values()).some((result) =>
+                    result.traces.some((t) => traceMatchesQuery(t, state.searchQuery))
+                  )
+                : true;
+
               return (
-                <div key={suiteName} className="suite-group" data-suite={suiteName}>
+                <div key={suiteName} className={`suite-group ${state.searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`} data-suite={suiteName}>
                   <div className="suite-header" onClick={() => toggleSuite(suiteName)}>
                     <span className="arrow suite-arrow" id={`suite-arrow-${suiteId}`}>
                       {suiteExpanded ? "▼" : "▶"}
@@ -463,12 +651,16 @@ export default function App() {
                       const testId = escapeId(testKey);
                       const testTraces = result.traces;
                       const isTestHighlighted = highlightedTest === testKey;
+                      // 검색 모드에서 이 테스트의 trace 중 매칭되는 것이 있는지 확인
+                      const hasMatchingTrace = state.searchQuery
+                        ? testTraces.some((t) => traceMatchesQuery(t, state.searchQuery))
+                        : true;
 
                       return (
                         <div
                           key={testKey}
                           id={`test-${testId}`}
-                          className={`test-group ${isTestHighlighted ? "highlight" : ""}`}
+                          className={`test-group ${isTestHighlighted ? "highlight" : ""} ${state.searchQuery && !hasMatchingTrace ? "search-hidden" : ""}`}
                           data-suite={suiteName}
                           data-test-name={testName}
                         >
@@ -504,12 +696,13 @@ export default function App() {
                               const traceExpanded = state.expandedTraces.includes(traceStateKey);
                               const traceId = escapeId(traceStateKey);
                               const isTraceHighlighted = highlightedTraces.has(traceStateKey);
+                              const isSearchMatch = state.searchQuery ? traceMatchesQuery(trace, state.searchQuery) : true;
 
                               return (
                                 <div
                                   key={traceStateKey}
                                   id={`item-${traceId}`}
-                                  className={`trace-item ${isTraceHighlighted ? "highlight" : ""}`}
+                                  className={`trace-item ${isTraceHighlighted ? "highlight" : ""} ${state.searchQuery && isSearchMatch ? "search-match" : ""} ${state.searchQuery && !isSearchMatch ? "search-hidden" : ""}`}
                                   data-suite={suiteName}
                                   data-test-name={testName}
                                   data-trace-key={trace.key}
@@ -528,7 +721,11 @@ export default function App() {
                                     >
                                       ▶
                                     </span>
-                                    <span className="key">{trace.key}</span>
+                                    <span className="key">
+                                      {state.searchQuery && isSearchMatch
+                                        ? renderHighlightedText(trace.key, state.searchQuery)
+                                        : trace.key}
+                                    </span>
                                     <span
                                       className="location-link"
                                       onClick={(e) => {
