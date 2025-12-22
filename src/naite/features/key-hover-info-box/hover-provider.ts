@@ -7,7 +7,9 @@ export class NaiteHoverProvider implements vscode.HoverProvider {
     position: vscode.Position,
   ): Promise<vscode.Hover | undefined> {
     const key = NaiteTracker.getKeyAtPosition(document, position);
-    if (!key) return undefined;
+    if (!key) {
+      return undefined;
+    }
 
     const setLocs = NaiteTracker.getKeyLocations(key, "set");
     const getLocs = NaiteTracker.getKeyLocations(key, "get");

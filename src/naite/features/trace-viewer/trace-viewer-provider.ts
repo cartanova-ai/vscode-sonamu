@@ -107,7 +107,9 @@ export class NaiteTraceViewerProvider {
    * 특정 key의 모든 trace로 이동하고 펼치기
    */
   focusKey(key: string): void {
-    if (!this._panel) return;
+    if (!this._panel) {
+      return;
+    }
 
     setTimeout(() => {
       this._panel?.webview.postMessage({
@@ -121,7 +123,9 @@ export class NaiteTraceViewerProvider {
    * 특정 test case로 이동하고 펼치기 (trace는 닫힌 상태)
    */
   focusTest(suiteName: string, testName: string): void {
-    if (!this._panel) return;
+    if (!this._panel) {
+      return;
+    }
 
     setTimeout(() => {
       this._panel?.webview.postMessage({
@@ -133,7 +137,9 @@ export class NaiteTraceViewerProvider {
   }
 
   private _sendData(): void {
-    if (!this._panel) return;
+    if (!this._panel) {
+      return;
+    }
 
     const testResults = TraceStore.getAllTestResults();
 

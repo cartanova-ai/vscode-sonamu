@@ -10,7 +10,9 @@ export class NaiteReferenceProvider implements vscode.ReferenceProvider {
     position: vscode.Position,
   ): Promise<vscode.Location[] | undefined> {
     const key = NaiteTracker.getKeyAtPosition(document, position);
-    if (!key) return undefined;
+    if (!key) {
+      return undefined;
+    }
 
     // References = 사용된 곳 (get, 즉 Naite.get/expect 등)
     let locations = NaiteTracker.getKeyLocations(key, "get");
@@ -21,7 +23,9 @@ export class NaiteReferenceProvider implements vscode.ReferenceProvider {
       locations = NaiteTracker.getKeyLocations(key, "get");
     }
 
-    if (locations.length === 0) return undefined;
+    if (locations.length === 0) {
+      return undefined;
+    }
 
     return locations;
   }

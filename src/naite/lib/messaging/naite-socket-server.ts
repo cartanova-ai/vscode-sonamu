@@ -146,7 +146,9 @@ class NaiteSocketServerClass {
    */
   private async stopOne(configPath: string): Promise<void> {
     const instance = this.sockets.get(configPath);
-    if (!instance) return;
+    if (!instance) {
+      return;
+    }
 
     instance.server.close();
 

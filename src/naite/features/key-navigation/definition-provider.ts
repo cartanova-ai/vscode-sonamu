@@ -7,7 +7,9 @@ export class NaiteDefinitionProvider implements vscode.DefinitionProvider {
     position: vscode.Position,
   ): Promise<vscode.Location[] | undefined> {
     const key = NaiteTracker.getKeyAtPosition(document, position);
-    if (!key) return undefined;
+    if (!key) {
+      return undefined;
+    }
 
     // Definition = 정의된 곳 (set, 즉 Naite.t)
     let locations = NaiteTracker.getKeyLocations(key, "set");
@@ -18,7 +20,9 @@ export class NaiteDefinitionProvider implements vscode.DefinitionProvider {
       locations = NaiteTracker.getKeyLocations(key, "set");
     }
 
-    if (locations.length === 0) return undefined;
+    if (locations.length === 0) {
+      return undefined;
+    }
 
     return locations;
   }

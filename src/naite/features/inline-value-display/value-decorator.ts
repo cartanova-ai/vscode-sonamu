@@ -7,13 +7,23 @@ let inlineValueDecorationType: vscode.TextEditorDecorationType | null = null;
 
 function formatValue(value: unknown, maxLength: number = 50): string {
   try {
-    if (value === null) return "null";
-    if (value === undefined) return "undefined";
-    if (typeof value === "string") return `"${truncate(value, maxLength - 2)}"`;
-    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (value === null) {
+      return "null";
+    }
+    if (value === undefined) {
+      return "undefined";
+    }
+    if (typeof value === "string") {
+      return `"${truncate(value, maxLength - 2)}"`;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
     if (Array.isArray(value)) {
       const preview = JSON.stringify(value);
-      if (preview.length <= maxLength) return preview;
+      if (preview.length <= maxLength) {
+        return preview;
+      }
       const truncated = value
         .slice(0, 3)
         .map((v) => formatValue(v, 10))
@@ -22,7 +32,9 @@ function formatValue(value: unknown, maxLength: number = 50): string {
     }
     if (typeof value === "object") {
       const preview = JSON.stringify(value);
-      if (preview.length <= maxLength) return preview;
+      if (preview.length <= maxLength) {
+        return preview;
+      }
       return truncate(preview, maxLength);
     }
     return String(value);
@@ -33,10 +45,18 @@ function formatValue(value: unknown, maxLength: number = 50): string {
 
 function formatValueFull(value: unknown): string {
   try {
-    if (value === null) return "null";
-    if (value === undefined) return "undefined";
-    if (typeof value === "string") return JSON.stringify(value);
-    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (value === null) {
+      return "null";
+    }
+    if (value === undefined) {
+      return "undefined";
+    }
+    if (typeof value === "string") {
+      return JSON.stringify(value);
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
     return JSON.stringify(value, null, 2);
   } catch {
     return "[Error]";
@@ -44,7 +64,9 @@ function formatValueFull(value: unknown): string {
 }
 
 function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
+  if (str.length <= maxLength) {
+    return str;
+  }
   return `${str.slice(0, maxLength - 3)}...`;
 }
 

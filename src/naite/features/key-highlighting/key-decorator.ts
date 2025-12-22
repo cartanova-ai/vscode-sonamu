@@ -42,7 +42,9 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
 }
 
 export function updateKeyDecorations(editor: vscode.TextEditor) {
-  if (editor.document.languageId !== "typescript") return;
+  if (editor.document.languageId !== "typescript") {
+    return;
+  }
 
   // 설정에서 decoration 활성화 여부 확인
   const config = vscode.workspace.getConfiguration("sonamu.naite");
@@ -68,7 +70,9 @@ export function updateKeyDecorations(editor: vscode.TextEditor) {
     const keyIndexBacktick = callText.indexOf(`\`${entry.key}\``) + 1;
 
     const offset = keyIndex > 0 ? keyIndex : keyIndexSingle > 0 ? keyIndexSingle : keyIndexBacktick;
-    if (offset <= 0) continue;
+    if (offset <= 0) {
+      continue;
+    }
 
     const startOffset = editor.document.offsetAt(entry.location.range.start) + offset;
     const endOffset = startOffset + entry.key.length;
