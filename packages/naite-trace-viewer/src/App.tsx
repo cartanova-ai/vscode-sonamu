@@ -36,6 +36,28 @@ function escapeId(str: string): string {
   return str.replace(/[^a-zA-Z0-9-_]/g, "_");
 }
 
+// 스티키 위치 계산 헬퍼
+function getStickyOffsets() {
+  const style = getComputedStyle(document.documentElement);
+  const headerHeight = Number.parseInt(style.getPropertyValue("--header-height")) || 40;
+  const suiteHeaderHeight = Number.parseInt(style.getPropertyValue("--suite-header-height")) || 30;
+  const testHeaderHeight = Number.parseInt(style.getPropertyValue("--test-header-height")) || 34;
+  const breadcrumbHeight = Number.parseInt(style.getPropertyValue("--breadcrumb-height")) || 28;
+
+  return {
+    headerHeight,
+    suiteHeaderHeight,
+    testHeaderHeight,
+    breadcrumbHeight,
+    // 각 헤더 타입의 스티키 top 위치
+    suite: headerHeight + 6,
+    test: headerHeight + suiteHeaderHeight + 7,
+    trace: headerHeight + suiteHeaderHeight + testHeaderHeight + 5,
+    searchBreadcrumb: headerHeight - 1,
+    searchTrace: headerHeight + breadcrumbHeight - 2,
+  };
+}
+
 // ============================================================================
 // JSON 렌더러
 // ============================================================================
@@ -171,34 +193,72 @@ export default function App() {
   // Toggle 함수들
   // ============================================================================
 
-  const toggleSuite = (name: string) => {
-    setState((prev) => {
-      const isExpanded = !prev.collapsedSuites.includes(name);
-      let newCollapsedSuites: string[];
+  const toggleSuite = (name: string, headerElement?: HTMLElement) => {
+    const isCurrentlyExpanded = !state.collapsedSuites.includes(name);
+    const willCollapse = isCurrentlyExpanded;
 
-      if (isExpanded) {
-        newCollapsedSuites = [...prev.collapsedSuites, name];
-      } else {
-        newCollapsedSuites = prev.collapsedSuites.filter((s) => s !== name);
+    // 스티키 상태에서 접을 때: 접은 후 헤더가 스티키 위치에 오도록 스크롤
+    if (willCollapse && headerElement) {
+      const rect = headerElement.getBoundingClientRect();
+      const offsets = getStickyOffsets();
+      const isStuck = rect.top <= offsets.suite + 1;
+
+      if (isStuck) {
+        // 상태 변경 후 헤더 위치로 스크롤
+        setState((prev) => ({
+          ...prev,
+          collapsedSuites: [...prev.collapsedSuites, name],
+        }));
+
+        // DOM 업데이트 후 스크롤 조정
+        requestAnimationFrame(() => {
+          headerElement.scrollIntoView({ block: "start" });
+          // 스티키 오프셋만큼 추가 조정
+          window.scrollBy({ top: -offsets.suite, behavior: "instant" });
+        });
+        return;
       }
+    }
 
+    // 일반 토글 (스티키 아니거나 펼칠 때)
+    setState((prev) => {
+      const newCollapsedSuites = isCurrentlyExpanded
+        ? [...prev.collapsedSuites, name]
+        : prev.collapsedSuites.filter((s) => s !== name);
       return { ...prev, collapsedSuites: newCollapsedSuites };
     });
   };
 
-  const toggleTest = (suite: string, testName: string) => {
+  const toggleTest = (suite: string, testName: string, headerElement?: HTMLElement) => {
     const key = `${suite}::${testName}`;
+    const isCurrentlyExpanded = state.expandedTests.includes(key);
+    const willCollapse = isCurrentlyExpanded;
 
-    setState((prev) => {
-      const isExpanded = prev.expandedTests.includes(key);
-      let newExpandedTests: string[];
+    // 스티키 상태에서 접을 때
+    if (willCollapse && headerElement) {
+      const rect = headerElement.getBoundingClientRect();
+      const offsets = getStickyOffsets();
+      const isStuck = rect.top <= offsets.test + 1;
 
-      if (isExpanded) {
-        newExpandedTests = prev.expandedTests.filter((t) => t !== key);
-      } else {
-        newExpandedTests = [...prev.expandedTests, key];
+      if (isStuck) {
+        setState((prev) => ({
+          ...prev,
+          expandedTests: prev.expandedTests.filter((t) => t !== key),
+        }));
+
+        requestAnimationFrame(() => {
+          headerElement.scrollIntoView({ block: "start" });
+          window.scrollBy({ top: -offsets.test, behavior: "instant" });
+        });
+        return;
       }
+    }
 
+    // 일반 토글
+    setState((prev) => {
+      const newExpandedTests = isCurrentlyExpanded
+        ? prev.expandedTests.filter((t) => t !== key)
+        : [...prev.expandedTests, key];
       return { ...prev, expandedTests: newExpandedTests };
     });
   };
@@ -209,19 +269,39 @@ export default function App() {
     traceKey: string,
     traceAt: string,
     traceIdx: number,
+    headerElement?: HTMLElement,
+    isSearchResult?: boolean,
   ) => {
     const stateKey = `${suite}::${testName}::${traceKey}::${traceAt}::${traceIdx}`;
+    const isCurrentlyExpanded = state.expandedTraces.includes(stateKey);
+    const willCollapse = isCurrentlyExpanded;
 
-    setState((prev) => {
-      const isExpanded = prev.expandedTraces.includes(stateKey);
-      let newExpandedTraces: string[];
+    // 스티키 상태에서 접을 때
+    if (willCollapse && headerElement) {
+      const rect = headerElement.getBoundingClientRect();
+      const offsets = getStickyOffsets();
+      const stickyTop = isSearchResult ? offsets.searchTrace : offsets.trace;
+      const isStuck = rect.top <= stickyTop + 1;
 
-      if (isExpanded) {
-        newExpandedTraces = prev.expandedTraces.filter((t) => t !== stateKey);
-      } else {
-        newExpandedTraces = [...prev.expandedTraces, stateKey];
+      if (isStuck) {
+        setState((prev) => ({
+          ...prev,
+          expandedTraces: prev.expandedTraces.filter((t) => t !== stateKey),
+        }));
+
+        requestAnimationFrame(() => {
+          headerElement.scrollIntoView({ block: "start" });
+          window.scrollBy({ top: -stickyTop, behavior: "instant" });
+        });
+        return;
       }
+    }
 
+    // 일반 토글
+    setState((prev) => {
+      const newExpandedTraces = isCurrentlyExpanded
+        ? prev.expandedTraces.filter((t) => t !== stateKey)
+        : [...prev.expandedTraces, stateKey];
       return { ...prev, expandedTraces: newExpandedTraces };
     });
   };
@@ -784,8 +864,8 @@ export default function App() {
                             <div key={traceStateKey} className="search-result-trace">
                               <div
                                 className="trace-header"
-                                onClick={() =>
-                                  toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)
+                                onClick={(e) =>
+                                  toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx, e.currentTarget, true)
                                 }
                               >
                                 <span
@@ -852,7 +932,7 @@ export default function App() {
                   className={`suite-group ${state.searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`}
                   data-suite={suiteName}
                 >
-                  <div className="suite-header" onClick={() => toggleSuite(suiteName)}>
+                  <div className="suite-header" onClick={(e) => toggleSuite(suiteName, e.currentTarget)}>
                     <span className="arrow suite-arrow" id={`suite-arrow-${suiteId}`}>
                       {suiteExpanded ? "▼" : "▶"}
                     </span>
@@ -898,7 +978,7 @@ export default function App() {
                         >
                           <div
                             className="test-header"
-                            onClick={() => toggleTest(suiteName, testName)}
+                            onClick={(e) => toggleTest(suiteName, testName, e.currentTarget)}
                           >
                             <span className="arrow test-arrow" id={`test-arrow-${testId}`}>
                               {testExpanded ? "▼" : "▶"}
@@ -953,13 +1033,15 @@ export default function App() {
                                 >
                                   <div
                                     className="trace-header"
-                                    onClick={() =>
+                                    onClick={(e) =>
                                       toggleTrace(
                                         suiteName,
                                         testName,
                                         trace.key,
                                         trace.at,
                                         traceIdx,
+                                        e.currentTarget,
+                                        false,
                                       )
                                     }
                                   >
