@@ -315,6 +315,7 @@ export default function App() {
         collapsedSuites: newCollapsedSuites,
         expandedTests: newExpandedTests,
         expandedTraces: newExpandedTraces,
+        searchMode: false, // 검색 모드 끄기 (검색어는 유지)
       };
     });
 
@@ -364,6 +365,7 @@ export default function App() {
         ...prev,
         collapsedSuites: newCollapsedSuites,
         expandedTests: newExpandedTests,
+        searchMode: false, // 검색 모드 끄기 (검색어는 유지)
       };
     });
 
@@ -388,15 +390,6 @@ export default function App() {
   // 검색 필터링 (퍼지 서치)
   // ============================================================================
 
-  // value를 문자열로 변환하여 검색
-  const stringifyValue = (value: unknown): string => {
-    if (value === null) return "null";
-    if (value === undefined) return "undefined";
-    if (typeof value === "string") return value;
-    if (typeof value === "number" || typeof value === "boolean") return String(value);
-    return JSON.stringify(value);
-  };
-
   // 퍼지 매칭: 각 문자가 순서대로 존재하는지 확인하고 매칭 인덱스 반환
   type FuzzyMatch = { matched: boolean; indices: number[]; score: number };
 
@@ -413,7 +406,6 @@ export default function App() {
     for (let i = 0; i < lowerText.length && queryIdx < lowerQuery.length; i++) {
       if (lowerText[i] === lowerQuery[queryIdx]) {
         indices.push(i);
-        // 연속 매칭 보너스
         if (lastMatchIdx === i - 1) {
           consecutiveBonus += 10;
         }
@@ -423,21 +415,15 @@ export default function App() {
     }
 
     const matched = queryIdx === lowerQuery.length;
-    // 점수: 매칭 완료 + 연속 보너스 - 간격 패널티
-    const score = matched ? 100 + consecutiveBonus - (indices.length > 0 ? indices[indices.length - 1] - indices[0] : 0) : 0;
+    const score = matched ? 100 + consecutiveBonus : 0;
 
     return { matched, indices, score };
   };
 
-  // trace가 검색어와 매칭되는지 확인
+  // trace가 검색어와 매칭되는지 확인 (key만 검색)
   const traceMatchesQuery = (trace: NaiteMessagingTypes.NaiteTrace, query: string): boolean => {
     if (!query) return true;
-    // key 퍼지 매칭
-    if (fuzzyMatch(trace.key, query).matched) return true;
-    // value 퍼지 매칭
-    const valueStr = stringifyValue(trace.value);
-    if (fuzzyMatch(valueStr, query).matched) return true;
-    return false;
+    return fuzzyMatch(trace.key, query).matched;
   };
 
   // 퍼지 매칭 결과로 하이라이트된 텍스트 생성
@@ -502,6 +488,35 @@ export default function App() {
 
   for (const suiteData of suiteMap.values()) {
     totalTests += suiteData.testMap.size;
+  }
+
+  // 검색 결과를 테스트 케이스별로 그룹핑
+  type MatchedTrace = {
+    trace: NaiteMessagingTypes.NaiteTrace;
+    traceIdx: number;
+  };
+  type SearchResultGroup = {
+    suiteName: string;
+    testName: string;
+    result: NaiteMessagingTypes.TestResult;
+    matchedTraces: MatchedTrace[];
+  };
+
+  const searchResultGroups: SearchResultGroup[] = [];
+  if (state.searchQuery) {
+    for (const result of state.testResults) {
+      const suiteName = result.suiteName || "(no suite)";
+      const testName = result.testName || "(no test)";
+      const matchedTraces: MatchedTrace[] = [];
+      result.traces.forEach((trace, traceIdx) => {
+        if (traceMatchesQuery(trace, state.searchQuery)) {
+          matchedTraces.push({ trace, traceIdx });
+        }
+      });
+      if (matchedTraces.length > 0) {
+        searchResultGroups.push({ suiteName, testName, result, matchedTraces });
+      }
+    }
   }
 
   // ============================================================================
@@ -597,7 +612,78 @@ export default function App() {
       <div id="traces-container" ref={tracesContainerRef}>
         {state.testResults.length === 0 ? (
           <div className="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>
+        ) : state.searchMode && state.searchQuery ? (
+          // 검색 모드: 테스트 케이스별 그룹
+          <div className="search-results">
+            {searchResultGroups.length === 0 ? (
+              <div className="empty">검색 결과가 없습니다.</div>
+            ) : (
+              searchResultGroups.map(({ suiteName, testName, result, matchedTraces }) => {
+                const groupKey = `${suiteName}::${testName}`;
+                return (
+                  <div key={groupKey} className="search-result-item">
+                    <div className="search-result-breadcrumb">
+                      <span className="breadcrumb-suite">{suiteName}</span>
+                      <span className="breadcrumb-separator">›</span>
+                      <span className="breadcrumb-test">{testName}</span>
+                      <span
+                        className="breadcrumb-location"
+                        onClick={() => goToLocation(result.testFilePath, result.testLine)}
+                      >
+                        {result.testFilePath.split("/").pop()}:{result.testLine}
+                      </span>
+                      <span className="breadcrumb-count">{matchedTraces.length}</span>
+                    </div>
+                    <div className="search-result-traces">
+                      {matchedTraces.map(({ trace, traceIdx }) => {
+                        const traceStateKey = `${suiteName}::${testName}::${trace.key}::${trace.at}::${traceIdx}`;
+                        const traceExpanded = state.expandedTraces.includes(traceStateKey);
+                        const traceId = escapeId(traceStateKey);
+                        const fileName = trace.filePath.split("/").pop() || trace.filePath;
+                        const time = new Date(trace.at).toLocaleTimeString("ko-KR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        });
+
+                        return (
+                          <div key={traceStateKey} className="search-result-trace">
+                            <div
+                              className="trace-header"
+                              onClick={() => toggleTrace(suiteName, testName, trace.key, trace.at, traceIdx)}
+                            >
+                              <span className={`arrow trace-arrow ${traceExpanded ? "expanded" : ""}`}>▶</span>
+                              <span className="key">{renderHighlightedText(trace.key, state.searchQuery)}</span>
+                              <span
+                                className="location-link"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  goToLocation(trace.filePath, trace.lineNumber);
+                                }}
+                              >
+                                {fileName}:{trace.lineNumber}
+                              </span>
+                              <span className="time">{time}</span>
+                            </div>
+                            {traceExpanded && (
+                              <div className="trace-content" id={`trace-content-${traceId}`}>
+                                <div className="json-viewer">
+                                  <JsonValue value={trace.value} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         ) : (
+          // 일반 모드: 계층 구조
           <div className="traces">
             {Array.from(suiteMap.entries()).map(([suiteName, suiteData]) => {
               const { testMap, suiteFilePath } = suiteData;

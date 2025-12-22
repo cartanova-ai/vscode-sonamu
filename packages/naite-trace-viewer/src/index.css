@@ -367,3 +367,61 @@ body {
 .suite-group.search-hidden {
   display: none;
 }
+
+/* 검색 결과 플랫 리스트 */
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-result-item {
+  border: 1px solid var(--vscode-sideBar-background);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.search-result-breadcrumb {
+  padding: 6px 12px;
+  background: var(--vscode-sideBar-background);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.breadcrumb-suite {
+  color: var(--vscode-symbolIcon-classForeground, #ee9d28);
+  font-weight: 500;
+}
+.breadcrumb-separator {
+  color: var(--vscode-descriptionForeground);
+}
+.breadcrumb-test {
+  color: var(--vscode-symbolIcon-functionForeground, #b180d7);
+}
+.breadcrumb-location {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  font-family: var(--vscode-editor-font-family);
+  cursor: pointer;
+}
+.breadcrumb-location:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.breadcrumb-count {
+  margin-left: auto;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.search-result-traces {
+  padding: 4px 0;
+}
+.search-result-trace .trace-header {
+  padding-left: 12px;
+}
+.search-result-trace .trace-content {
+  margin-left: 12px;
+}
