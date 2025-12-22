@@ -1,13 +1,10 @@
 import ts from "typescript";
 import vscode from "vscode";
 
-type NaiteExpression = {
-  pattern: string; // 매칭된 패턴 (예: "Naite.t", "Naite.get")
+export type NaiteExpression = {
   key: string; // 키 값 (예: "add:params", "add:result")
+  pattern: string; // 매칭된 패턴 (예: "Naite.t", "Naite.get")
   location: vscode.Location; // 호출문 위치
-
-  callExpression: ts.CallExpression;
-  firstArgument: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral;
 };
 
 /**
@@ -53,22 +50,12 @@ export default class NaiteExpressionScanner {
                 const firstArg = callExpr.arguments[0];
 
                 if (ts.isStringLiteral(firstArg) || ts.isNoSubstitutionTemplateLiteral(firstArg)) {
-                  // 전체 호출문 위치를 꺼내옵니다.
-                  // 전체라 함은 "Naite.t("add:params", { a, b })" 전체를 의미합니다.
+                  // 전체 호출문 위치 (예: "Naite.t("add:params", { a, b })" 전체)
                   const start = doc.positionAt(callExpr.getStart(sourceFile));
                   const end = doc.positionAt(callExpr.getEnd());
-                  const range = new vscode.Range(start, end);
-                  const location = new vscode.Location(doc.uri, range);
+                  const location = new vscode.Location(doc.uri, new vscode.Range(start, end));
 
-                  const expression: NaiteExpression = {
-                    pattern: fullPattern,
-                    key: firstArg.text,
-                    location,
-                    callExpression: callExpr,
-                    firstArgument: firstArg,
-                  };
-
-                  yield expression;
+                  yield { key: firstArg.text, pattern: fullPattern, location };
                 }
               }
             }

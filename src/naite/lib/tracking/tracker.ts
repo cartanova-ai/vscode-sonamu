@@ -1,11 +1,9 @@
-import assert from "assert";
 import vscode from "vscode";
 import NaiteExpressionExtractor from "../code-parsing/expression-extractor";
-import NaiteExpressionScanner from "../code-parsing/expression-scanner";
+import NaiteExpressionScanner, { type NaiteExpression } from "../code-parsing/expression-scanner";
 import { StatusBar } from "../utils/status-bar";
 import { findConfigFiles } from "../utils/workspace";
 import { NaiteCallPatterns } from "./patterns";
-import type { NaiteKey, NaiteKeysMap } from "./types";
 
 /**
  * 와일드카드 패턴(*)이 주어진 키와 매칭되는지 확인합니다
@@ -23,7 +21,7 @@ function matchesKey(pattern: string, key: string): boolean {
  * TypeScript 파일을 파싱하여 Naite 호출을 찾습니다
  */
 class NaiteTrackerClass {
-  private keys: NaiteKeysMap = new Map();
+  private naiteCalls: Map<string, NaiteExpression[]> = new Map();
 
   /**
    * 워크스페이스의 모든 TypeScript 파일에서 Naite 호출을 스캔합니다.
@@ -31,7 +29,7 @@ class NaiteTrackerClass {
    * - 해당 프로젝트의 node_modules/sonamu/src 내의 .ts 파일들
    */
   async scanWorkspace(): Promise<void> {
-    this.keys.clear();
+    this.naiteCalls.clear();
 
     // sonamu.config.ts 위치 찾기 (프로젝트 루트 결정)
     const configFiles = await findConfigFiles();
@@ -67,14 +65,14 @@ class NaiteTrackerClass {
     StatusBar.show(`스캔 완료: ${keyCount}개 키 발견`, { timeout: 1000, done: true });
   }
 
-  private forgetKeysInFile(uri: vscode.Uri): void {
+  private forgetCallsInFile(uri: vscode.Uri): void {
     const uriString = uri.toString();
-    for (const [key, entries] of this.keys) {
+    for (const [key, entries] of this.naiteCalls) {
       const filtered = entries.filter((e) => e.location.uri.toString() !== uriString);
       if (filtered.length === 0) {
-        this.keys.delete(key);
+        this.naiteCalls.delete(key);
       } else {
-        this.keys.set(key, filtered);
+        this.naiteCalls.set(key, filtered);
       }
     }
   }
@@ -86,7 +84,7 @@ class NaiteTrackerClass {
     const fileName = uri.fsPath.split("/").pop() || uri.fsPath;
     const statusMessage = StatusBar.show(`스캔 중: ${fileName}...`);
 
-    this.forgetKeysInFile(uri);
+    this.forgetCallsInFile(uri);
 
     const document = await vscode.workspace.openTextDocument(uri);
     const scanner = new NaiteExpressionScanner(document);
@@ -94,15 +92,11 @@ class NaiteTrackerClass {
 
     const naiteCalls = Array.from(scanner.scanNaiteCalls(patterns));
 
-    for (const { key, location, pattern } of naiteCalls) {
-      const type = NaiteCallPatterns.getType(pattern);
-      assert(type, `있을 수 없는 일입니다.`);
-
-      const naiteKey: NaiteKey = { key, location, type, pattern };
-      if (!this.keys.has(key)) {
-        this.keys.set(key, []);
+    for (const expr of naiteCalls) {
+      if (!this.naiteCalls.has(expr.key)) {
+        this.naiteCalls.set(expr.key, []);
       }
-      this.keys.get(key)?.push(naiteKey);
+      this.naiteCalls.get(expr.key)?.push(expr);
     }
 
     statusMessage.dispose();
@@ -120,9 +114,11 @@ class NaiteTrackerClass {
    * 모든 Naite 호출 키 목록을 반환합니다.
    */
   getAllKeys(type?: "set" | "get"): string[] {
-    const keys = Array.from(this.keys.keys()).sort();
+    const keys = Array.from(this.naiteCalls.keys()).sort();
     if (type) {
-      return keys.filter((k) => this.keys.get(k)?.some((k) => k.type === type));
+      return keys.filter((k) =>
+        this.naiteCalls.get(k)?.some((expr) => NaiteCallPatterns.getType(expr.pattern) === type),
+      );
     }
     return keys;
   }
@@ -134,11 +130,11 @@ class NaiteTrackerClass {
   getKeyLocations(key: string, type?: "set" | "get"): vscode.Location[] {
     const results: vscode.Location[] = [];
 
-    for (const [storedKey, naiteKeys] of this.keys) {
+    for (const [storedKey, expressions] of this.naiteCalls) {
       if (matchesKey(key, storedKey)) {
-        for (const k of naiteKeys) {
-          if (!type || k.type === type) {
-            results.push(k.location);
+        for (const expr of expressions) {
+          if (!type || NaiteCallPatterns.getType(expr.pattern) === type) {
+            results.push(expr.location);
           }
         }
       }
@@ -150,14 +146,14 @@ class NaiteTrackerClass {
   /**
    * 특정 파일의 모든 Naite 호출을 반환합니다 (CodeLens/Decorator용)
    */
-  getEntriesForFile(uri: vscode.Uri): NaiteKey[] {
+  getEntriesForFile(uri: vscode.Uri): NaiteExpression[] {
     const uriString = uri.toString();
-    const entries: NaiteKey[] = [];
+    const entries: NaiteExpression[] = [];
 
-    for (const naiteKeys of this.keys.values()) {
-      for (const entry of naiteKeys) {
-        if (entry.location.uri.toString() === uriString) {
-          entries.push(entry);
+    for (const expressions of this.naiteCalls.values()) {
+      for (const expr of expressions) {
+        if (expr.location.uri.toString() === uriString) {
+          entries.push(expr);
         }
       }
     }

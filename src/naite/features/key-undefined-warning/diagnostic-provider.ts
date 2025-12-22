@@ -1,4 +1,5 @@
 import vscode from "vscode";
+import { NaiteCallPatterns } from "../../lib/tracking/patterns";
 import { NaiteTracker } from "../../lib/tracking/tracker";
 
 /**
@@ -26,7 +27,7 @@ export class NaiteDiagnosticProvider {
     const diagnostics: vscode.Diagnostic[] = [];
 
     const expressions = NaiteTracker.getEntriesForFile(document.uri).filter(
-      (k) => k.type === "get",
+      (expr) => NaiteCallPatterns.isGet(expr.pattern),
     );
 
     for (const expr of expressions) {

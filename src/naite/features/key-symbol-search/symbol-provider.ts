@@ -1,4 +1,5 @@
 import vscode from "vscode";
+import { NaiteCallPatterns } from "../../lib/tracking/patterns";
 import { NaiteTracker } from "../../lib/tracking/tracker";
 
 /**
@@ -12,7 +13,7 @@ export class NaiteDocumentSymbolProvider implements vscode.DocumentSymbolProvide
     const entries = NaiteTracker.getEntriesForFile(document.uri);
 
     return entries
-      .filter((entry) => entry.type === "set")
+      .filter((entry) => NaiteCallPatterns.isSet(entry.pattern))
       .map((entry) => {
         return new vscode.DocumentSymbol(
           entry.key,
