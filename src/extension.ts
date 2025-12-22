@@ -16,8 +16,7 @@ import {
   NaiteWorkspaceSymbolProvider,
 } from "./naite/features/key-symbol-search/symbol-provider";
 import { NaiteDiagnosticProvider } from "./naite/features/key-undefined-warning/diagnostic-provider";
-import { NaiteTracePanelProvider } from "./naite/features/trace-viewer-panel/trace-panel-provider";
-import { NaiteTraceTabProvider } from "./naite/features/trace-viewer-tab/trace-tab-provider";
+import { NaiteTraceViewerProvider } from "./naite/features/trace-viewer/trace-viewer-provider";
 import NaiteExpressionScanner from "./naite/lib/code-parsing/expression-scanner";
 import { NaiteSocketServer } from "./naite/lib/messaging/naite-socket-server";
 import { TraceStore } from "./naite/lib/messaging/trace-store";
@@ -40,19 +39,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
   await NaiteTracker.scanWorkspace();
 
-  const { traceTabProvider } = registerTraceViewers(context);
+  const traceViewerProvider = registerTraceViewerProvider(context);
   const diagnosticProvider = registerDiagnosticProvider(context);
   diagnosticProvider.updateAllDiagnostics();
 
   registerConfigListeners(context, diagnosticProvider);
-  registerDocumentEventHandlers(context, traceTabProvider, diagnosticProvider);
+  registerDocumentEventHandlers(context, traceViewerProvider, diagnosticProvider);
   registerLanguageProviders(context);
-  registerCommands(context, traceTabProvider);
+  registerCommands(context, traceViewerProvider);
 
   context.subscriptions.push(
     TraceStore.onTestResultAdded(() => {
       // 테스트 결과가 도착하면 Trace Viewer Tab을 보여줍니다.
-      traceTabProvider.show();
+      traceViewerProvider.show();
 
       for (const editor of vscode.window.visibleTextEditors) {
         // 유일하게 영향 받는 inline value decoration만 업데이트합니다.
@@ -117,36 +116,23 @@ function registerDiagnosticProvider(context: vscode.ExtensionContext): NaiteDiag
 }
 
 /**
- * Naite Trace Viewer(panel, tab)를 등록합니다.
+ * Naite Trace Viewer를 등록합니다.
  *
  * @param context
  * @returns 각 provider 인스턴스
  */
-function registerTraceViewers(context: vscode.ExtensionContext): {
-  tracePanelProvider: NaiteTracePanelProvider;
-  traceTabProvider: NaiteTraceTabProvider;
-} {
-  // 하단 패널 WebviewView
-  const tracePanelProvider = new NaiteTracePanelProvider();
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      NaiteTracePanelProvider.viewType,
-      tracePanelProvider,
-      { webviewOptions: { retainContextWhenHidden: true } },
-    ),
-  );
-
+function registerTraceViewerProvider(context: vscode.ExtensionContext): NaiteTraceViewerProvider {
   // 에디터 탭 WebviewPanel
-  const traceTabProvider = new NaiteTraceTabProvider(context);
+  const traceViewerProvider = new NaiteTraceViewerProvider(context);
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("naiteTraceViewer", {
       async deserializeWebviewPanel(panel: vscode.WebviewPanel, _state: unknown) {
-        traceTabProvider.restorePanel(panel);
+        traceViewerProvider.restorePanel(panel);
       },
     }),
   );
 
-  return { tracePanelProvider, traceTabProvider };
+  return traceViewerProvider;
 }
 
 /**
@@ -189,7 +175,7 @@ function registerConfigListeners(
  */
 function registerDocumentEventHandlers(
   context: vscode.ExtensionContext,
-  traceTabProvider: NaiteTraceTabProvider,
+  traceTabProvider: NaiteTraceViewerProvider,
   diagnosticProvider: NaiteDiagnosticProvider,
 ) {
   context.subscriptions.push(
@@ -264,7 +250,7 @@ function registerLanguageProviders(context: vscode.ExtensionContext) {
  */
 function registerCommands(
   context: vscode.ExtensionContext,
-  traceTabProvider: NaiteTraceTabProvider,
+  traceTabProvider: NaiteTraceViewerProvider,
 ) {
   context.subscriptions.push(
     vscode.commands.registerCommand("sonamu.rescanNaiteKeys", async () => {
@@ -404,7 +390,7 @@ async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promi
  */
 function focusSelectionOnTraceTab(
   e: vscode.TextEditorSelectionChangeEvent,
-  traceTabProvider: NaiteTraceTabProvider,
+  traceTabProvider: NaiteTraceViewerProvider,
 ) {
   if (!traceTabProvider.isVisible() || !traceTabProvider.isFollowEnabled()) {
     return;

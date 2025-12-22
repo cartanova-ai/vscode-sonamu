@@ -11,7 +11,7 @@ import traceTabHtml from "./ui/index.html";
  * 얘는 사실 Provider 모양의 클래스로 만들 필요는 없었습니다만,
  * 일관성을 맞추기 위해 이렇게 했습니다.
  */
-export class NaiteTraceTabProvider {
+export class NaiteTraceViewerProvider {
   private _panel: vscode.WebviewPanel | null = null;
   private _disposables: vscode.Disposable[] = [];
   private _followEnabled: boolean = true;
