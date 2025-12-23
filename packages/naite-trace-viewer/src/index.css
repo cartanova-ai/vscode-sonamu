@@ -81,19 +81,28 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0; /* 축소 허용 */
+  flex: 1;
+  overflow: hidden;
 }
 .header-right {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0; /* 버튼 영역 고정 */
 }
 .title {
   font-size: 13px;
   font-weight: 500;
+  flex-shrink: 0; /* 타이틀 고정 */
 }
 .stats {
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .header-btn {
   background: var(--vscode-button-secondaryBackground);
@@ -163,7 +172,7 @@ body {
   top: calc(var(--header-height) + 6px); /* 헤더 아래 여백 두고 고정 */
   z-index: 30;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -177,6 +186,9 @@ body {
 }
 .suite-name {
   color: var(--vscode-symbolIcon-classForeground, #ee9d28);
+  word-break: break-word; /* 길면 줄바꿈 */
+  min-width: 0;
+  flex-shrink: 1; /* 나중에 축소됨 */
 }
 .suite-file {
   color: var(--vscode-descriptionForeground);
@@ -185,6 +197,11 @@ body {
   font-family: var(--vscode-editor-font-family);
   cursor: pointer;
   margin-left: 8px;
+  flex-shrink: 10; /* 먼저 빠르게 축소됨 */
+  min-width: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .suite-file:hover {
   color: var(--accent);
@@ -195,6 +212,11 @@ body {
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
   font-weight: normal;
+  flex-shrink: 999; /* 가장 먼저 사라짐 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .suite-content.collapsed {
   display: none;
