@@ -1,8 +1,10 @@
+import { useLayoutEffect, useRef } from "react";
 import type { NaiteMessagingTypes } from "naite-types";
+
+import { goToLocation, handleStickyToggle } from "../hooks";
+import { createTestKey, escapeId, traceMatchesQuery } from "../utils";
 import { ExpandArrow } from "./ExpandArrow";
 import { TestItem } from "./TestItem";
-import { escapeId, createTestKey, traceMatchesQuery } from "../utils";
-import { goToLocation, handleStickyToggle } from "../hooks";
 
 type SuiteItemProps = {
   suiteName: string;
@@ -35,6 +37,29 @@ export function SuiteItem({
 }: SuiteItemProps) {
   const suiteId = escapeId(suiteName);
   const testFileName = suiteFilePath ? suiteFilePath.split("/").pop() : null;
+  const suiteHeaderRef = useRef<HTMLDivElement>(null);
+  const suiteContentRef = useRef<HTMLDivElement>(null);
+
+  // 스위트 헤더 높이 변화 감지 및 CSS 변수 업데이트
+  useLayoutEffect(() => {
+    const headerEl = suiteHeaderRef.current;
+    const contentEl = suiteContentRef.current;
+    if (!headerEl || !contentEl) return;
+
+    const updateHeight = () => {
+      const height = headerEl.offsetHeight;
+      contentEl.style.setProperty("--suite-header-height", `${height}px`);
+    };
+
+    // 초기 설정
+    updateHeight();
+
+    // ResizeObserver로 높이 변화 감지
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerEl);
+
+    return () => observer.disconnect();
+  }, []);
 
   // 통계 계산
   const suiteTestCount = testMap.size;
@@ -66,7 +91,7 @@ export function SuiteItem({
       className={`suite-group ${searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`}
       data-suite={suiteName}
     >
-      <div className="suite-header" onClick={handleHeaderClick}>
+      <div ref={suiteHeaderRef} className="suite-header" onClick={handleHeaderClick}>
         <ExpandArrow expanded={expanded} className="suite-arrow" id={`suite-arrow-${suiteId}`} />
         <span className="suite-name">{suiteName}</span>
         {testFileName && suiteFilePath && (
@@ -80,6 +105,7 @@ export function SuiteItem({
       </div>
 
       <div
+        ref={suiteContentRef}
         className={`suite-content ${expanded ? "" : "collapsed"}`}
         id={`suite-content-${suiteId}`}
       >

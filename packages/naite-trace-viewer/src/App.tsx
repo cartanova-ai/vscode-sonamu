@@ -168,7 +168,7 @@ export default function App() {
             expandedTraces={state.expandedTraces}
             highlightedTraces={highlightedTraces}
             highlightedTest={highlightedTest}
-            searchQuery={state.searchQuery}
+            searchQuery="" // 검색 모드가 아닐 때는 필터 비활성화 (검색어는 다음 검색을 위해 state에 보존)
             onToggleSuite={handleToggleSuite}
             onToggleTest={handleToggleTest}
             onToggleTrace={handleToggleTrace}

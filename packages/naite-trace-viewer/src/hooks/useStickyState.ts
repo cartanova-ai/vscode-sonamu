@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { getStickyOffsets } from "../utils";
 
 /**
  * 스티키 헤더 상태 감지 훅
@@ -14,15 +13,31 @@ export function useStickyState(dependencies: unknown[]) {
     let ticking = false;
 
     const updateStickyState = () => {
-      const offsets = getStickyOffsets();
-      const normalViewStickyTop = offsets.trace;
-      const searchViewStickyTop = offsets.searchTrace;
+      const rootStyle = getComputedStyle(document.documentElement);
+      const headerHeight = parseInt(rootStyle.getPropertyValue("--header-height")) || 40;
+      const testHeaderHeight = parseInt(rootStyle.getPropertyValue("--test-header-height")) || 34;
 
       const headers = document.querySelectorAll(".trace-header");
       for (const header of headers) {
         const rect = header.getBoundingClientRect();
         const isSearchResult = header.closest(".search-result-trace") !== null;
-        const stickyTop = isSearchResult ? searchViewStickyTop : normalViewStickyTop;
+
+        let stickyTop: number;
+        if (isSearchResult) {
+          // 검색 결과: 상위 .search-result-traces에서 breadcrumb 높이 읽기
+          const tracesContainer = header.closest(".search-result-traces");
+          const breadcrumbHeight = tracesContainer
+            ? parseInt(getComputedStyle(tracesContainer).getPropertyValue("--breadcrumb-height")) || 28
+            : 28;
+          stickyTop = headerHeight + 6 + breadcrumbHeight;
+        } else {
+          // 일반 뷰: 상위 .suite-content에서 suite 헤더 높이 읽기
+          const suiteContent = header.closest(".suite-content");
+          const suiteHeaderHeight = suiteContent
+            ? parseInt(getComputedStyle(suiteContent).getPropertyValue("--suite-header-height")) || 30
+            : 30;
+          stickyTop = headerHeight + suiteHeaderHeight + testHeaderHeight + 6;
+        }
 
         // 약간의 여유를 두고 판단 (1px)
         const isStuck = rect.top <= stickyTop + 1;
