@@ -1,0 +1,92 @@
+import type { NaiteMessagingTypes } from "naite-types";
+
+/**
+ * 런타임 상태 (Set 사용)
+ * React 컴포넌트에서 사용하는 상태 타입
+ */
+export type TraceViewerState = {
+  testResults: NaiteMessagingTypes.TestResult[];
+  collapsedSuites: Set<string>; // 닫힌 suite (기본 펼침)
+  expandedTests: Set<string>; // 열린 test (기본 접힘)
+  expandedTraces: Set<string>; // 열린 trace (기본 접힘)
+  followEnabled: boolean;
+  searchQuery: string;
+  searchMode: boolean;
+};
+
+/**
+ * VSCode 저장용 상태 (Array로 직렬화)
+ * vscode.setState()에 저장되는 형태
+ */
+export type PersistedState = {
+  testResults: NaiteMessagingTypes.TestResult[];
+  collapsedSuites: string[];
+  expandedTests: string[];
+  expandedTraces: string[];
+  followEnabled: boolean;
+  // searchQuery, searchMode는 저장하지 않음 (임시 상태)
+};
+
+/**
+ * 하이라이트 상태
+ */
+export type HighlightState = {
+  traces: Set<string>;
+  test: string | null;
+};
+
+/**
+ * 스티키 오프셋 값들
+ */
+export type StickyOffsets = {
+  headerHeight: number;
+  suiteHeaderHeight: number;
+  testHeaderHeight: number;
+  traceHeaderHeight: number;
+  breadcrumbHeight: number;
+  // 각 헤더 타입의 스티키 top 위치
+  suite: number;
+  test: number;
+  trace: number;
+  searchBreadcrumb: number;
+  searchTrace: number;
+};
+
+/**
+ * 퍼지 매칭 결과
+ */
+export type FuzzyMatchResult = {
+  matched: boolean;
+  indices: number[];
+  score: number;
+};
+
+/**
+ * 검색 결과에서 매칭된 trace
+ */
+export type MatchedTrace = {
+  trace: NaiteMessagingTypes.NaiteTrace;
+  traceIdx: number;
+};
+
+/**
+ * 검색 결과 그룹 (테스트 케이스별)
+ */
+export type SearchResultGroup = {
+  suiteName: string;
+  testName: string;
+  result: NaiteMessagingTypes.TestResult;
+  matchedTraces: MatchedTrace[];
+};
+
+/**
+ * VSCode API 메시지 타입들
+ */
+export type VSCodeMessage =
+  | { type: "updateTestResults"; testResults: NaiteMessagingTypes.TestResult[] }
+  | { type: "focusKey"; key: string }
+  | { type: "focusTest"; suiteName: string; testName: string };
+
+export type VSCodeOutgoingMessage =
+  | { type: "goToLocation"; filePath: string; lineNumber: number }
+  | { type: "followStateChanged"; enabled: boolean };
