@@ -326,9 +326,18 @@ body {
   background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
   animation: fadeHighlight 2s ease-out forwards;
 }
+.trace-item.highlight > .trace-header {
+  background: transparent; /* 하이라이트가 헤더 위로 보이도록 */
+}
 .test-group.highlight {
   background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33));
   animation: fadeHighlight 2s ease-out forwards;
+}
+.test-group.highlight .trace-header {
+  background: transparent; /* 테스트케이스 하이라이트 시 트레이스 헤더도 투명 */
+}
+.test-group.highlight .test-header {
+  background: transparent; /* 테스트케이스 하이라이트 시 테스트 헤더도 투명 */
 }
 @keyframes fadeHighlight {
   0% { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.33)); }

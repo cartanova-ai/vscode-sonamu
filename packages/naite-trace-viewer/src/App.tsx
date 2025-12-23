@@ -33,7 +33,16 @@ type SearchResultGroup = {
 // ============================================================================
 
 function escapeId(str: string): string {
-  return str.replace(/[^a-zA-Z0-9-_]/g, "_");
+  // 간단한 해시 함수로 유니크한 ID 생성
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // 영문/숫자만 남기고 해시 추가
+  const safe = str.replace(/[^a-zA-Z0-9-_]/g, "_");
+  return `${safe}_${Math.abs(hash).toString(36)}`;
 }
 
 // 스티키 위치 계산 헬퍼
