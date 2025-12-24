@@ -536,7 +536,7 @@ body {
   flex-shrink: 0; /* 절대 축소 안됨 */
 }
 .search-result-traces { /*얘가 왜 필요했더라...*/
-  padding: 0px 0;
+  padding-bottom: 4px
 }
 .search-result-trace .trace-header {
   height: 16px; /*얘가 없으면 0.5px정도 높이가 안 맞아요;*/
