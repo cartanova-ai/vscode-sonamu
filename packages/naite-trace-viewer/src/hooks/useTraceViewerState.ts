@@ -22,7 +22,7 @@ type Action =
   | { type: "SET_SEARCH_QUERY"; query: string }
   | { type: "FOCUS_KEY"; key: string }
   | { type: "FOCUS_TEST"; suiteName: string; testName: string }
-  | { type: "CLEAR_PENDING_HIGHLIGHT" };
+  | { type: "CLEAR_HIGHLIGHT" };
 
 function reducer(state: TraceViewerState, action: Action): TraceViewerState {
   switch (action.type) {
@@ -92,9 +92,7 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
 
     case "FOCUS_KEY": {
       // VSCode에서 "이 trace로 포커스해줘" 요청이 왔을 때:
-      // 1. Suite/Test/Trace를 열어서 DOM이 렌더되도록 함 (동기)
-      // 2. pendingHighlight에 하이라이트 대상을 "예약"
-      //    → 실제 스크롤/하이라이트는 DOM 렌더 후 useHighlight에서 처리
+      // Suite/Test/Trace를 열고 하이라이트 상태 설정
       const newCollapsedSuites = new Set(state.collapsedSuites);
       const newExpandedTests = new Set(state.expandedTests);
       const newExpandedTraces = new Set(state.expandedTraces);
@@ -131,8 +129,8 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
         expandedTests: newExpandedTests,
         expandedTraces: newExpandedTraces,
         searchMode: false,
-        pendingHighlight:
-          matchingTraceKeys.length > 0 ? { type: "traces", targets: matchingTraceKeys } : null,
+        highlightedTest: null,
+        highlightedTraces: new Set(matchingTraceKeys),
       };
     }
 
@@ -151,12 +149,13 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
         collapsedSuites: newCollapsedSuites,
         expandedTests: newExpandedTests,
         searchMode: false,
-        pendingHighlight: { type: "test", targets: [testKey] },
+        highlightedTest: testKey,
+        highlightedTraces: new Set(),
       };
     }
 
-    case "CLEAR_PENDING_HIGHLIGHT":
-      return { ...state, pendingHighlight: null };
+    case "CLEAR_HIGHLIGHT":
+      return { ...state, highlightedTest: null, highlightedTraces: new Set() };
 
     default:
       return state;
@@ -177,7 +176,8 @@ function createInitialState(): TraceViewerState {
     followEnabled: saved?.followEnabled ?? true,
     searchQuery: "",
     searchMode: false,
-    pendingHighlight: null,
+    highlightedTest: null,
+    highlightedTraces: new Set(),
   };
 }
 
@@ -202,9 +202,12 @@ export function serializeState(state: TraceViewerState): PersistedState {
  * - VSCode 메시지 수신 → dispatch 연결
  * - 편의용 actions 제공 (dispatch 래핑)
  */
+const HIGHLIGHT_DURATION_MS = 2000;
+
 export function useTraceViewerState() {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
   const isFirstRender = useRef(true);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 상태 변경 시 VSCode에 저장 (첫 렌더 제외)
   useEffect(() => {
@@ -214,6 +217,29 @@ export function useTraceViewerState() {
     }
     vscode.setState(serializeState(state));
   }, [state]);
+
+  // 하이라이트 자동 해제 (2초 후)
+  useEffect(() => {
+    const hasHighlight = state.highlightedTest || state.highlightedTraces.size > 0;
+    if (!hasHighlight) {
+      return;
+    }
+
+    // 기존 타이머 정리
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+
+    highlightTimeoutRef.current = setTimeout(() => {
+      dispatch({ type: "CLEAR_HIGHLIGHT" });
+    }, HIGHLIGHT_DURATION_MS);
+
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, [state.highlightedTest, state.highlightedTraces]);
 
   // VSCode 메시지 수신 처리
   useEffect(() => {
@@ -274,9 +300,6 @@ export function useTraceViewerState() {
     },
     setSearchQuery: (query: string) => {
       dispatch({ type: "SET_SEARCH_QUERY", query });
-    },
-    clearPendingHighlight: () => {
-      dispatch({ type: "CLEAR_PENDING_HIGHLIGHT" });
     },
   };
 

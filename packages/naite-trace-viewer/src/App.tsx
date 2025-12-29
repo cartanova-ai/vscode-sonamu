@@ -27,7 +27,7 @@
  * - testResults: 테스트 결과 배열 (Suite > Test > Trace 계층)
  * - collapsedSuites / expandedTests / expandedTraces: UI 토글 상태
  * - searchMode / searchQuery: 검색 모드 및 검색어
- * - pendingHighlight: 포커스 요청 시 하이라이트 대상 (일회성)
+ * - highlightedTest / highlightedTraces: 하이라이트 대상
  *
  * ## 수정 가이드
  * - 검색 기능 → features/search/
@@ -42,7 +42,7 @@ import { Header } from "./components";
 import { SearchView, useSearch } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
-import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./hooks";
+import { useKeyboardShortcuts, useScrollToHighlight, useTraceViewerState } from "./hooks";
 
 export default function App() {
   const { state, actions } = useTraceViewerState();
@@ -58,11 +58,8 @@ export default function App() {
     handleSearchChange,
   } = useSearch(state.testResults, actions.setSearchMode, actions.setSearchQuery, searchInputRef);
 
-  // 하이라이트 기능 (pendingHighlight 감지 → 하이라이트 + 스크롤 자동 처리)
-  const { highlightedTest, highlightedTraces } = useHighlight(
-    state.pendingHighlight,
-    actions.clearPendingHighlight,
-  );
+  // 하이라이트 대상으로 스크롤 (해제는 useTraceViewerState에서 자동 처리)
+  useScrollToHighlight(state.highlightedTest, state.highlightedTraces);
 
   // 키보드 단축키
   useKeyboardShortcuts(state.searchMode, openSearch, closeSearch, searchInputRef);
@@ -109,8 +106,8 @@ export default function App() {
             collapsedSuites={state.collapsedSuites}
             expandedTests={state.expandedTests}
             expandedTraces={state.expandedTraces}
-            highlightedTest={highlightedTest}
-            highlightedTraces={highlightedTraces}
+            highlightedTest={state.highlightedTest}
+            highlightedTraces={state.highlightedTraces}
             onToggleSuite={actions.toggleSuite}
             onToggleTest={actions.toggleTest}
             onToggleTrace={actions.toggleTrace}

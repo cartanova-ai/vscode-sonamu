@@ -4,15 +4,6 @@ import type { NaiteMessagingTypes } from "naite-types";
  * 런타임 상태 (Set 사용)
  * React 컴포넌트에서 사용하는 상태 타입
  */
-/**
- * 포커스 시 하이라이트할 대상 정보
- * reducer에서 설정 → App에서 하이라이트 적용 후 초기화
- */
-export type PendingHighlight = {
-  type: "traces" | "test";
-  targets: string[]; // traceKeys 또는 [testKey]
-};
-
 export type TraceViewerState = {
   testResults: NaiteMessagingTypes.TestResult[];
   collapsedSuites: Set<string>; // 닫힌 suite (기본 펼침)
@@ -21,7 +12,8 @@ export type TraceViewerState = {
   followEnabled: boolean;
   searchQuery: string;
   searchMode: boolean;
-  pendingHighlight: PendingHighlight | null; // 포커스 시 하이라이트 대상
+  highlightedTest: string | null; // 하이라이트된 테스트 키
+  highlightedTraces: Set<string>; // 하이라이트된 트레이스 키들
 };
 
 /**
@@ -35,14 +27,6 @@ export type PersistedState = {
   expandedTraces: string[];
   followEnabled: boolean;
   // searchQuery, searchMode는 저장하지 않음 (임시 상태)
-};
-
-/**
- * 하이라이트 상태
- */
-export type HighlightState = {
-  traces: Set<string>;
-  test: string | null;
 };
 
 /**
