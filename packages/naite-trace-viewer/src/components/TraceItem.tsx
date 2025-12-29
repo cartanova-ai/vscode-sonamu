@@ -32,7 +32,7 @@ export function TraceItem({
   const traceId = escapeId(traceStateKey);
   const fileName = getFileName(trace.filePath);
   const time = formatTime(trace.at);
-  const isSearchMatch = searchQuery ? true : false; // 검색 모드에서 이 컴포넌트가 렌더되면 매칭된 것
+  const isSearchMatch = !!searchQuery; // 검색 모드에서 이 컴포넌트가 렌더되면 매칭된 것
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
     handleStickyToggle(

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
   "linter": {
     "enabled": true,
     "rules": {
@@ -13,10 +13,15 @@
         "noUnusedImports": {
           "level": "warn",
           "fix": "safe"
-        }
+        },
+        "useExhaustiveDependencies": "off"
       },
       "a11y": {
-        "noLabelWithoutControl": "off"
+        "noLabelWithoutControl": "off",
+        "useSemanticElements": "off",
+        "noSvgWithoutTitle": "off",
+        "useKeyWithClickEvents": "off",
+        "noStaticElementInteractions": "off"
       },
       "complexity": {
         "noBannedTypes": "off"

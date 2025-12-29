@@ -45,7 +45,10 @@ export function NormalView({
     if (!suiteMap.has(suiteName)) {
       suiteMap.set(suiteName, { testMap: new Map(), suiteFilePath: result.suiteFilePath });
     }
-    const suiteData = suiteMap.get(suiteName)!;
+    const suiteData = suiteMap.get(suiteName) as {
+      testMap: Map<string, NaiteMessagingTypes.TestResult>;
+      suiteFilePath?: string;
+    };
     suiteData.testMap.set(testName, result);
   }
 

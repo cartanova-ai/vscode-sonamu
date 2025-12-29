@@ -1,5 +1,5 @@
 class NaiteClass {
-  t(key: string, value: any) {
+  t(key: string, value: unknown) {
     console.log(key, value);
   }
 
