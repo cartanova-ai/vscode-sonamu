@@ -5,6 +5,10 @@ import { vscode } from "../lib/vscode-api";
 import type { PersistedState, TraceViewerState, VSCodeOutgoingMessage } from "../types";
 import { createTestKey, createTraceKey } from "../utils";
 
+// ─────────────────────────────────────────────────────────────
+// 타입 및 상수
+// ─────────────────────────────────────────────────────────────
+
 type Action =
   | { type: "SET_TEST_RESULTS"; testResults: NaiteMessagingTypes.TestResult[] }
   | { type: "TOGGLE_SUITE"; suiteName: string }
@@ -25,6 +29,154 @@ type Action =
   | { type: "FOCUS_KEY"; key: string }
   | { type: "FOCUS_TEST"; suiteName: string; testName: string }
   | { type: "CLEAR_HIGHLIGHT" };
+
+const HIGHLIGHT_DURATION_MS = 2000;
+const SEARCH_DEBOUNCE_MS = 100;
+
+// ─────────────────────────────────────────────────────────────
+// 메인 훅
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Trace Viewer 핵심 상태 관리 훅
+ *
+ * - reducer 기반 상태 관리
+ * - VSCode 상태 저장/복원 (vscode.getState/setState)
+ * - VSCode 메시지 수신 → dispatch 연결
+ * - 편의용 actions 제공 (dispatch 래핑)
+ */
+export function useTraceViewerState() {
+  const [state, dispatch] = useReducer(reducer, null, createInitialState);
+  const isFirstRender = useRef(true);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 상태 변경 시 VSCode에 저장 (첫 렌더 제외)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    vscode.setState(serializeState(state));
+  }, [state]);
+
+  // 하이라이트 자동 해제 (2초 후)
+  useEffect(() => {
+    const hasHighlight = state.highlightedTest || state.highlightedTraces.size > 0;
+    if (!hasHighlight) {
+      return;
+    }
+
+    // 기존 타이머 정리
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+
+    highlightTimeoutRef.current = setTimeout(() => {
+      dispatch({ type: "CLEAR_HIGHLIGHT" });
+    }, HIGHLIGHT_DURATION_MS);
+
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, [state.highlightedTest, state.highlightedTraces]);
+
+  // 검색어 디바운싱 (100ms 후 debouncedSearchQuery 업데이트)
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      dispatch({ type: "SET_DEBOUNCED_SEARCH_QUERY", query: state.searchQuery });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [state.searchQuery]);
+
+  // VSCode 메시지 수신 처리
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+
+      if (message.type === "updateTestResults") {
+        dispatch({
+          type: "SET_TEST_RESULTS",
+          testResults: message.testResults || [],
+        });
+      }
+
+      if (message.type === "focusKey") {
+        dispatch({ type: "FOCUS_KEY", key: message.key });
+      }
+
+      if (message.type === "focusTest") {
+        dispatch({
+          type: "FOCUS_TEST",
+          suiteName: message.suiteName,
+          testName: message.testName,
+        });
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // 검색 결과 (derived state) - state와 합쳐서 반환
+  const stateWithDerived = useMemo(
+    () => ({
+      ...state,
+      searchResult: filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
+    }),
+    [state],
+  );
+
+  // 편의용 actions (dispatch 래핑)
+  const actions = {
+    toggleSuite: (suiteName: string) => {
+      dispatch({ type: "TOGGLE_SUITE", suiteName });
+    },
+    toggleTest: (suiteName: string, testName: string) => {
+      dispatch({ type: "TOGGLE_TEST", suiteName, testName });
+    },
+    toggleTrace: (
+      suiteName: string,
+      testName: string,
+      traceKey: string,
+      traceAt: string,
+      traceIdx: number,
+    ) => {
+      dispatch({ type: "TOGGLE_TRACE", suiteName, testName, traceKey, traceAt, traceIdx });
+    },
+    toggleFollow: () => {
+      const newEnabled = !state.followEnabled;
+      dispatch({ type: "SET_FOLLOW", enabled: newEnabled });
+      sendFollowStateChanged(newEnabled);
+    },
+    collapseAll: () => {
+      dispatch({ type: "COLLAPSE_ALL" });
+    },
+    setSearchMode: (mode: boolean) => {
+      dispatch({ type: "SET_SEARCH_MODE", mode });
+    },
+    setSearchQuery: (query: string) => {
+      dispatch({ type: "SET_SEARCH_QUERY", query });
+    },
+  };
+
+  return { state: stateWithDerived, actions };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 내부 헬퍼 함수 (useTraceViewerState에서 사용)
+// ─────────────────────────────────────────────────────────────
 
 function reducer(state: TraceViewerState, action: Action): TraceViewerState {
   switch (action.type) {
@@ -187,6 +339,10 @@ function createInitialState(): TraceViewerState {
   };
 }
 
+// ─────────────────────────────────────────────────────────────
+// 기타 export 유틸리티
+// ─────────────────────────────────────────────────────────────
+
 /**
  * 상태를 VSCode 저장용 형태로 변환
  */
@@ -198,146 +354,6 @@ export function serializeState(state: TraceViewerState): PersistedState {
     expandedTraces: [...state.expandedTraces],
     followEnabled: state.followEnabled,
   };
-}
-
-/**
- * Trace Viewer 핵심 상태 관리 훅
- *
- * - reducer 기반 상태 관리
- * - VSCode 상태 저장/복원 (vscode.getState/setState)
- * - VSCode 메시지 수신 → dispatch 연결
- * - 편의용 actions 제공 (dispatch 래핑)
- */
-const HIGHLIGHT_DURATION_MS = 2000;
-const SEARCH_DEBOUNCE_MS = 100;
-
-export function useTraceViewerState() {
-  const [state, dispatch] = useReducer(reducer, null, createInitialState);
-  const isFirstRender = useRef(true);
-  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 상태 변경 시 VSCode에 저장 (첫 렌더 제외)
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    vscode.setState(serializeState(state));
-  }, [state]);
-
-  // 하이라이트 자동 해제 (2초 후)
-  useEffect(() => {
-    const hasHighlight = state.highlightedTest || state.highlightedTraces.size > 0;
-    if (!hasHighlight) {
-      return;
-    }
-
-    // 기존 타이머 정리
-    if (highlightTimeoutRef.current) {
-      clearTimeout(highlightTimeoutRef.current);
-    }
-
-    highlightTimeoutRef.current = setTimeout(() => {
-      dispatch({ type: "CLEAR_HIGHLIGHT" });
-    }, HIGHLIGHT_DURATION_MS);
-
-    return () => {
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-      }
-    };
-  }, [state.highlightedTest, state.highlightedTraces]);
-
-  // 검색어 디바운싱 (100ms 후 debouncedSearchQuery 업데이트)
-  useEffect(() => {
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-
-    searchDebounceRef.current = setTimeout(() => {
-      dispatch({ type: "SET_DEBOUNCED_SEARCH_QUERY", query: state.searchQuery });
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => {
-      if (searchDebounceRef.current) {
-        clearTimeout(searchDebounceRef.current);
-      }
-    };
-  }, [state.searchQuery]);
-
-  // VSCode 메시지 수신 처리
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
-
-      if (message.type === "updateTestResults") {
-        dispatch({
-          type: "SET_TEST_RESULTS",
-          testResults: message.testResults || [],
-        });
-      }
-
-      if (message.type === "focusKey") {
-        dispatch({ type: "FOCUS_KEY", key: message.key });
-      }
-
-      if (message.type === "focusTest") {
-        dispatch({
-          type: "FOCUS_TEST",
-          suiteName: message.suiteName,
-          testName: message.testName,
-        });
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  // 검색 결과 (derived state) - state와 합쳐서 반환
-  const stateWithDerived = useMemo(
-    () => ({
-      ...state,
-      searchResult: filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
-    }),
-    [state],
-  );
-
-  // 편의용 actions (dispatch 래핑)
-  const actions = {
-    toggleSuite: (suiteName: string) => {
-      dispatch({ type: "TOGGLE_SUITE", suiteName });
-    },
-    toggleTest: (suiteName: string, testName: string) => {
-      dispatch({ type: "TOGGLE_TEST", suiteName, testName });
-    },
-    toggleTrace: (
-      suiteName: string,
-      testName: string,
-      traceKey: string,
-      traceAt: string,
-      traceIdx: number,
-    ) => {
-      dispatch({ type: "TOGGLE_TRACE", suiteName, testName, traceKey, traceAt, traceIdx });
-    },
-    toggleFollow: () => {
-      const newEnabled = !state.followEnabled;
-      dispatch({ type: "SET_FOLLOW", enabled: newEnabled });
-      sendFollowStateChanged(newEnabled);
-    },
-    collapseAll: () => {
-      dispatch({ type: "COLLAPSE_ALL" });
-    },
-    setSearchMode: (mode: boolean) => {
-      dispatch({ type: "SET_SEARCH_MODE", mode });
-    },
-    setSearchQuery: (query: string) => {
-      dispatch({ type: "SET_SEARCH_QUERY", query });
-    },
-  };
-
-  return { state: stateWithDerived, actions };
 }
 
 /**

@@ -53,52 +53,6 @@ export function Header({
   );
 }
 
-// 검색 아이콘
-function SearchIcon() {
-  return (
-    <svg
-      className="search-icon"
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <circle cx="7" cy="7" r="4.5" />
-      <line x1="10.5" y1="10.5" x2="14" y2="14" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// Follow 아이콘
-function FollowIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.2"
-    >
-      <rect x="5.5" y="1.5" width="5" height="3" rx="0.5" />
-      <rect x="1.5" y="9.5" width="4" height="4" rx="0.5" />
-      <rect x="10.5" y="9.5" width="4" height="4" rx="0.5" />
-      <path d="M8 4.5v3.5M3.5 9.5V8h9v1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 닫기 아이콘
-function CloseIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
-    </svg>
-  );
-}
-
 // 검색 모드 헤더
 type SearchModeHeaderProps = {
   searchQuery: string;
@@ -203,5 +157,49 @@ function NormalModeHeader({
         </button>
       </div>
     </>
+  );
+}
+
+// 아이콘 컴포넌트들 (공유)
+function SearchIcon() {
+  return (
+    <svg
+      className="search-icon"
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <circle cx="7" cy="7" r="4.5" />
+      <line x1="10.5" y1="10.5" x2="14" y2="14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FollowIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    >
+      <rect x="5.5" y="1.5" width="5" height="3" rx="0.5" />
+      <rect x="1.5" y="9.5" width="4" height="4" rx="0.5" />
+      <rect x="10.5" y="9.5" width="4" height="4" rx="0.5" />
+      <path d="M8 4.5v3.5M3.5 9.5V8h9v1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z" />
+    </svg>
   );
 }
