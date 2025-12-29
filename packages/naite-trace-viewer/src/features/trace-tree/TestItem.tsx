@@ -46,7 +46,7 @@ export function TestItem({
 
   return (
     <div
-      id={`test-${testId}`}
+      id={`test-${testId}`/*진짜 쓸데없어보이지만 useScrollToHighlight 훅에서 찾을 때 필요합니다.*/}
       className={`test-group ${highlighted ? "highlight" : ""}`}
       data-suite={suiteName}
       data-test-name={testName}

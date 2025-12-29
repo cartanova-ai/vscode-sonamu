@@ -50,7 +50,9 @@ export function TraceItem({
 
   return (
     <div
-      id={`item-${traceId}`}
+      id={
+        `item-${traceId}` /*진짜 쓸데없어보이지만 useScrollToHighlight 훅에서 찾을 때 필요합니다.*/
+      }
       className={wrapperClassName}
       data-suite={suiteName}
       data-test-name={testName}
