@@ -70,9 +70,6 @@ export default function App() {
   // 스티키 상태 감지
   useStickyState([state.testResults, state.expandedTests, state.searchMode, debouncedQuery]);
 
-  // 통계 계산
-  const stats = calculateStats(state.testResults);
-
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       closeSearch();
@@ -86,7 +83,7 @@ export default function App() {
         searchQuery={state.searchQuery}
         matchCount={matchCount}
         followEnabled={state.followEnabled}
-        stats={stats}
+        stats={calculateStats(state.testResults)}
         searchInputRef={searchInputRef}
         onSearchChange={handleSearchChange}
         onSearchKeyDown={handleSearchKeyDown}

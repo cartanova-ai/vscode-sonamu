@@ -91,7 +91,10 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
       return { ...state, searchQuery: action.query };
 
     case "FOCUS_KEY": {
-      // 해당 key를 가진 모든 trace 찾아서 부모 열기
+      // VSCode에서 "이 trace로 포커스해줘" 요청이 왔을 때:
+      // 1. Suite/Test/Trace를 열어서 DOM이 렌더되도록 함 (동기)
+      // 2. pendingHighlight에 하이라이트 대상을 "예약"
+      //    → 실제 스크롤/하이라이트는 DOM 렌더 후 useHighlight에서 처리
       const newCollapsedSuites = new Set(state.collapsedSuites);
       const newExpandedTests = new Set(state.expandedTests);
       const newExpandedTraces = new Set(state.expandedTraces);

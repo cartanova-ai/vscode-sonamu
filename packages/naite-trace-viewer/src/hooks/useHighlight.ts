@@ -8,8 +8,12 @@ const SCROLL_DELAY_MS = 100;
 /**
  * 하이라이트 상태 관리 훅
  *
- * - pendingHighlight 감지 → 하이라이트 적용 + 스크롤
- * - trace/test 하이라이트 (2초 후 자동 제거)
+ * ## pendingHighlight 패턴
+ * VSCode에서 포커스 요청이 오면, reducer는 트리를 펼치고 pendingHighlight를 설정합니다.
+ * 하지만 스크롤/하이라이트는 DOM이 렌더된 후에야 가능하므로, 이 훅에서 "예약된 요청"을
+ * 감지하여 실제 처리 후 클리어합니다.
+ *
+ * 흐름: VSCode 메시지 → reducer(트리 펼침 + pending 설정) → 렌더 → useHighlight(스크롤 + 하이라이트)
  */
 export function useHighlight(
   pendingHighlight: PendingHighlight | null,
