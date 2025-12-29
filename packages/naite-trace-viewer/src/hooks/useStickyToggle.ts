@@ -25,9 +25,16 @@ export function handleStickyToggle(
     return;
   }
 
+  const container = document.getElementById("traces-container");
+  if (!container) {
+    onToggle();
+    return;
+  }
+
   const rect = headerElement.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
   const offsets = getStickyOffsets();
-  const stickyTop = offsets[level];
+  const stickyTop = containerRect.top + offsets[level];
 
   // 현재 스티키 상태인지 확인 (1px 여유)
   const isStuck = rect.top <= stickyTop + 1;
@@ -43,6 +50,6 @@ export function handleStickyToggle(
   // DOM 업데이트 후 스크롤 조정
   requestAnimationFrame(() => {
     headerElement.scrollIntoView({ block: "start" });
-    window.scrollBy({ top: -stickyTop, behavior: "instant" });
+    container.scrollBy({ top: -offsets[level], behavior: "instant" });
   });
 }

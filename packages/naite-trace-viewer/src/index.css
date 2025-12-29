@@ -41,18 +41,24 @@
   --badge-bg: var(--vscode-badge-background);
   --badge-fg: var(--vscode-badge-foreground);
 }
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* body는 스크롤 안함 */
+}
 body {
   font-family: var(--vscode-font-family);
   font-size: 13px;
-  padding: 0;
-  margin: 0;
   color: var(--fg);
-  overflow-x: hidden; /* 가로 스크롤 방지 */
+}
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 .header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  flex-shrink: 0;
   padding: 8px 16px;
   height: 40px;
   box-sizing: border-box;
@@ -60,43 +66,45 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg);
+  position: relative;
 }
-/* 스티키 헤더 아래 카드 둥근 모서리 감싸기 - 양쪽 귀 부분 */
-.header::after {
+#traces-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* 스티키로 상단 고정 - 카드 둥근 모서리 감싸기 */
+#traces-container::before {
   content: '';
-  position: absolute;
-  margin-top: 1px;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: 12px; /* 패딩(6px) + radius(6px) */
+  display: block;
+  position: sticky;
+  top: 0px;
+  height: 12px;
+  margin-top: -6px;
   background: var(--bg);
+  border-left: 1px solid var(--vscode-widget-border);
+  z-index: 40;
+  pointer-events: none;
   /*
    * 세 개의 SVG mask:
    * 1. 왼쪽 귀: 12x12px
    * 2. 오른쪽 귀: 12x12px
-   * 3. 가운데 평평한 막대: 상단 6px 높이, 양쪽 12px씩 제외
+   * 3. 가운데 평평한 막대: 상단 7px 높이
    */
   -webkit-mask-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M0,0 L0,12 L6,12 L6,6 A6,6 0 0,1 12,0 L0,0 Z' fill='white'/%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M12,0 L0,0 A6,6 0 0,1 6,6 L6,12 L12,12 L12,0 Z' fill='white'/%3E%3C/svg%3E"),
     linear-gradient(white, white);
-  -webkit-mask-size: 12px 12px, 12px 12px, calc(100% - 7px) 7px;
-  -webkit-mask-position: left 7px, right 7px, 0 top;
+  -webkit-mask-size: 12px 12px, 12px 12px, 100% 8px;
+  -webkit-mask-position: left 8px, right 8px, 0 top;
   -webkit-mask-repeat: no-repeat, no-repeat, no-repeat;
   mask-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M0,0 L0,12 L6,12 L6,6 A6,6 0 0,1 12,0 L0,0 Z' fill='white'/%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M12,0 L0,0 A6,6 0 0,1 6,6 L6,12 L12,12 L12,0 Z' fill='white'/%3E%3C/svg%3E"),
     linear-gradient(white, white);
-  mask-size: 12px 12px, 12px 12px, calc(100%) 7px;
-  mask-position: left 7px, right 7px, 0 top;
+  mask-size: 12px 12px, 12px 12px, 100% 8px;
+  mask-position: left 8px, right 8px, 0 top;
   mask-repeat: no-repeat, no-repeat, no-repeat;
-  pointer-events: none;
-}
-#traces-container {
-  padding: 6px;
-  /* 스티키가 제대로 작동하도록 overflow 설정 */
 }
 .header-left {
   display: flex;
@@ -187,10 +195,12 @@ body {
   border: 1px solid var(--vscode-sideBar-background);
   border-radius: 8px;
   overflow: visible; /* 스티키가 작동하려면 visible 필요 */
+  margin-left: 6px;
+  margin-right: 6px;
 }
 .suite-header {
   position: sticky;
-  top: calc(var(--header-height) + 7px); /* 헤더 아래 여백 두고 고정 */
+  top: 7px;
   z-index: 30;
   display: flex;
   align-items: center;
@@ -201,7 +211,7 @@ body {
   user-select: none;
   font-weight: 500;
   border-radius: 6px 6px 0 0;
-  height: 16px; /*얘가 없으면 0.5px정도 높이가 안 맞아요;*/
+  height: 16px;
 }
 .suite-header:hover {
   background: var(--hover);
@@ -245,14 +255,14 @@ body {
 }
 /* Test level */
 .test-group {
-  scroll-margin-top: calc(var(--header-height) + var(--suite-header-height));
+  scroll-margin-top: var(--suite-header-height);
 }
 .test-group:last-child {
   border-bottom: none;
 }
 .test-header {
   position: sticky;
-  top: calc(var(--header-height) + var(--suite-header-height) + 7px); /* 여백 맞춤 */
+  top: calc(var(--suite-header-height) + 7px);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -291,7 +301,7 @@ body {
 }
 .trace-header {
   position: sticky;
-  top: calc(var(--header-height) + var(--suite-header-height) + var(--test-header-height) + 6px); /* 여백 맞춤 */
+  top: calc(var(--suite-header-height) + var(--test-header-height) + 6px);
   z-index: 10;
   display: flex;
   align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
@@ -482,10 +492,12 @@ body {
   border-radius: 6px;
   overflow: visible; /* 스티키 작동 위해 */
   background: var(--bg);
+  margin-left: 6px;
+  margin-right: 6px;
 }
 .search-result-breadcrumb {
   position: sticky;
-  top: calc(var(--header-height) + 7px); /* 헤더 아래 + 컨테이너 패딩 */
+  top: 7px;
   z-index: 20;
   padding: 6px 12px;
   background: var(--vscode-sideBar-background);
@@ -538,9 +550,9 @@ body {
   padding-bottom: 4px
 }
 .search-result-trace .trace-header {
-  height: 16px; /*얘가 없으면 0.5px정도 높이가 안 맞아요;*/
+  height: 16px;
   position: sticky;
-  top: calc(var(--header-height) + 7px + var(--breadcrumb-height)); /* 헤더 + 패딩 + breadcrumb 높이 */
+  top: calc(var(--breadcrumb-height) + 7px);
   z-index: 10;
   padding-left: 12px;
   background: var(--bg);

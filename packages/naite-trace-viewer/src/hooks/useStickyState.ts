@@ -10,12 +10,17 @@ import { useEffect } from "react";
  */
 export function useStickyState(dependencies: unknown[]) {
   useEffect(() => {
+    const container = document.getElementById("traces-container");
+    if (!container) return;
+
     let ticking = false;
 
     const updateStickyState = () => {
       const rootStyle = getComputedStyle(document.documentElement);
-      const headerHeight = parseInt(rootStyle.getPropertyValue("--header-height")) || 40;
       const testHeaderHeight = parseInt(rootStyle.getPropertyValue("--test-header-height")) || 34;
+
+      // 컨테이너의 상단 위치 (헤더 바로 아래)
+      const containerRect = container.getBoundingClientRect();
 
       const headers = document.querySelectorAll(".trace-header");
       for (const header of headers) {
@@ -24,21 +29,21 @@ export function useStickyState(dependencies: unknown[]) {
 
         let stickyTop: number;
         if (isSearchResult) {
-          // 검색 결과: 상위 .search-result-traces에서 breadcrumb 높이 읽기
-          const tracesContainer = header.closest(".search-result-traces");
-          const breadcrumbHeight = tracesContainer
-            ? parseInt(getComputedStyle(tracesContainer).getPropertyValue("--breadcrumb-height")) ||
+          // 검색 결과: breadcrumb 높이만큼
+          const tracesContainerEl = header.closest(".search-result-traces");
+          const breadcrumbHeight = tracesContainerEl
+            ? parseInt(getComputedStyle(tracesContainerEl).getPropertyValue("--breadcrumb-height")) ||
               28
             : 28;
-          stickyTop = headerHeight + 6 + breadcrumbHeight;
+          stickyTop = containerRect.top + breadcrumbHeight;
         } else {
-          // 일반 뷰: 상위 .suite-content에서 suite 헤더 높이 읽기
+          // 일반 뷰: suite + test 헤더 높이만큼
           const suiteContent = header.closest(".suite-content");
           const suiteHeaderHeight = suiteContent
             ? parseInt(getComputedStyle(suiteContent).getPropertyValue("--suite-header-height")) ||
-              30
-            : 30;
-          stickyTop = headerHeight + suiteHeaderHeight + testHeaderHeight + 6;
+              32
+            : 32;
+          stickyTop = containerRect.top + suiteHeaderHeight + testHeaderHeight;
         }
 
         // 약간의 여유를 두고 판단 (1px)
@@ -56,11 +61,11 @@ export function useStickyState(dependencies: unknown[]) {
       }
     };
 
-    window.addEventListener("scroll", onScroll, { passive: true });
+    container.addEventListener("scroll", onScroll, { passive: true });
     // 초기 상태 및 DOM 변경 후 업데이트
     requestAnimationFrame(updateStickyState);
 
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => container.removeEventListener("scroll", onScroll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 }
