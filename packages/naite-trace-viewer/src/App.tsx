@@ -37,9 +37,9 @@
  * - 스타일 → index.css
  */
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { Header } from "./components";
-import { SearchView, useSearch } from "./features/search";
+import { filterBySearchQuery, SearchView } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
 import { useKeyboardShortcuts, useScrollToHighlight, useTraceViewerState } from "./hooks";
@@ -60,41 +60,59 @@ export default function App() {
   // 이 훅 호출은 이 타겟이 지정될 때 그 곳으로 스크롤을 수행해줍니다.
   useScrollToHighlight(state.highlightedTest, state.highlightedTraces);
 
-  // 검색 기능
-  const {
-    debouncedQuery,
-    searchResultGroups,
-    matchCount,
-    openSearch,
-    closeSearch,
-    handleSearchChange,
-  } = useSearch(state.testResults, actions.setSearchMode, actions.setSearchQuery, searchInputRef);
+  // 검색 결과 계산 (순수 함수 + 메모이제이션)
+  const searchResult = useMemo(
+    () => filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
+    [state.testResults, state.debouncedSearchQuery],
+  );
+
+  // 검색 input 포커스 헬퍼
+  const focusSearchInput = () => {
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }, 50);
+  };
 
   // 키보드 단축키
-  useKeyboardShortcuts(state.searchMode, openSearch, closeSearch, searchInputRef);
+  useKeyboardShortcuts(
+    state.searchMode,
+    () => {
+      actions.setSearchMode(true);
+      focusSearchInput();
+    },
+    () => actions.setSearchMode(false),
+    searchInputRef,
+  );
 
   // 스티키 상태 감지
-  useStickyState([state.testResults, state.expandedTests, state.searchMode, debouncedQuery]);
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      closeSearch();
-    }
-  };
+  useStickyState([
+    state.testResults,
+    state.expandedTests,
+    state.searchMode,
+    state.debouncedSearchQuery,
+  ]);
 
   return (
     <>
       <Header
         searchMode={state.searchMode}
         searchQuery={state.searchQuery}
-        matchCount={matchCount}
+        matchCount={searchResult.matchCount}
         followEnabled={state.followEnabled}
         stats={calculateStats(state.testResults)}
         searchInputRef={searchInputRef}
-        onSearchChange={handleSearchChange}
-        onSearchKeyDown={handleSearchKeyDown}
-        onOpenSearch={openSearch}
-        onCloseSearch={closeSearch}
+        onSearchChange={actions.setSearchQuery}
+        onSearchKeyDown={(e) => {
+          if (e.key === "Escape") {
+            actions.setSearchMode(false);
+          }
+        }}
+        onOpenSearch={() => {
+          actions.setSearchMode(true);
+          focusSearchInput();
+        }}
+        onCloseSearch={() => actions.setSearchMode(false)}
         onToggleFollow={actions.toggleFollow}
         onCollapseAll={actions.collapseAll}
       />
@@ -104,7 +122,7 @@ export default function App() {
           <div className="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>
         ) : state.searchMode && state.searchQuery ? (
           <SearchView
-            searchResultGroups={searchResultGroups}
+            searchResultGroups={searchResult.groups}
             searchQuery={state.searchQuery}
             expandedTraces={state.expandedTraces}
             onToggleTrace={actions.toggleTrace}

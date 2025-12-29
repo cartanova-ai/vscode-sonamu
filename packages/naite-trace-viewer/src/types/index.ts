@@ -10,7 +10,8 @@ export type TraceViewerState = {
   expandedTests: Set<string>; // 열린 test (기본 접힘)
   expandedTraces: Set<string>; // 열린 trace (기본 접힘)
   followEnabled: boolean;
-  searchQuery: string;
+  searchQuery: string; // 입력창에 표시되는 검색어
+  debouncedSearchQuery: string; // 디바운스된 검색어 (실제 검색에 사용)
   searchMode: boolean;
   highlightedTest: string | null; // 하이라이트된 테스트 키
   highlightedTraces: Set<string>; // 하이라이트된 트레이스 키들

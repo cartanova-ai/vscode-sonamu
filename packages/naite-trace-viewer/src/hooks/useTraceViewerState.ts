@@ -20,6 +20,7 @@ type Action =
   | { type: "SET_FOLLOW"; enabled: boolean }
   | { type: "SET_SEARCH_MODE"; mode: boolean }
   | { type: "SET_SEARCH_QUERY"; query: string }
+  | { type: "SET_DEBOUNCED_SEARCH_QUERY"; query: string }
   | { type: "FOCUS_KEY"; key: string }
   | { type: "FOCUS_TEST"; suiteName: string; testName: string }
   | { type: "CLEAR_HIGHLIGHT" };
@@ -89,6 +90,9 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
 
     case "SET_SEARCH_QUERY":
       return { ...state, searchQuery: action.query };
+
+    case "SET_DEBOUNCED_SEARCH_QUERY":
+      return { ...state, debouncedSearchQuery: action.query };
 
     case "FOCUS_KEY": {
       // VSCode에서 "이 trace로 포커스해줘" 요청이 왔을 때:
@@ -175,6 +179,7 @@ function createInitialState(): TraceViewerState {
     expandedTraces: new Set(saved?.expandedTraces ?? []),
     followEnabled: saved?.followEnabled ?? true,
     searchQuery: "",
+    debouncedSearchQuery: "",
     searchMode: false,
     highlightedTest: null,
     highlightedTraces: new Set(),
@@ -203,11 +208,13 @@ export function serializeState(state: TraceViewerState): PersistedState {
  * - 편의용 actions 제공 (dispatch 래핑)
  */
 const HIGHLIGHT_DURATION_MS = 2000;
+const SEARCH_DEBOUNCE_MS = 100;
 
 export function useTraceViewerState() {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
   const isFirstRender = useRef(true);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 상태 변경 시 VSCode에 저장 (첫 렌더 제외)
   useEffect(() => {
@@ -240,6 +247,23 @@ export function useTraceViewerState() {
       }
     };
   }, [state.highlightedTest, state.highlightedTraces]);
+
+  // 검색어 디바운싱 (100ms 후 debouncedSearchQuery 업데이트)
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      dispatch({ type: "SET_DEBOUNCED_SEARCH_QUERY", query: state.searchQuery });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [state.searchQuery]);
 
   // VSCode 메시지 수신 처리
   useEffect(() => {
