@@ -6,7 +6,7 @@ import { NormalView } from "./features/trace-tree";
 import { sendFollowStateChanged, useVSCodeSync } from "./features/vscode-sync";
 import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./shared/hooks";
 import { Header } from "./shared/ui";
-import { createTraceKey, escapeId } from "./shared/utils";
+import { escapeId } from "./shared/utils";
 
 export default function App() {
   const { state, dispatch } = useTraceViewerState();
@@ -41,38 +41,19 @@ export default function App() {
   // 스티키 상태 감지
   useStickyState([state.testResults, state.expandedTests, state.searchMode, debouncedQuery]);
 
-  // Focus 메시지 처리 시 하이라이트 적용
+  // pendingHighlight 감지 → 하이라이트 적용
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
+    if (!state.pendingHighlight) return;
 
-      if (message.type === "focusKey") {
-        // 해당 key를 가진 모든 trace의 stateKey 수집
-        const matchingTraces: string[] = [];
-        for (const result of state.testResults) {
-          for (let i = 0; i < result.traces.length; i++) {
-            const trace = result.traces[i];
-            if (trace.key === message.key) {
-              matchingTraces.push(
-                createTraceKey(result.suiteName, result.testName, trace.key, trace.at, i),
-              );
-            }
-          }
-        }
-        if (matchingTraces.length > 0) {
-          highlightTraces(matchingTraces);
-        }
-      }
+    const { type, targets } = state.pendingHighlight;
+    if (type === "traces" && targets.length > 0) {
+      highlightTraces(targets);
+    } else if (type === "test" && targets.length > 0) {
+      highlightTest(targets[0]);
+    }
 
-      if (message.type === "focusTest") {
-        const testKey = `${message.suiteName}::${message.testName}`;
-        highlightTest(testKey);
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [state.testResults, highlightTraces, highlightTest]);
+    dispatch({ type: "CLEAR_PENDING_HIGHLIGHT" });
+  }, [state.pendingHighlight, highlightTraces, highlightTest, dispatch]);
 
   // 스크롤 타겟 처리
   useEffect(() => {
@@ -80,8 +61,7 @@ export default function App() {
 
     const escapedId = escapeId(scrollTarget);
     const element =
-      document.getElementById(`item-${escapedId}`) ||
-      document.getElementById(`test-${escapedId}`);
+      document.getElementById(`item-${escapedId}`) || document.getElementById(`test-${escapedId}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
     }

@@ -21,7 +21,8 @@ type Action =
   | { type: "SET_SEARCH_MODE"; mode: boolean }
   | { type: "SET_SEARCH_QUERY"; query: string }
   | { type: "FOCUS_KEY"; key: string }
-  | { type: "FOCUS_TEST"; suiteName: string; testName: string };
+  | { type: "FOCUS_TEST"; suiteName: string; testName: string }
+  | { type: "CLEAR_PENDING_HIGHLIGHT" };
 
 function reducer(state: TraceViewerState, action: Action): TraceViewerState {
   switch (action.type) {
@@ -94,6 +95,7 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
       const newCollapsedSuites = new Set(state.collapsedSuites);
       const newExpandedTests = new Set(state.expandedTests);
       const newExpandedTraces = new Set(state.expandedTraces);
+      const matchingTraceKeys: string[] = [];
 
       for (const result of state.testResults) {
         for (let i = 0; i < result.traces.length; i++) {
@@ -114,6 +116,8 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
             newExpandedTests.add(testKey);
             // Trace 열기
             newExpandedTraces.add(traceStateKey);
+            // 하이라이트 대상 수집
+            matchingTraceKeys.push(traceStateKey);
           }
         }
       }
@@ -123,7 +127,9 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
         collapsedSuites: newCollapsedSuites,
         expandedTests: newExpandedTests,
         expandedTraces: newExpandedTraces,
-        searchMode: false, // 검색 모드 끄기
+        searchMode: false,
+        pendingHighlight:
+          matchingTraceKeys.length > 0 ? { type: "traces", targets: matchingTraceKeys } : null,
       };
     }
 
@@ -141,9 +147,13 @@ function reducer(state: TraceViewerState, action: Action): TraceViewerState {
         ...state,
         collapsedSuites: newCollapsedSuites,
         expandedTests: newExpandedTests,
-        searchMode: false, // 검색 모드 끄기
+        searchMode: false,
+        pendingHighlight: { type: "test", targets: [testKey] },
       };
     }
+
+    case "CLEAR_PENDING_HIGHLIGHT":
+      return { ...state, pendingHighlight: null };
 
     default:
       return state;
@@ -162,8 +172,9 @@ function createInitialState(): TraceViewerState {
     expandedTests: new Set(saved?.expandedTests ?? []),
     expandedTraces: new Set(saved?.expandedTraces ?? []),
     followEnabled: saved?.followEnabled ?? true,
-    searchQuery: "", // 검색어는 저장하지 않음
-    searchMode: false, // 검색 모드도 저장하지 않음
+    searchQuery: "",
+    searchMode: false,
+    pendingHighlight: null,
   };
 }
 

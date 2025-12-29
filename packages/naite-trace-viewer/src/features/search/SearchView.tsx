@@ -3,8 +3,8 @@ import { useLayoutEffect, useRef } from "react";
 
 import { createTraceKey, getFileName } from "../../shared/utils";
 import type { MatchedTrace, SearchResultGroup } from "../../types";
-import { goToLocation } from "../vscode-sync";
 import { TraceItem } from "../trace-tree/TraceItem";
+import { goToLocation } from "../vscode-sync";
 
 type SearchViewProps = {
   searchResultGroups: SearchResultGroup[];

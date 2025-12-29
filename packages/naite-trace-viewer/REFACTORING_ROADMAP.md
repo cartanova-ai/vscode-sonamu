@@ -27,26 +27,25 @@ src/
 
 ## 남은 개선 과제
 
-### 2. 메시지 처리 로직 통합
+### 2. 메시지 처리 로직 통합 ✅ 완료
 
-**현재 문제:**
-- App.tsx에 focusKey/focusTest 처리 로직 있음 (48~91줄)
-- useVSCodeSync.ts에 다른 메시지 처리 있음
-- 같은 패턴(trace.key 검색 루프)이 중복됨
+**해결:**
+- useTraceViewerState.ts의 FOCUS_KEY/FOCUS_TEST 액션에서 `pendingHighlight` 설정
+- App.tsx는 `pendingHighlight` 감지 → 하이라이트 적용 → 초기화
+- 기존 App.tsx의 중복 메시지 핸들러 제거
 
-**목표:**
-- 모든 메시지 처리를 `features/sync/useVSCodeSync.ts`로 통합
-- App.tsx는 순수하게 UI 조합만 담당
+**효과:** "포커스 기능을 수정하려면?" → useTraceViewerState.ts만 보면 됨
 
 ---
 
-### 3. ResizeObserver 로직 추출
+### 3. ResizeObserver 훅 추출
 
 **현재 문제:**
-- SuiteItem.tsx와 SearchView.tsx에 동일한 ResizeObserver 패턴 반복
+- SuiteItem.tsx (L46-64)와 SearchView.tsx (L83-101)에 동일한 ResizeObserver 패턴 100% 중복
 
 **목표:**
-- `shared/hooks/useDynamicHeight.ts`로 추출
+- `shared/hooks/useResizeObserverCSSVar.ts`로 추출
+- 사용: `useResizeObserverCSSVar(sourceRef, targetRef, "suite-header-height")`
 
 ---
 
@@ -54,9 +53,10 @@ src/
 
 **현재 문제:**
 - Magic numbers가 여기저기 흩어져 있음
-  - HIGHLIGHT_DURATION_MS = 2000
-  - DEBOUNCE_MS = 100
-  - 스티키 오프셋 7, 6 등
+  - HIGHLIGHT_DURATION_MS = 2000 (useHighlight.ts)
+  - SCROLL_DELAY_MS = 100 (useHighlight.ts)
+  - DEBOUNCE_MS = 100 (useSearch.ts)
+  - 스티키 오프셋 7, 6 등 (stickyOffsets.ts, useStickyState.ts)
 
 **목표:**
 - `shared/constants.ts`에 모두 모음
@@ -64,9 +64,34 @@ src/
 
 ---
 
+### 5. App.tsx 책임 분리 (신규)
+
+**현재 문제:**
+- App.tsx가 188줄로 너무 많은 책임을 가짐
+  - 상태 초기화
+  - 메시지 핸들링 (L45-75)
+  - 스크롤 타겟 처리 (L77-89)
+  - 토글 핸들러들 (L94-126)
+  - 통계 계산
+
+**목표:**
+- 메시지 핸들링 + 스크롤 로직을 별도 훅으로 분리
+- App.tsx는 컴포넌트 조합에만 집중
+
+---
+
 ## 진행 상황
 
 - [x] 1. 폴더 구조 기능 기반 변경
-- [ ] 2. 메시지 처리 통합
-- [ ] 3. ResizeObserver 훅 추출
+- [x] 2. 메시지 처리 통합
+- [ ] 3. ResizeObserver 훅 추출 ← **다음 작업**
 - [ ] 4. 상수 파일 통합
+- [ ] 5. App.tsx 책임 분리 (2번 완료로 대부분 해결됨)
+
+---
+
+## 권장 진행 순서
+
+1. ~~메시지 처리 통합~~ ✅
+2. **상수 파일 통합** (쉬움, quick win)
+3. **ResizeObserver 훅 추출** (중복 제거)

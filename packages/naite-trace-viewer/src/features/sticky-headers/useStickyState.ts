@@ -32,8 +32,9 @@ export function useStickyState(dependencies: unknown[]) {
           // 검색 결과: breadcrumb 높이 + 7px (CSS top 값과 일치)
           const tracesContainerEl = header.closest(".search-result-traces");
           const breadcrumbHeight = tracesContainerEl
-            ? parseInt(getComputedStyle(tracesContainerEl).getPropertyValue("--breadcrumb-height")) ||
-              28
+            ? parseInt(
+                getComputedStyle(tracesContainerEl).getPropertyValue("--breadcrumb-height"),
+              ) || 28
             : 28;
           stickyTop = containerRect.top + breadcrumbHeight + 7;
         } else {
