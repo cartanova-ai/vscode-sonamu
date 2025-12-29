@@ -37,14 +37,13 @@ src/
 
 ---
 
-### 3. ResizeObserver 훅 추출
+### 3. ResizeObserver 훅 추출 ✅ 완료
 
-**현재 문제:**
-- SuiteItem.tsx (L46-64)와 SearchView.tsx (L83-101)에 동일한 ResizeObserver 패턴 100% 중복
+**해결:**
+- `hooks/useResizeObserverCSSVar.ts` 생성
+- SuiteItem.tsx, SearchView.tsx의 19줄 중복 코드 → 1줄로 단순화
 
-**목표:**
-- `hooks/useResizeObserverCSSVar.ts`로 추출
-- 사용: `useResizeObserverCSSVar(sourceRef, targetRef, "suite-header-height")`
+**효과:** 동일 패턴 중복 제거, 유지보수 용이
 
 ---
 
@@ -83,8 +82,8 @@ src/
 
 - [x] 1. 폴더 구조 기능 기반 변경
 - [x] 2. 메시지 처리 통합
-- [ ] 3. ResizeObserver 훅 추출 ← **다음 작업**
-- [ ] 4. 상수 파일 통합
+- [x] 3. ResizeObserver 훅 추출
+- [ ] 4. 상수 파일 통합 ← **다음 작업**
 - [ ] 5. App.tsx 책임 분리 (2번 완료로 대부분 해결됨)
 
 ---
@@ -92,5 +91,5 @@ src/
 ## 권장 진행 순서
 
 1. ~~메시지 처리 통합~~ ✅
-2. **상수 파일 통합** (쉬움, quick win)
-3. **ResizeObserver 훅 추출** (중복 제거)
+2. ~~ResizeObserver 훅 추출~~ ✅
+3. **상수 파일 통합** (쉬움, quick win)
