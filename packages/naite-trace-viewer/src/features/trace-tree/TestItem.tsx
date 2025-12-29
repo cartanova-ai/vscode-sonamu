@@ -52,7 +52,7 @@ export function TestItem({
       data-test-name={testName}
     >
       <div className="test-header" onClick={handleHeaderClick}>
-        <ExpandArrow expanded={expanded} className="test-arrow" id={`test-arrow-${testId}`} />
+        <ExpandArrow expanded={expanded} className="test-arrow" />
         <span className="test-name">{testName}</span>
         {result.testFilePath && result.testLine && (
           <span className="test-line" onClick={handleLineClick}>
@@ -62,7 +62,7 @@ export function TestItem({
         <span className="test-count">{testTraces.length}</span>
       </div>
 
-      <div className={`test-content ${expanded ? "" : "collapsed"}`} id={`test-content-${testId}`}>
+      <div className={`test-content ${expanded ? "" : "collapsed"}`}>
         {testTraces.map((trace, traceIdx) => {
           const traceStateKey = createTraceKey(suiteName, testName, trace.key, trace.at, traceIdx);
           const isTraceExpanded = expandedTraces.has(traceStateKey);

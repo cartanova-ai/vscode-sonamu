@@ -7,12 +7,11 @@
 type ExpandArrowProps = {
   expanded: boolean;
   className?: string;
-  id?: string;
 };
 
-export function ExpandArrow({ expanded, className = "", id }: ExpandArrowProps) {
+export function ExpandArrow({ expanded, className = "" }: ExpandArrowProps) {
   return (
-    <span className={`arrow ${className} ${expanded ? "expanded" : ""}`} id={id}>
+    <span className={`arrow ${className} ${expanded ? "expanded" : ""}`}>
       ▶
     </span>
   );

@@ -61,7 +61,7 @@ export function TraceItem({
       data-line={trace.lineNumber}
     >
       <div className="trace-header" onClick={handleHeaderClick}>
-        <ExpandArrow expanded={expanded} className="trace-arrow" id={`trace-arrow-${traceId}`} />
+        <ExpandArrow expanded={expanded} className="trace-arrow" />
         <span className="key">
           {searchQuery ? <HighlightedText text={trace.key} query={searchQuery} /> : trace.key}
         </span>
@@ -72,7 +72,7 @@ export function TraceItem({
       </div>
 
       {expanded && (
-        <div className="trace-content" id={`trace-content-${traceId}`}>
+        <div className="trace-content">
           <div className="json-viewer">
             <JsonValue value={trace.value} />
           </div>

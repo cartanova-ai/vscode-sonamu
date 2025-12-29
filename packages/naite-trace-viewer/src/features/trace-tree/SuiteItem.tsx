@@ -2,7 +2,7 @@ import type { NaiteMessagingTypes } from "naite-types";
 
 import { ExpandArrow } from "../../components";
 import { goToLocation } from "../../hooks";
-import { createTestKey, escapeId } from "../../utils";
+import { createTestKey } from "../../utils";
 import { handleStickyToggle } from "../sticky-headers";
 import { TestItem } from "./TestItem";
 
@@ -33,7 +33,6 @@ export function SuiteItem({
   onToggleTest,
   onToggleTrace,
 }: SuiteItemProps) {
-  const suiteId = escapeId(suiteName);
   const testFileName = suiteFilePath ? suiteFilePath.split("/").pop() : null;
 
   // 통계 계산
@@ -57,7 +56,7 @@ export function SuiteItem({
   return (
     <div className={`suite-group`} data-suite={suiteName}>
       <div className="suite-header" onClick={handleHeaderClick}>
-        <ExpandArrow expanded={expanded} className="suite-arrow" id={`suite-arrow-${suiteId}`} />
+        <ExpandArrow expanded={expanded} className="suite-arrow" />
         <span className="suite-name">{suiteName}</span>
         {testFileName && suiteFilePath && (
           <span className="suite-file" onClick={handleFileClick}>
@@ -69,10 +68,7 @@ export function SuiteItem({
         </span>
       </div>
 
-      <div
-        className={`suite-content ${expanded ? "" : "collapsed"}`}
-        id={`suite-content-${suiteId}`}
-      >
+      <div className={`suite-content ${expanded ? "" : "collapsed"}`}>
         {Array.from(testMap.entries()).map(([testName, result]) => {
           const testKey = createTestKey(suiteName, testName);
           const isTestExpanded = expandedTests.has(testKey);
