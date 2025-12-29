@@ -183,10 +183,11 @@ body {
    ============================================================================= */
 :root {
   --header-height: 40px;
-  --suite-header-height: 30px;
-  --test-header-height: 34px;
-  --trace-header-height: 28px;
-  --breadcrumb-height: 28px; /* 검색 결과 breadcrumb 높이 */
+  /* 아래 값들은 실제 헤더의 height + padding 합계와 일치해야 함 */
+  --suite-header-height: 32px;  /* height 16px + padding 8px*2 */
+  --test-header-height: 34px;   /* height 18px + padding 8px*2 */
+  --trace-header-height: 28px;  /* height 16px + padding 6px*2 */
+  --breadcrumb-height: 28px;    /* height 16px + padding 6px*2 */
 }
 
 /* Suite level */

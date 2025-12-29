@@ -46,23 +46,6 @@ export type HighlightState = {
 };
 
 /**
- * 스티키 오프셋 값들
- */
-export type StickyOffsets = {
-  headerHeight: number;
-  suiteHeaderHeight: number;
-  testHeaderHeight: number;
-  traceHeaderHeight: number;
-  breadcrumbHeight: number;
-  // 각 헤더 타입의 스티키 top 위치
-  suite: number;
-  test: number;
-  trace: number;
-  searchBreadcrumb: number;
-  searchTrace: number;
-};
-
-/**
  * 퍼지 매칭 결과
  */
 export type FuzzyMatchResult = {
