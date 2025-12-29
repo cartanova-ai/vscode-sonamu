@@ -25,10 +25,9 @@
   "scripts": {
     "vscode:prepublish": "pnpm run build",
     "build": "tsc --noEmit && pnpm --filter naite-trace-viewer build && node esbuild.js --production",
-    "dev": "node esbuild.js --watch",
     "pretest": "tsc -p ./",
     "test": "vscode-test",
-    "package": "vsce package"
+    "install-extension": "rm -f sonamu-*.vsix && pnpm run build && vsce package && code --install-extension sonamu-*.vsix"
   },
   "devDependencies": {
     "naite-types": "workspace:*",
