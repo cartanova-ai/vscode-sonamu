@@ -193,7 +193,7 @@ body {
   top: calc(var(--header-height) + 7px); /* 헤더 아래 여백 두고 고정 */
   z-index: 30;
   display: flex;
-  align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
+  align-items: center;
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -314,7 +314,6 @@ body {
   color: var(--vscode-descriptionForeground);
   width: 10px;
   flex-shrink: 0;
-  margin-top: 4px; /* 첫 줄과 정렬 */
 }
 .arrow.expanded {
   transform: rotate(90deg);
