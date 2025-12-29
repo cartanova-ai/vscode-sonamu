@@ -8,7 +8,6 @@ type HeaderProps = {
   stats: { suites: number; tests: number; traces: number };
   searchInputRef: Ref<HTMLInputElement>;
   onSearchChange: (value: string) => void;
-  onSearchKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
   onToggleFollow: () => void;
@@ -23,7 +22,6 @@ export function Header({
   stats,
   searchInputRef,
   onSearchChange,
-  onSearchKeyDown,
   onOpenSearch,
   onCloseSearch,
   onToggleFollow,
@@ -38,7 +36,6 @@ export function Header({
           followEnabled={followEnabled}
           searchInputRef={searchInputRef}
           onSearchChange={onSearchChange}
-          onSearchKeyDown={onSearchKeyDown}
           onCloseSearch={onCloseSearch}
           onToggleFollow={onToggleFollow}
           onCollapseAll={onCollapseAll}
@@ -109,7 +106,6 @@ type SearchModeHeaderProps = {
   followEnabled: boolean;
   searchInputRef: Ref<HTMLInputElement>;
   onSearchChange: (value: string) => void;
-  onSearchKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onCloseSearch: () => void;
   onToggleFollow: () => void;
   onCollapseAll: () => void;
@@ -121,7 +117,6 @@ function SearchModeHeader({
   followEnabled,
   searchInputRef,
   onSearchChange,
-  onSearchKeyDown,
   onCloseSearch,
   onToggleFollow,
   onCollapseAll,
@@ -137,7 +132,6 @@ function SearchModeHeader({
           placeholder="key 또는 value 검색..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          onKeyDown={onSearchKeyDown}
         />
         {searchQuery && <span className="search-count">{matchCount} matches</span>}
         <button type="button" className="search-close" onClick={onCloseSearch} title="검색 닫기">

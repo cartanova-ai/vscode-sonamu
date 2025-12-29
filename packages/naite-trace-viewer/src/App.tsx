@@ -37,12 +37,12 @@
  * - 스타일 → index.css
  */
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Header } from "./components";
 import { SearchView } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
-import { useScrollToHighlight, useTraceViewerState } from "./hooks";
+import { useKeyCombination, useScrollToHighlight, useTraceViewerState } from "./hooks";
 
 export default function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -73,17 +73,10 @@ export default function App() {
     actions.setSearchMode(false);
   };
 
-  // Cmd/Ctrl+F: 검색창 열기
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
-        e.preventDefault();
-        openSearch();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  // 전역 리스너를 달아서 "Ctrl + F"가 눌리면 검색창을 열어줍니다(openSearch).
+  // 또한 검색 input에서는 "Esc"가 눌리면 검색창을 닫아줍니다(closeSearch).
+  useKeyCombination(null, (e) => (e.metaKey || e.ctrlKey) && e.key === "f", openSearch);
+  useKeyCombination(searchInputRef, (e) => e.key === "Escape", closeSearch);
 
   // 스티키 상태 감지
   useStickyState([
@@ -103,11 +96,6 @@ export default function App() {
         stats={calculateStats(state.testResults)}
         searchInputRef={searchInputRef}
         onSearchChange={actions.setSearchQuery}
-        onSearchKeyDown={(e) => {
-          if (e.key === "Escape") {
-            closeSearch();
-          }
-        }}
         onOpenSearch={openSearch}
         onCloseSearch={closeSearch}
         onToggleFollow={actions.toggleFollow}
