@@ -5,7 +5,8 @@
     "rules": {
       "recommended": true,
       "style": {
-        "useNodejsImportProtocol": "off"
+        "useNodejsImportProtocol": "off",
+        "useBlockStatements": "error"
       },
       "correctness": {
         "useParseIntRadix": "off",

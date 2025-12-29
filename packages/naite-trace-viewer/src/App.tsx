@@ -82,7 +82,9 @@ export default function App() {
 
   // pendingHighlight 감지 → 하이라이트 적용
   useEffect(() => {
-    if (!state.pendingHighlight) return;
+    if (!state.pendingHighlight) {
+      return;
+    }
 
     const { type, targets } = state.pendingHighlight;
     if (type === "traces" && targets.length > 0) {
@@ -96,7 +98,9 @@ export default function App() {
 
   // 스크롤 타겟 처리
   useEffect(() => {
-    if (!scrollTarget) return;
+    if (!scrollTarget) {
+      return;
+    }
 
     const escapedId = escapeId(scrollTarget);
     const element =

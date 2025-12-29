@@ -46,6 +46,8 @@ export function fuzzyMatch(text: string, query: string): FuzzyMatchResult {
  * 빈 쿼리는 항상 true
  */
 export function traceMatchesQuery(traceKey: string, query: string): boolean {
-  if (!query) return true;
+  if (!query) {
+    return true;
+  }
   return fuzzyMatch(traceKey, query).matched;
 }

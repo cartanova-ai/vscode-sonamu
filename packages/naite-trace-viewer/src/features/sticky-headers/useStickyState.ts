@@ -15,7 +15,9 @@ import { useEffect } from "react";
 export function useStickyState(dependencies: unknown[]) {
   useEffect(() => {
     const container = document.getElementById("traces-container");
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     let ticking = false;
 

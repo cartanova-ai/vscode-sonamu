@@ -10,7 +10,7 @@ import { NaiteCallPatterns } from "./patterns";
  * 예: "puri:*"는 "puri:abc", "puri:def" 등과 매칭됨
  */
 function matchesKey(pattern: string, key: string): boolean {
-  if (!pattern.includes("*")) return pattern === key;
+  if (!pattern.includes("*")) { return pattern === key; }
   const regex = new RegExp(
     `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
   );
