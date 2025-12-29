@@ -26,8 +26,8 @@ export class NaiteDiagnosticProvider {
 
     const diagnostics: vscode.Diagnostic[] = [];
 
-    const expressions = NaiteTracker.getEntriesForFile(document.uri).filter(
-      (expr) => NaiteCallPatterns.isGet(expr.pattern),
+    const expressions = NaiteTracker.getEntriesForFile(document.uri).filter((expr) =>
+      NaiteCallPatterns.isGet(expr.pattern),
     );
 
     for (const expr of expressions) {

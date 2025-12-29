@@ -32,6 +32,7 @@
       "**/*.tsx",
       "!**/dist",
       "!**/node_modules",
+      "!**/.vscode-test",
       "!examples/**/web/src/services/**/*"
     ]
   },

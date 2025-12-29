@@ -26,13 +26,7 @@ export default function App() {
     openSearch,
     closeSearch,
     handleSearchChange,
-  } = useSearch(
-    state.searchQuery,
-    state.searchMode,
-    state.testResults,
-    dispatch,
-    searchInputRef,
-  );
+  } = useSearch(state.searchQuery, state.searchMode, state.testResults, dispatch, searchInputRef);
 
   // 하이라이트 기능
   const {
@@ -87,8 +81,9 @@ export default function App() {
   useEffect(() => {
     if (!scrollTarget) return;
 
-    const element = document.getElementById(`item-${scrollTarget}`) ||
-                    document.getElementById(`test-${scrollTarget}`);
+    const element =
+      document.getElementById(`item-${scrollTarget}`) ||
+      document.getElementById(`test-${scrollTarget}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
     }

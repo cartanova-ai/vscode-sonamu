@@ -27,14 +27,16 @@ export function useStickyState(dependencies: unknown[]) {
           // 검색 결과: 상위 .search-result-traces에서 breadcrumb 높이 읽기
           const tracesContainer = header.closest(".search-result-traces");
           const breadcrumbHeight = tracesContainer
-            ? parseInt(getComputedStyle(tracesContainer).getPropertyValue("--breadcrumb-height")) || 28
+            ? parseInt(getComputedStyle(tracesContainer).getPropertyValue("--breadcrumb-height")) ||
+              28
             : 28;
           stickyTop = headerHeight + 6 + breadcrumbHeight;
         } else {
           // 일반 뷰: 상위 .suite-content에서 suite 헤더 높이 읽기
           const suiteContent = header.closest(".suite-content");
           const suiteHeaderHeight = suiteContent
-            ? parseInt(getComputedStyle(suiteContent).getPropertyValue("--suite-header-height")) || 30
+            ? parseInt(getComputedStyle(suiteContent).getPropertyValue("--suite-header-height")) ||
+              30
             : 30;
           stickyTop = headerHeight + suiteHeaderHeight + testHeaderHeight + 6;
         }
