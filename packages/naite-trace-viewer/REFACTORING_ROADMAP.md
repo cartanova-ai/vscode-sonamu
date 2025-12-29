@@ -47,18 +47,17 @@ src/
 
 ---
 
-### 4. 상수 파일 통합
+### 4. 상수 파일 통합 → 불필요 (스킵)
 
-**현재 문제:**
-- Magic numbers가 여기저기 흩어져 있음
-  - HIGHLIGHT_DURATION_MS = 2000 (useHighlight.ts)
-  - SCROLL_DELAY_MS = 100 (useHighlight.ts)
-  - DEBOUNCE_MS = 100 (useSearch.ts)
-  - 스티키 오프셋 7, 6 등 (stickyOffsets.ts, useStickyState.ts)
+**분석 결과:**
+- 각 상수가 한 곳에서만 사용됨 (공유 안 함)
+- 해당 로직 근처에 있는 게 더 직관적
+- 주석으로 용도 설명 충분
 
-**목표:**
-- `constants.ts`에 모두 모음
-- CSS와 동기화 필요한 값들은 주석으로 명시
+**현재 상태:**
+- `HIGHLIGHT_DURATION_MS`, `SCROLL_DELAY_MS` → useHighlight.ts (하이라이트 전용)
+- `DEBOUNCE_MS` → useSearch.ts (검색 전용)
+- 스티키 오프셋 → sticky-headers/ 내부 (CSS와 동기화 주석 있음)
 
 ---
 
@@ -83,8 +82,8 @@ src/
 - [x] 1. 폴더 구조 기능 기반 변경
 - [x] 2. 메시지 처리 통합
 - [x] 3. ResizeObserver 훅 추출
-- [ ] 4. 상수 파일 통합 ← **다음 작업**
-- [ ] 5. App.tsx 책임 분리 (2번 완료로 대부분 해결됨)
+- [x] 4. 상수 파일 통합 → 불필요 (스킵)
+- [ ] 5. App.tsx 책임 분리 ← **다음 작업** (2번 완료로 대부분 해결됨)
 
 ---
 
@@ -92,4 +91,5 @@ src/
 
 1. ~~메시지 처리 통합~~ ✅
 2. ~~ResizeObserver 훅 추출~~ ✅
-3. **상수 파일 통합** (쉬움, quick win)
+3. ~~상수 파일 통합~~ → 불필요 (스킵)
+4. **App.tsx 책임 분리** (이미 많이 개선됨)
