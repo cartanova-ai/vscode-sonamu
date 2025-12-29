@@ -1,4 +1,6 @@
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { PendingHighlight } from "../types";
+import { escapeId } from "../utils";
 
 const HIGHLIGHT_DURATION_MS = 2000;
 const SCROLL_DELAY_MS = 100;
@@ -6,33 +8,47 @@ const SCROLL_DELAY_MS = 100;
 /**
  * 하이라이트 상태 관리 훅
  *
+ * - pendingHighlight 감지 → 하이라이트 적용 + 스크롤
  * - trace/test 하이라이트 (2초 후 자동 제거)
- * - 스크롤 타겟 관리
  */
-export function useHighlight() {
+export function useHighlight(
+  pendingHighlight: PendingHighlight | null,
+  clearPendingHighlight: () => void,
+) {
   const [highlightedTraces, setHighlightedTraces] = useState<Set<string>>(new Set());
   const [highlightedTest, setHighlightedTest] = useState<string | null>(null);
-  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
 
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const testHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
+   * 요소로 스크롤
+   */
+  const scrollToElement = (id: string) => {
+    const escapedId = escapeId(id);
+    const element =
+      document.getElementById(`item-${escapedId}`) || document.getElementById(`test-${escapedId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  /**
    * 여러 trace를 하이라이트하고 첫 번째로 스크롤
    */
-  const highlightTraces = useCallback((traceKeys: string[]) => {
+  const highlightTraces = (traceKeys: string[]) => {
     // 기존 타이머 정리
     if (highlightTimeoutRef.current) {
       clearTimeout(highlightTimeoutRef.current);
     }
 
-    // 하이라이트 적용
+    // 하이라이트 적용 (약간의 딜레이로 DOM 업데이트 후 스크롤)
     setTimeout(() => {
       setHighlightedTraces(new Set(traceKeys));
 
       // 첫 번째 요소로 스크롤
       if (traceKeys.length > 0) {
-        setScrollTarget(traceKeys[0]);
+        scrollToElement(traceKeys[0]);
       }
 
       // 2초 후 하이라이트 제거
@@ -40,12 +56,12 @@ export function useHighlight() {
         setHighlightedTraces(new Set());
       }, HIGHLIGHT_DURATION_MS);
     }, SCROLL_DELAY_MS);
-  }, []);
+  };
 
   /**
    * 단일 test를 하이라이트하고 스크롤
    */
-  const highlightTest = useCallback((testKey: string) => {
+  const highlightTest = (testKey: string) => {
     // 기존 타이머 정리
     if (testHighlightTimeoutRef.current) {
       clearTimeout(testHighlightTimeoutRef.current);
@@ -54,37 +70,33 @@ export function useHighlight() {
     // 하이라이트 적용
     setTimeout(() => {
       setHighlightedTest(testKey);
-      setScrollTarget(testKey);
+      scrollToElement(testKey);
 
       // 2초 후 하이라이트 제거
       testHighlightTimeoutRef.current = setTimeout(() => {
         setHighlightedTest(null);
       }, HIGHLIGHT_DURATION_MS);
     }, SCROLL_DELAY_MS);
-  }, []);
+  };
 
-  /**
-   * 하이라이트 초기화
-   */
-  const clearHighlights = useCallback(() => {
-    setHighlightedTraces(new Set());
-    setHighlightedTest(null);
-  }, []);
+  // pendingHighlight 감지 → 하이라이트 적용
+  useEffect(() => {
+    if (!pendingHighlight) {
+      return;
+    }
 
-  /**
-   * 스크롤 완료 처리
-   */
-  const clearScrollTarget = useCallback(() => {
-    setScrollTarget(null);
-  }, []);
+    const { type, targets } = pendingHighlight;
+    if (type === "traces" && targets.length > 0) {
+      highlightTraces(targets);
+    } else if (type === "test" && targets.length > 0) {
+      highlightTest(targets[0]);
+    }
+
+    clearPendingHighlight();
+  }, [pendingHighlight, clearPendingHighlight]);
 
   return {
-    highlightedTraces,
     highlightedTest,
-    scrollTarget,
-    highlightTraces,
-    highlightTest,
-    clearHighlights,
-    clearScrollTarget,
+    highlightedTraces,
   };
 }

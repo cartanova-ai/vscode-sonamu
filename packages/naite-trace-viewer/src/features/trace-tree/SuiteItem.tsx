@@ -3,7 +3,6 @@ import type { NaiteMessagingTypes } from "naite-types";
 import { ExpandArrow } from "../../components";
 import { goToLocation } from "../../hooks";
 import { createTestKey, escapeId } from "../../utils";
-import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
 import { TestItem } from "./TestItem";
 
@@ -16,7 +15,6 @@ type SuiteItemProps = {
   expandedTraces: Set<string>;
   highlightedTraces: Set<string>;
   highlightedTest: string | null;
-  searchQuery: string;
   onToggle: () => void;
   onToggleTest: (testName: string) => void;
   onToggleTrace: (testName: string, traceKey: string, traceAt: string, traceIdx: number) => void;
@@ -31,7 +29,6 @@ export function SuiteItem({
   expandedTraces,
   highlightedTraces,
   highlightedTest,
-  searchQuery,
   onToggle,
   onToggleTest,
   onToggleTrace,
@@ -46,13 +43,6 @@ export function SuiteItem({
     suiteTraceCount += result.traces.length;
   }
 
-  // 검색 모드에서 매칭되는 trace가 있는지 확인
-  const hasSuiteMatchingTrace = searchQuery
-    ? Array.from(testMap.values()).some((result) =>
-        result.traces.some((t) => traceMatchesQuery(t.key, searchQuery)),
-      )
-    : true;
-
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
     handleStickyToggle(e.currentTarget, expanded, onToggle);
   };
@@ -65,10 +55,7 @@ export function SuiteItem({
   };
 
   return (
-    <div
-      className={`suite-group ${searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`}
-      data-suite={suiteName}
-    >
+    <div className={`suite-group`} data-suite={suiteName}>
       <div className="suite-header" onClick={handleHeaderClick}>
         <ExpandArrow expanded={expanded} className="suite-arrow" id={`suite-arrow-${suiteId}`} />
         <span className="suite-name">{suiteName}</span>
@@ -101,7 +88,6 @@ export function SuiteItem({
               highlighted={isTestHighlighted}
               expandedTraces={expandedTraces}
               highlightedTraces={highlightedTraces}
-              searchQuery={searchQuery}
               onToggle={() => onToggleTest(testName)}
               onToggleTrace={(traceKey, traceAt, traceIdx) =>
                 onToggleTrace(testName, traceKey, traceAt, traceIdx)

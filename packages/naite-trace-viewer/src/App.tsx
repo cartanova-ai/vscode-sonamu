@@ -37,21 +37,15 @@
  * - 스타일 → index.css
  */
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Header } from "./components";
 import { SearchView, useSearch } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
-import {
-  sendFollowStateChanged,
-  useHighlight,
-  useKeyboardShortcuts,
-  useTraceViewerState,
-} from "./hooks";
-import { escapeId } from "./utils";
+import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./hooks";
 
 export default function App() {
-  const { state, dispatch } = useTraceViewerState();
+  const { state, actions } = useTraceViewerState();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 검색 기능
@@ -62,17 +56,13 @@ export default function App() {
     openSearch,
     closeSearch,
     handleSearchChange,
-  } = useSearch(state.searchQuery, state.searchMode, state.testResults, dispatch, searchInputRef);
+  } = useSearch(state.testResults, actions.setSearchMode, actions.setSearchQuery, searchInputRef);
 
-  // 하이라이트 기능
-  const {
-    highlightedTraces,
-    highlightedTest,
-    scrollTarget,
-    highlightTraces,
-    highlightTest,
-    clearScrollTarget,
-  } = useHighlight();
+  // 하이라이트 기능 (pendingHighlight 감지 → 하이라이트 + 스크롤 자동 처리)
+  const { highlightedTest, highlightedTraces } = useHighlight(
+    state.pendingHighlight,
+    actions.clearPendingHighlight,
+  );
 
   // 키보드 단축키
   useKeyboardShortcuts(state.searchMode, openSearch, closeSearch, searchInputRef);
@@ -80,68 +70,8 @@ export default function App() {
   // 스티키 상태 감지
   useStickyState([state.testResults, state.expandedTests, state.searchMode, debouncedQuery]);
 
-  // pendingHighlight 감지 → 하이라이트 적용
-  useEffect(() => {
-    if (!state.pendingHighlight) {
-      return;
-    }
-
-    const { type, targets } = state.pendingHighlight;
-    if (type === "traces" && targets.length > 0) {
-      highlightTraces(targets);
-    } else if (type === "test" && targets.length > 0) {
-      highlightTest(targets[0]);
-    }
-
-    dispatch({ type: "CLEAR_PENDING_HIGHLIGHT" });
-  }, [state.pendingHighlight, highlightTraces, highlightTest, dispatch]);
-
-  // 스크롤 타겟 처리
-  useEffect(() => {
-    if (!scrollTarget) {
-      return;
-    }
-
-    const escapedId = escapeId(scrollTarget);
-    const element =
-      document.getElementById(`item-${escapedId}`) || document.getElementById(`test-${escapedId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    clearScrollTarget();
-  }, [scrollTarget, clearScrollTarget]);
-
   // 통계 계산
   const stats = calculateStats(state.testResults);
-
-  // 토글 핸들러
-  const handleToggleSuite = (suiteName: string) => {
-    dispatch({ type: "TOGGLE_SUITE", suiteName });
-  };
-
-  const handleToggleTest = (suiteName: string, testName: string) => {
-    dispatch({ type: "TOGGLE_TEST", suiteName, testName });
-  };
-
-  const handleToggleTrace = (
-    suiteName: string,
-    testName: string,
-    traceKey: string,
-    traceAt: string,
-    traceIdx: number,
-  ) => {
-    dispatch({ type: "TOGGLE_TRACE", suiteName, testName, traceKey, traceAt, traceIdx });
-  };
-
-  const handleToggleFollow = () => {
-    const newEnabled = !state.followEnabled;
-    dispatch({ type: "SET_FOLLOW", enabled: newEnabled });
-    sendFollowStateChanged(newEnabled);
-  };
-
-  const handleCollapseAll = () => {
-    dispatch({ type: "COLLAPSE_ALL" });
-  };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -162,8 +92,8 @@ export default function App() {
         onSearchKeyDown={handleSearchKeyDown}
         onOpenSearch={openSearch}
         onCloseSearch={closeSearch}
-        onToggleFollow={handleToggleFollow}
-        onCollapseAll={handleCollapseAll}
+        onToggleFollow={actions.toggleFollow}
+        onCollapseAll={actions.collapseAll}
       />
 
       <div id="traces-container">
@@ -174,7 +104,7 @@ export default function App() {
             searchResultGroups={searchResultGroups}
             searchQuery={state.searchQuery}
             expandedTraces={state.expandedTraces}
-            onToggleTrace={handleToggleTrace}
+            onToggleTrace={actions.toggleTrace}
           />
         ) : (
           <NormalView
@@ -182,12 +112,11 @@ export default function App() {
             collapsedSuites={state.collapsedSuites}
             expandedTests={state.expandedTests}
             expandedTraces={state.expandedTraces}
-            highlightedTraces={highlightedTraces}
             highlightedTest={highlightedTest}
-            searchQuery="" // 검색 모드가 아닐 때는 필터 비활성화 (검색어는 다음 검색을 위해 state에 보존)
-            onToggleSuite={handleToggleSuite}
-            onToggleTest={handleToggleTest}
-            onToggleTrace={handleToggleTrace}
+            highlightedTraces={highlightedTraces}
+            onToggleSuite={actions.toggleSuite}
+            onToggleTest={actions.toggleTest}
+            onToggleTrace={actions.toggleTrace}
           />
         )}
       </div>

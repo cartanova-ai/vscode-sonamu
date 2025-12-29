@@ -1,7 +1,3 @@
 export { useHighlight } from "./useHighlight";
 export { useKeyboardShortcuts } from "./useKeyboardShortcuts";
-export {
-  goToLocation,
-  sendFollowStateChanged,
-  useTraceViewerState,
-} from "./useTraceViewerState";
+export { goToLocation, useTraceViewerState } from "./useTraceViewerState";

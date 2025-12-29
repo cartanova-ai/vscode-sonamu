@@ -7,9 +7,8 @@ type NormalViewProps = {
   collapsedSuites: Set<string>;
   expandedTests: Set<string>;
   expandedTraces: Set<string>;
-  highlightedTraces: Set<string>;
   highlightedTest: string | null;
-  searchQuery: string;
+  highlightedTraces: Set<string>;
   onToggleSuite: (suiteName: string) => void;
   onToggleTest: (suiteName: string, testName: string) => void;
   onToggleTrace: (
@@ -26,9 +25,8 @@ export function NormalView({
   collapsedSuites,
   expandedTests,
   expandedTraces,
-  highlightedTraces,
   highlightedTest,
-  searchQuery,
+  highlightedTraces,
   onToggleSuite,
   onToggleTest,
   onToggleTrace,
@@ -70,7 +68,6 @@ export function NormalView({
             expandedTraces={expandedTraces}
             highlightedTraces={highlightedTraces}
             highlightedTest={highlightedTest}
-            searchQuery={searchQuery}
             onToggle={() => onToggleSuite(suiteName)}
             onToggleTest={(testName) => onToggleTest(suiteName, testName)}
             onToggleTrace={(testName, traceKey, traceAt, traceIdx) =>

@@ -3,7 +3,6 @@ import type { NaiteMessagingTypes } from "naite-types";
 import { ExpandArrow } from "../../components";
 import { goToLocation } from "../../hooks";
 import { createTestKey, createTraceKey, escapeId } from "../../utils";
-import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
 import { TraceItem } from "./TraceItem";
 
@@ -15,7 +14,6 @@ type TestItemProps = {
   highlighted: boolean;
   expandedTraces: Set<string>;
   highlightedTraces: Set<string>;
-  searchQuery: string;
   onToggle: () => void;
   onToggleTrace: (traceKey: string, traceAt: string, traceIdx: number) => void;
 };
@@ -28,18 +26,12 @@ export function TestItem({
   highlighted,
   expandedTraces,
   highlightedTraces,
-  searchQuery,
   onToggle,
   onToggleTrace,
 }: TestItemProps) {
   const testKey = createTestKey(suiteName, testName);
   const testId = escapeId(testKey);
   const testTraces = result.traces;
-
-  // 검색 모드에서 매칭되는 trace가 있는지 확인
-  const hasMatchingTrace = searchQuery
-    ? testTraces.some((t) => traceMatchesQuery(t.key, searchQuery))
-    : true;
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
     handleStickyToggle(e.currentTarget, expanded, onToggle);
@@ -55,7 +47,7 @@ export function TestItem({
   return (
     <div
       id={`test-${testId}`}
-      className={`test-group ${highlighted ? "highlight" : ""} ${searchQuery && !hasMatchingTrace ? "search-hidden" : ""}`}
+      className={`test-group ${highlighted ? "highlight" : ""}`}
       data-suite={suiteName}
       data-test-name={testName}
     >
@@ -75,12 +67,6 @@ export function TestItem({
           const traceStateKey = createTraceKey(suiteName, testName, trace.key, trace.at, traceIdx);
           const isTraceExpanded = expandedTraces.has(traceStateKey);
           const isTraceHighlighted = highlightedTraces.has(traceStateKey);
-          const isSearchMatch = searchQuery ? traceMatchesQuery(trace.key, searchQuery) : true;
-
-          // 검색 모드에서 매칭 안되면 숨김
-          if (searchQuery && !isSearchMatch) {
-            return null;
-          }
 
           return (
             <TraceItem
@@ -91,7 +77,7 @@ export function TestItem({
               testName={testName}
               expanded={isTraceExpanded}
               highlighted={isTraceHighlighted}
-              searchQuery={searchQuery}
+              searchQuery={""}
               onToggle={() => onToggleTrace(trace.key, trace.at, traceIdx)}
             />
           );

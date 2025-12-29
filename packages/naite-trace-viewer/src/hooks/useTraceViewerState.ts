@@ -197,6 +197,7 @@ export function serializeState(state: TraceViewerState): PersistedState {
  * - reducer 기반 상태 관리
  * - VSCode 상태 저장/복원 (vscode.getState/setState)
  * - VSCode 메시지 수신 → dispatch 연결
+ * - 편의용 actions 제공 (dispatch 래핑)
  */
 export function useTraceViewerState() {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
@@ -240,7 +241,43 @@ export function useTraceViewerState() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  return { state, dispatch };
+  // 편의용 actions (dispatch 래핑)
+  const actions = {
+    toggleSuite: (suiteName: string) => {
+      dispatch({ type: "TOGGLE_SUITE", suiteName });
+    },
+    toggleTest: (suiteName: string, testName: string) => {
+      dispatch({ type: "TOGGLE_TEST", suiteName, testName });
+    },
+    toggleTrace: (
+      suiteName: string,
+      testName: string,
+      traceKey: string,
+      traceAt: string,
+      traceIdx: number,
+    ) => {
+      dispatch({ type: "TOGGLE_TRACE", suiteName, testName, traceKey, traceAt, traceIdx });
+    },
+    toggleFollow: () => {
+      const newEnabled = !state.followEnabled;
+      dispatch({ type: "SET_FOLLOW", enabled: newEnabled });
+      sendFollowStateChanged(newEnabled);
+    },
+    collapseAll: () => {
+      dispatch({ type: "COLLAPSE_ALL" });
+    },
+    setSearchMode: (mode: boolean) => {
+      dispatch({ type: "SET_SEARCH_MODE", mode });
+    },
+    setSearchQuery: (query: string) => {
+      dispatch({ type: "SET_SEARCH_QUERY", query });
+    },
+    clearPendingHighlight: () => {
+      dispatch({ type: "CLEAR_PENDING_HIGHLIGHT" });
+    },
+  };
+
+  return { state, actions };
 }
 
 /**

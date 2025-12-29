@@ -1,13 +1,9 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { type Dispatch, type RefObject, useMemo, useRef, useState } from "react";
+import { type RefObject, useMemo, useRef, useState } from "react";
 import type { MatchedTrace, SearchResultGroup } from "../../types";
 import { traceMatchesQuery } from "./fuzzyMatch";
 
 const DEBOUNCE_MS = 100;
-
-type Action =
-  | { type: "SET_SEARCH_MODE"; mode: boolean }
-  | { type: "SET_SEARCH_QUERY"; query: string };
 
 /**
  * 검색 기능 훅
@@ -17,17 +13,16 @@ type Action =
  * - 검색 결과 그룹화 (메모이제이션)
  */
 export function useSearch(
-  _searchQuery: string,
-  _searchMode: boolean,
   testResults: NaiteMessagingTypes.TestResult[],
-  dispatch: Dispatch<Action>,
+  setSearchMode: (mode: boolean) => void,
+  setSearchQuery: (query: string) => void,
   searchInputRef: RefObject<HTMLInputElement | null>,
 ) {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openSearch = () => {
-    dispatch({ type: "SET_SEARCH_MODE", mode: true });
+    setSearchMode(true);
     setTimeout(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
@@ -35,11 +30,11 @@ export function useSearch(
   };
 
   const closeSearch = () => {
-    dispatch({ type: "SET_SEARCH_MODE", mode: false });
+    setSearchMode(false);
   };
 
   const handleSearchChange = (value: string) => {
-    dispatch({ type: "SET_SEARCH_QUERY", query: value });
+    setSearchQuery(value);
 
     // 디바운싱
     if (debounceRef.current) {
