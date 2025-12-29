@@ -32,6 +32,8 @@ export function TestItem({
   const testKey = createTestKey(suiteName, testName);
   const testId = escapeId(testKey);
   const testTraces = result.traces;
+  const status = result.status ?? "passed";
+  const duration = result.duration ?? 0;
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
     handleStickyToggle(e.currentTarget, expanded, onToggle);
@@ -46,7 +48,9 @@ export function TestItem({
 
   return (
     <div
-      id={`test-${testId}`/*진짜 쓸데없어보이지만 useScrollToHighlight 훅에서 찾을 때 필요합니다.*/}
+      id={
+        `test-${testId}` /*진짜 쓸데없어보이지만 useScrollToHighlight 훅에서 찾을 때 필요합니다.*/
+      }
       className={`test-group ${highlighted ? "highlight" : ""}`}
       data-suite={suiteName}
       data-test-name={testName}
@@ -59,6 +63,10 @@ export function TestItem({
             :{result.testLine}
           </span>
         )}
+        <span className={`test-status ${status}`}>
+          <span className="status-dot" />
+          <span className="status-duration">{duration}ms</span>
+        </span>
         <span className="test-count">{testTraces.length}</span>
       </div>
 
