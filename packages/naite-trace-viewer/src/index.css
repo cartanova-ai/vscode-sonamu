@@ -327,45 +327,34 @@ body {
   font-size: 12px;
   font-family: var(--vscode-editor-font-family);
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 5;
 }
 .test-line:hover {
   color: var(--accent);
   text-decoration: underline;
 }
-.test-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  flex-shrink: 999; /* test-count와 같이 가장 먼저 사라짐 */
-  min-width: 0;
-  overflow: hidden;
-}
-.test-status .status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.test-status.passed .status-dot {
-  background: #4bc662; /* VSCode 초록 */
-}
-.test-status.failed .status-dot {
-  background: #f14c4c; /* VSCode 빨강 */
-}
-.test-status.skipped .status-dot {
-  background: #808080; /* 회색 */
-}
-.test-status .status-duration {
-  font-size: 11px;
-  color: var(--vscode-descriptionForeground);
+.test-duration {
+  font-size: 12px;
   font-family: var(--vscode-editor-font-family);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.test-duration.pass {
+  color: #4dca64e4;
+}
+.test-duration.fail {
+  color: #f14c4ce4;
+}
+.test-duration.skip {
+  color: #808080;
+}
+.test-duration .unit {
+  opacity: 0.7;
 }
 .test-count {
-  margin-left: 8px;
+  margin-left: auto;
   background: var(--badge-bg);
   color: var(--badge-fg);
   padding: 2px 6px;

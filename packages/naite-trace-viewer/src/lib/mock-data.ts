@@ -10,7 +10,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "add 함수 - 양수 더하기",
     testFilePath: "/src/services/math.test.ts",
     testLine: 10,
-    status: "passed",
+    status: "pass",
     duration: 12,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -36,7 +36,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "add 함수 - 음수 포함",
     testFilePath: "/src/services/math.test.ts",
     testLine: 18,
-    status: "passed",
+    status: "pass",
     duration: 8,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -69,7 +69,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "multiply 함수 테스트",
     testFilePath: "/src/services/math.test.ts",
     testLine: 25,
-    status: "passed",
+    status: "pass",
     duration: 15,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -95,7 +95,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "divide 함수 - 0으로 나누기 예외",
     testFilePath: "/src/services/math.test.ts",
     testLine: 35,
-    status: "failed",
+    status: "fail",
     duration: 22,
     receivedAt: new Date().toISOString(),
     error: {
@@ -136,7 +136,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "getUser - 존재하는 사용자 조회",
     testFilePath: "/src/services/user.test.ts",
     testLine: 12,
-    status: "passed",
+    status: "pass",
     duration: 145,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -186,7 +186,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "getUser - 존재하지 않는 사용자",
     testFilePath: "/src/services/user.test.ts",
     testLine: 28,
-    status: "passed",
+    status: "pass",
     duration: 89,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -223,7 +223,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "createUser - 새 사용자 생성",
     testFilePath: "/src/services/user.test.ts",
     testLine: 42,
-    status: "passed",
+    status: "pass",
     duration: 234,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -286,7 +286,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "updateUser - 프로필 수정",
     testFilePath: "/src/services/user.test.ts",
     testLine: 65,
-    status: "passed",
+    status: "pass",
     duration: 178,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -336,7 +336,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "login - 정상 로그인",
     testFilePath: "/src/services/auth.test.ts",
     testLine: 8,
-    status: "passed",
+    status: "pass",
     duration: 312,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -387,7 +387,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "login - 잘못된 비밀번호",
     testFilePath: "/src/services/auth.test.ts",
     testLine: 35,
-    status: "passed",
+    status: "pass",
     duration: 198,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -427,7 +427,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "logout - 세션 종료",
     testFilePath: "/src/services/auth.test.ts",
     testLine: 55,
-    status: "passed",
+    status: "pass",
     duration: 67,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -460,7 +460,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "refreshToken - 토큰 갱신",
     testFilePath: "/src/services/auth.test.ts",
     testLine: 72,
-    status: "passed",
+    status: "pass",
     duration: 89,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -500,7 +500,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "createOrder - 새 주문 생성",
     testFilePath: "/src/services/order.test.ts",
     testLine: 15,
-    status: "passed",
+    status: "pass",
     duration: 456,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -579,7 +579,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "createOrder - 재고 부족 실패",
     testFilePath: "/src/services/order.test.ts",
     testLine: 55,
-    status: "failed",
+    status: "fail",
     duration: 123,
     receivedAt: new Date().toISOString(),
     error: {
@@ -626,7 +626,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "cancelOrder - 주문 취소",
     testFilePath: "/src/services/order.test.ts",
     testLine: 85,
-    status: "passed",
+    status: "pass",
     duration: 234,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -680,7 +680,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "sendEmail - 이메일 발송",
     testFilePath: "/src/services/notification.test.ts",
     testLine: 10,
-    status: "passed",
+    status: "pass",
     duration: 567,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -725,7 +725,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "sendPush - 푸시 알림 발송",
     testFilePath: "/src/services/notification.test.ts",
     testLine: 35,
-    status: "passed",
+    status: "pass",
     duration: 234,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -776,7 +776,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "get - 캐시 히트",
     testFilePath: "/src/services/cache.test.ts",
     testLine: 8,
-    status: "passed",
+    status: "pass",
     duration: 5,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -806,7 +806,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "get - 캐시 미스",
     testFilePath: "/src/services/cache.test.ts",
     testLine: 22,
-    status: "passed",
+    status: "pass",
     duration: 3,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -832,7 +832,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "set - 캐시 저장",
     testFilePath: "/src/services/cache.test.ts",
     testLine: 35,
-    status: "passed",
+    status: "pass",
     duration: 8,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -862,7 +862,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "invalidate - 캐시 무효화",
     testFilePath: "/src/services/cache.test.ts",
     testLine: 48,
-    status: "passed",
+    status: "pass",
     duration: 12,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -892,7 +892,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "validateEmail - 유효한 이메일",
     testFilePath: "/src/services/validation.test.ts",
     testLine: 5,
-    status: "passed",
+    status: "pass",
     duration: 2,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -918,7 +918,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "validateEmail - 잘못된 형식",
     testFilePath: "/src/services/validation.test.ts",
     testLine: 18,
-    status: "passed",
+    status: "pass",
     duration: 1,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -947,7 +947,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "validatePassword - 강한 비밀번호",
     testFilePath: "/src/services/validation.test.ts",
     testLine: 32,
-    status: "passed",
+    status: "pass",
     duration: 3,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -983,7 +983,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "GET /api/users - 사용자 목록 조회",
     testFilePath: "/src/controllers/api.test.ts",
     testLine: 12,
-    status: "passed",
+    status: "pass",
     duration: 345,
     receivedAt: new Date().toISOString(),
     traces: [
@@ -1046,7 +1046,7 @@ export const mockTestResults: NaiteMessagingTypes.TestResult[] = [
     testName: "POST /api/users - 사용자 생성 (대량 데이터)",
     testFilePath: "/src/controllers/api.test.ts",
     testLine: 55,
-    status: "passed",
+    status: "pass",
     duration: 678,
     receivedAt: new Date().toISOString(),
     traces: [

@@ -32,7 +32,7 @@ export function TestItem({
   const testKey = createTestKey(suiteName, testName);
   const testId = escapeId(testKey);
   const testTraces = result.traces;
-  const status = result.status ?? "passed";
+  const status = result.status ?? "pass";
   const duration = result.duration ?? 0;
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -60,12 +60,12 @@ export function TestItem({
         <span className="test-name">{testName}</span>
         {result.testFilePath && result.testLine && (
           <span className="test-line" onClick={handleLineClick}>
-            :{result.testLine}
+            {result.testFilePath.split("/").pop()}:{result.testLine}
           </span>
         )}
-        <span className={`test-status ${status}`}>
-          <span className="status-dot" />
-          <span className="status-duration">{duration}ms</span>
+        <span className={`test-duration ${status}`}>
+          {duration}
+          <span className="unit">ms</span>
         </span>
         <span className="test-count">{testTraces.length}</span>
       </div>
