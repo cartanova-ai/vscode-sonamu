@@ -1,4 +1,4 @@
-import { getStickyOffsets } from "../utils";
+import { getStickyOffsets } from "./stickyOffsets";
 
 type StickyLevel = "suite" | "test" | "trace" | "searchTrace";
 

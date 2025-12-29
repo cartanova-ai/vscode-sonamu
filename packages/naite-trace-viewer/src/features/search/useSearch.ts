@@ -1,7 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { type Dispatch, type RefObject, useMemo, useRef, useState } from "react";
-import type { MatchedTrace, SearchResultGroup } from "../types";
-import { traceMatchesQuery } from "../utils";
+import type { MatchedTrace, SearchResultGroup } from "../../types";
+import { traceMatchesQuery } from "./fuzzyMatch";
 
 const DEBOUNCE_MS = 100;
 

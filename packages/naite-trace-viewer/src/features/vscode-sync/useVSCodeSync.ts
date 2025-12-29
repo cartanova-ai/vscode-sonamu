@@ -1,8 +1,8 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { type Dispatch, useEffect, useRef } from "react";
-import { vscode } from "../lib/vscode-api";
-import type { TraceViewerState, VSCodeOutgoingMessage } from "../types";
-import { serializeState } from "./useTraceViewerState";
+import { vscode } from "../../lib/vscode-api";
+import type { TraceViewerState, VSCodeOutgoingMessage } from "../../types";
+import { serializeState } from "../../shared/hooks/useTraceViewerState";
 
 type Action =
   | { type: "SET_TEST_RESULTS"; testResults: NaiteMessagingTypes.TestResult[] }

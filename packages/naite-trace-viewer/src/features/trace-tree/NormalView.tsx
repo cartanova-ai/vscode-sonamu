@@ -1,4 +1,5 @@
 import type { NaiteMessagingTypes } from "naite-types";
+
 import { SuiteItem } from "./SuiteItem";
 
 type NormalViewProps = {

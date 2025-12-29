@@ -1,9 +1,11 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { useLayoutEffect, useRef } from "react";
 
-import { goToLocation, handleStickyToggle } from "../hooks";
-import { createTestKey, escapeId, traceMatchesQuery } from "../utils";
-import { ExpandArrow } from "./ExpandArrow";
+import { ExpandArrow } from "../../shared/ui";
+import { createTestKey, escapeId } from "../../shared/utils";
+import { traceMatchesQuery } from "../search/fuzzyMatch";
+import { handleStickyToggle } from "../sticky-headers";
+import { goToLocation } from "../vscode-sync";
 import { TestItem } from "./TestItem";
 
 type SuiteItemProps = {

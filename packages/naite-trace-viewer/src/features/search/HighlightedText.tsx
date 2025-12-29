@@ -1,4 +1,4 @@
-import { fuzzyMatch } from "../utils";
+import { fuzzyMatch } from "./fuzzyMatch";
 
 /**
  * 퍼지 매칭 결과로 매칭된 문자를 하이라이트하여 렌더링

@@ -1,4 +1,4 @@
-import type { StickyOffsets } from "../types";
+import type { StickyOffsets } from "../../types";
 
 /**
  * CSS 변수에서 스티키 헤더 높이를 읽고 각 레벨의 top 오프셋을 계산

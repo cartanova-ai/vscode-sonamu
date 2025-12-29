@@ -1,4 +1,4 @@
-import type { FuzzyMatchResult } from "../types";
+import type { FuzzyMatchResult } from "../../types";
 
 /**
  * 퍼지 매칭: 쿼리의 각 문자가 텍스트에 순서대로 존재하는지 확인

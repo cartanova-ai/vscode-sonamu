@@ -32,30 +32,58 @@ pnpm build
 # 파일명이 고정되어야 extension의 esbuild.js가 인라인 가능
 ```
 
-## 주요 아키텍처
+## 폴더 구조 (기능 기반)
 
-### 뷰 모드
-- **NormalView**: 스위트 > 테스트 > 트레이스 계층 구조
-- **SearchView**: 검색 결과를 플랫 리스트로 표시
+```
+src/
+├── features/
+│   ├── trace-tree/       # 메인 트리 뷰 (Suite > Test > Trace 계층)
+│   ├── search/           # 검색 기능 (퍼지 매칭, 하이라이트)
+│   ├── sticky-headers/   # 스티키 헤더 시스템
+│   └── vscode-sync/      # VSCode 상태 동기화
+├── shared/
+│   ├── ui/               # 재사용 UI (ExpandArrow, JsonValue, Header)
+│   ├── hooks/            # 앱 전반 훅 (상태관리, 하이라이트, 키보드)
+│   └── utils/            # 공용 유틸 (formatters, keys, escapeId)
+├── types/
+├── lib/
+├── App.tsx
+└── main.tsx
+```
 
-### 스티키 헤더 시스템 (복잡함!)
+**"기능 X를 수정하려면?"** → `features/X/` 폴더만 보면 됨
 
-3단계 스티키 헤더가 중첩됨:
-1. `suite-header` (top: 7px, z-index: 30)
-2. `test-header` (top: suite높이 + 7px, z-index: 20)
-3. `trace-header` (top: suite + test + 6px, z-index: 10)
+## 주요 기능별 설명
 
-#### 관련 파일들
-- `src/index.css`: CSS top 값 정의
-- `src/utils/stickyOffsets.ts`: JS에서 같은 오프셋 계산 (**CSS와 반드시 일치해야 함!**)
-- `src/hooks/useStickyState.ts`: .stuck 클래스 토글 (그림자 표시용)
-- `src/hooks/useStickyToggle.ts`: 스티키 상태에서 접을 때 스크롤 보정
+### features/trace-tree/
+Suite > Test > Trace 계층 구조 렌더링
+- NormalView.tsx - Suite 목록 그룹화
+- SuiteItem.tsx, TestItem.tsx, TraceItem.tsx - 각 계층 컴포넌트
 
-#### 스티키 관련 버그 수정 시 주의
-CSS의 `top` 값을 바꾸면 **반드시** `stickyOffsets.ts`와 `useStickyState.ts`의 오프셋도 동일하게 수정해야 함.
-그렇지 않으면:
-- 스티키 상태 판단이 틀려서 그림자가 안 나오거나
-- 접을 때 스크롤이 튀는 현상 발생
+### features/search/
+검색 기능 전체
+- SearchView.tsx - 검색 결과 플랫 리스트
+- useSearch.ts - 디바운싱, 결과 그룹화
+- fuzzyMatch.ts - 퍼지 매칭 알고리즘
+- HighlightedText.tsx - 매칭 문자 하이라이트
+
+### features/sticky-headers/ (복잡함!)
+3단계 스티키 헤더 시스템:
+1. suite-header (top: 7px)
+2. test-header (top: suite높이 + 7px)
+3. trace-header (top: suite + test + 6px)
+
+**파일들:**
+- stickyOffsets.ts - CSS 오프셋 계산 (**CSS와 반드시 일치해야 함!**)
+- useStickyState.ts - .stuck 클래스 토글
+- useStickyToggle.ts - 접을 때 스크롤 보정
+
+**⚠️ CSS top 값 수정 시 stickyOffsets.ts도 함께 수정 필수**
+
+### features/vscode-sync/
+VSCode 확장과 통신
+- useVSCodeSync.ts - 상태 저장/복원, 메시지 처리
+- goToLocation(), sendFollowStateChanged() - 메시지 발신
 
 ### 레이아웃 구조
 
@@ -65,15 +93,6 @@ CSS의 `top` 값을 바꾸면 **반드시** `stickyOffsets.ts`와 `useStickyStat
 └── #traces-container (스크롤, flex: 1, overflow-y: auto)
     └── ::before (스티키 마스크 - 둥근 모서리 효과)
 ```
-
-- 스크롤바는 `#traces-container` 내부에 있음
-- `#traces-container::before`가 상단 둥근 모서리 마스크 역할
-
-### 검색 기능
-
-- `useSearch.ts`: fuzzy 검색 로직
-- `fuzzyMatch.ts`: 매칭 알고리즘
-- 검색 시 NormalView → SearchView로 전환
 
 ## CSS 특이사항
 
@@ -91,4 +110,6 @@ pnpm test        # 단일 실행
 pnpm test:watch  # watch 모드
 ```
 
-`*.test.ts` 파일들: `escapeId.test.ts`, `fuzzyMatch.test.ts` 등
+`*.test.ts` 파일들:
+- `src/shared/utils/escapeId.test.ts`
+- `src/features/search/fuzzyMatch.test.ts`
