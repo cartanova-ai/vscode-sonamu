@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, type Dispatch, type RefObject } from "react";
 import type { NaiteMessagingTypes } from "naite-types";
+import { type Dispatch, type RefObject, useMemo, useRef, useState } from "react";
 import type { MatchedTrace, SearchResultGroup } from "../types";
 import { traceMatchesQuery } from "../utils";
 

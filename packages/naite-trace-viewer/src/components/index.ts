@@ -1,9 +1,9 @@
 export { ExpandArrow } from "./ExpandArrow";
-export { JsonValue } from "./JsonValue";
-export { HighlightedText } from "./HighlightedText";
-export { TraceItem } from "./TraceItem";
-export { TestItem } from "./TestItem";
-export { SuiteItem } from "./SuiteItem";
 export { Header } from "./Header";
+export { HighlightedText } from "./HighlightedText";
+export { JsonValue } from "./JsonValue";
 export { NormalView } from "./NormalView";
 export { SearchView } from "./SearchView";
+export { SuiteItem } from "./SuiteItem";
+export { TestItem } from "./TestItem";
+export { TraceItem } from "./TraceItem";

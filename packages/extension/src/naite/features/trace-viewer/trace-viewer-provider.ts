@@ -1,8 +1,8 @@
+// esbuild 플러그인이 naite-trace-viewer 빌드 결과물을 주입합니다
+import traceViewerHtml from "@vscode-sonamu/naite-trace-viewer";
 import vscode from "vscode";
 import { TraceStore } from "../../lib/messaging/trace-store";
 import { goToLocation } from "../../lib/utils/editor-navigation";
-// esbuild 플러그인이 naite-trace-viewer 빌드 결과물을 주입합니다
-import traceViewerHtml from "@vscode-sonamu/naite-trace-viewer";
 
 /**
  * 에디터 탭용 Trace Viewer (WebviewPanel)

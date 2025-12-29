@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
 import type { NaiteMessagingTypes } from "naite-types";
+import { useLayoutEffect, useRef } from "react";
 
 import { goToLocation } from "../hooks";
 import type { MatchedTrace, SearchResultGroup } from "../types";

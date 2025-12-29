@@ -1,9 +1,9 @@
 import crypto from "crypto";
 import fs from "fs/promises";
+import type { NaiteMessagingTypes } from "naite-types";
 import net from "net";
 import os from "os";
 import path from "path";
-import type { NaiteMessagingTypes } from "naite-types";
 import { TraceStore } from "./trace-store";
 
 /**

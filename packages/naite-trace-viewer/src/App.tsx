@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Header, NormalView, SearchView } from "./components";
 import {
-  useTraceViewerState,
-  useVSCodeSync,
-  useSearch,
+  sendFollowStateChanged,
   useHighlight,
   useKeyboardShortcuts,
+  useSearch,
   useStickyState,
-  sendFollowStateChanged,
+  useTraceViewerState,
+  useVSCodeSync,
 } from "./hooks";
 import { createTraceKey } from "./utils";
 

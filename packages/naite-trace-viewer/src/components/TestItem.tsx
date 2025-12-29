@@ -1,8 +1,8 @@
 import type { NaiteMessagingTypes } from "naite-types";
+import { goToLocation, handleStickyToggle } from "../hooks";
+import { createTestKey, createTraceKey, escapeId, traceMatchesQuery } from "../utils";
 import { ExpandArrow } from "./ExpandArrow";
 import { TraceItem } from "./TraceItem";
-import { escapeId, createTestKey, createTraceKey, traceMatchesQuery } from "../utils";
-import { goToLocation, handleStickyToggle } from "../hooks";
 
 type TestItemProps = {
   result: NaiteMessagingTypes.TestResult;

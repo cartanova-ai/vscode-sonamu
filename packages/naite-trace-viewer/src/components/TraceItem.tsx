@@ -1,9 +1,9 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { ExpandArrow } from "./ExpandArrow";
-import { JsonValue } from "./JsonValue";
-import { HighlightedText } from "./HighlightedText";
-import { escapeId, formatTime, getFileName, createTraceKey } from "../utils";
 import { goToLocation, handleStickyToggle } from "../hooks";
+import { createTraceKey, escapeId, formatTime, getFileName } from "../utils";
+import { ExpandArrow } from "./ExpandArrow";
+import { HighlightedText } from "./HighlightedText";
+import { JsonValue } from "./JsonValue";
 
 type TraceItemProps = {
   trace: NaiteMessagingTypes.NaiteTrace;

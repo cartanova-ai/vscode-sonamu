@@ -1,7 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useEffect, useRef, type Dispatch } from "react";
-import type { TraceViewerState, VSCodeOutgoingMessage } from "../types";
+import { type Dispatch, useEffect, useRef } from "react";
 import { vscode } from "../lib/vscode-api";
+import type { TraceViewerState, VSCodeOutgoingMessage } from "../types";
 import { serializeState } from "./useTraceViewerState";
 
 type Action =

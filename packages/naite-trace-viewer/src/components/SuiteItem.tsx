@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
 import type { NaiteMessagingTypes } from "naite-types";
+import { useLayoutEffect, useRef } from "react";
 
 import { goToLocation, handleStickyToggle } from "../hooks";
 import { createTestKey, escapeId, traceMatchesQuery } from "../utils";

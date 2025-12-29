@@ -1,8 +1,8 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { useReducer } from "react";
+import { vscode } from "../lib/vscode-api";
 import type { PersistedState, TraceViewerState } from "../types";
 import { createTestKey, createTraceKey } from "../utils";
-import { vscode } from "../lib/vscode-api";
 
 type Action =
   | { type: "SET_TEST_RESULTS"; testResults: NaiteMessagingTypes.TestResult[] }
