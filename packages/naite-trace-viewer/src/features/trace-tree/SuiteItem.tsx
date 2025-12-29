@@ -1,7 +1,8 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useLayoutEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { ExpandArrow } from "../../components";
+import { useResizeObserverCSSVar } from "../../hooks";
 import { createTestKey, escapeId } from "../../utils";
 import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
@@ -42,26 +43,7 @@ export function SuiteItem({
   const suiteHeaderRef = useRef<HTMLDivElement>(null);
   const suiteContentRef = useRef<HTMLDivElement>(null);
 
-  // 스위트 헤더 높이 변화 감지 및 CSS 변수 업데이트
-  useLayoutEffect(() => {
-    const headerEl = suiteHeaderRef.current;
-    const contentEl = suiteContentRef.current;
-    if (!headerEl || !contentEl) return;
-
-    const updateHeight = () => {
-      const height = headerEl.offsetHeight;
-      contentEl.style.setProperty("--suite-header-height", `${height}px`);
-    };
-
-    // 초기 설정
-    updateHeight();
-
-    // ResizeObserver로 높이 변화 감지
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(headerEl);
-
-    return () => observer.disconnect();
-  }, []);
+  useResizeObserverCSSVar(suiteHeaderRef, suiteContentRef, "suite-header-height");
 
   // 통계 계산
   const suiteTestCount = testMap.size;

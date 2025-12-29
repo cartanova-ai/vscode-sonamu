@@ -1,5 +1,6 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useLayoutEffect, useRef } from "react";
+import { useRef } from "react";
+import { useResizeObserverCSSVar } from "../../hooks";
 import type { MatchedTrace, SearchResultGroup } from "../../types";
 import { createTraceKey, getFileName } from "../../utils";
 import { TraceItem } from "../trace-tree/TraceItem";
@@ -78,26 +79,7 @@ function SearchResultItem({
   const breadcrumbRef = useRef<HTMLDivElement>(null);
   const tracesContainerRef = useRef<HTMLDivElement>(null);
 
-  // breadcrumb 높이 변화 감지 및 CSS 변수 업데이트
-  useLayoutEffect(() => {
-    const breadcrumbEl = breadcrumbRef.current;
-    const tracesEl = tracesContainerRef.current;
-    if (!breadcrumbEl || !tracesEl) return;
-
-    const updateHeight = () => {
-      const height = breadcrumbEl.offsetHeight;
-      tracesEl.style.setProperty("--breadcrumb-height", `${height}px`);
-    };
-
-    // 초기 설정
-    updateHeight();
-
-    // ResizeObserver로 높이 변화 감지
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(breadcrumbEl);
-
-    return () => observer.disconnect();
-  }, []);
+  useResizeObserverCSSVar(breadcrumbRef, tracesContainerRef, "breadcrumb-height");
 
   const handleLocationClick = () => {
     goToLocation(result.testFilePath, result.testLine);
