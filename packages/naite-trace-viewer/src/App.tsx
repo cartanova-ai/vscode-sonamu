@@ -1,3 +1,43 @@
+/**
+ * naite-trace-viewer 메인 컴포넌트
+ *
+ * ## 이 앱이 하는 일
+ * Sonamu 프레임워크의 테스트 실행 시 `Naite.t("key", value)`로 기록된
+ * 트레이스 데이터를 VSCode 웹뷰에 트리 형태로 표시합니다.
+ *
+ * ## 데이터 흐름
+ * ```
+ * VSCode Extension ──(postMessage)──▶ useVSCodeSync ──(dispatch)──▶ useTraceViewerState
+ *                                                                          │
+ *                                      ┌───────────────────────────────────┘
+ *                                      ▼
+ *                          ┌───────────────────────┐
+ *                          │  state.testResults    │
+ *                          │  state.expanded*      │
+ *                          │  state.searchMode     │
+ *                          └───────────┬───────────┘
+ *                                      │
+ *                    ┌─────────────────┼─────────────────┐
+ *                    ▼                 ▼                 ▼
+ *              NormalView        SearchView          Header
+ *              (트리 뷰)         (검색 결과)        (검색/액션)
+ * ```
+ *
+ * ## 주요 상태 (useTraceViewerState)
+ * - testResults: 테스트 결과 배열 (Suite > Test > Trace 계층)
+ * - collapsedSuites / expandedTests / expandedTraces: UI 토글 상태
+ * - searchMode / searchQuery: 검색 모드 및 검색어
+ * - pendingHighlight: 포커스 요청 시 하이라이트 대상 (일회성)
+ *
+ * ## 수정 가이드
+ * - 검색 기능 → features/search/
+ * - 트리 렌더링 → features/trace-tree/
+ * - 스티키 헤더 → features/sticky-headers/
+ * - VSCode 통신 → features/vscode-sync/
+ * - 상태 관리 → hooks/useTraceViewerState.ts
+ * - 스타일 → index.css
+ */
+
 import { useEffect, useRef } from "react";
 import { Header } from "./components";
 import { SearchView, useSearch } from "./features/search";

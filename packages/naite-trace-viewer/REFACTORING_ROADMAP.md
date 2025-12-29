@@ -2,6 +2,107 @@
 
 > 목표: "Claude 없이도 아무나 보고 바로 수정할 수 있는" 직관적인 React 앱
 
+---
+
+## 아키텍처 개요
+
+### 이 앱이 하는 일
+
+Sonamu 프레임워크에서 테스트 실행 시 `Naite.t("key", value)`로 기록된 트레이스 데이터를 VSCode 웹뷰에 트리 형태로 표시합니다.
+
+### 전체 데이터 흐름
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  VSCode Extension (packages/extension)                                      │
+│                                                                             │
+│  ┌─────────────────┐     ┌──────────────────┐                              │
+│  │ Sonamu 테스트    │────▶│ 소켓 서버        │                              │
+│  │ Naite.t() 호출   │     │ (트레이스 수집)   │                              │
+│  └─────────────────┘     └────────┬─────────┘                              │
+│                                   │                                         │
+│                          postMessage (JSON)                                 │
+│                                   │                                         │
+└───────────────────────────────────│─────────────────────────────────────────┘
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  naite-trace-viewer (이 앱 - WebView)                                       │
+│                                                                             │
+│  ┌──────────────────┐                                                      │
+│  │ useVSCodeSync    │  "testResults" 메시지 수신                            │
+│  │                  │  "focusKey" 메시지 수신 (에디터에서 키 클릭 시)         │
+│  └────────┬─────────┘                                                      │
+│           │ dispatch                                                        │
+│           ▼                                                                 │
+│  ┌──────────────────────────────────────────────────────────────┐          │
+│  │ useTraceViewerState (중앙 상태 관리)                          │          │
+│  │                                                               │          │
+│  │  state = {                                                    │          │
+│  │    testResults: TestResult[],     // 테스트 결과 데이터        │          │
+│  │    collapsedSuites: Set<string>,  // 접힌 Suite               │          │
+│  │    expandedTests: Set<string>,    // 펼쳐진 Test              │          │
+│  │    expandedTraces: Set<string>,   // 펼쳐진 Trace             │          │
+│  │    searchMode: boolean,           // 검색 모드 여부            │          │
+│  │    searchQuery: string,           // 검색어                   │          │
+│  │    followEnabled: boolean,        // 에디터 따라가기 토글       │          │
+│  │    pendingHighlight: {...}        // 하이라이트 요청 (일회성)   │          │
+│  │  }                                                            │          │
+│  └──────────────────────────────────┬───────────────────────────┘          │
+│                                     │                                       │
+│           ┌─────────────────────────┼─────────────────────────┐            │
+│           │                         │                         │            │
+│           ▼                         ▼                         ▼            │
+│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐       │
+│  │    Header       │     │   NormalView    │     │   SearchView    │       │
+│  │                 │     │                 │     │                 │       │
+│  │ - 검색 입력      │     │ - Suite 목록    │     │ - 검색 결과      │       │
+│  │ - Follow 토글   │     │   └─ Test 목록  │     │   플랫 리스트    │       │
+│  │ - 모두 접기     │     │      └─ Trace   │     │                 │       │
+│  └─────────────────┘     └─────────────────┘     └─────────────────┘       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 데이터 계층 구조
+
+```
+TestResult[] (state.testResults)
+│
+├─ TestResult
+│   ├─ suiteName: "UserService"           // Suite 이름
+│   ├─ suiteFilePath: "src/user.spec.ts"  // 파일 경로
+│   ├─ testName: "should create user"     // Test 이름
+│   ├─ testLine: 42                       // 테스트 라인 번호
+│   └─ traces: Trace[]
+│       ├─ { key: "input", value: {...}, at: "src/user.ts:15" }
+│       ├─ { key: "result", value: {...}, at: "src/user.ts:28" }
+│       └─ ...
+│
+├─ TestResult (같은 Suite의 다른 Test)
+│   ├─ suiteName: "UserService"
+│   ├─ testName: "should delete user"
+│   └─ traces: [...]
+│
+└─ TestResult (다른 Suite)
+    ├─ suiteName: "OrderService"
+    └─ ...
+```
+
+### 주요 기능별 위치
+
+| 기능 | 위치 | 설명 |
+|------|------|------|
+| **검색** | `features/search/` | 퍼지 매칭, 검색 결과 뷰 |
+| **트리 렌더링** | `features/trace-tree/` | Suite > Test > Trace 컴포넌트 |
+| **스티키 헤더** | `features/sticky-headers/` | 3단계 스티키 + 그림자 효과 |
+| **VSCode 통신** | `features/vscode-sync/` | 메시지 수신/발신, 상태 저장 |
+| **상태 관리** | `hooks/useTraceViewerState.ts` | useReducer 기반 중앙 상태 |
+| **하이라이트** | `hooks/useHighlight.ts` | 포커스 시 2초 하이라이트 |
+| **공통 UI** | `components/` | Header, ExpandArrow, JsonValue |
+| **스타일** | `index.css` | 모든 CSS (섹션별 주석으로 구분) |
+
+---
+
 ## 현재 폴더 구조 (기능 기반으로 변경 완료 ✅)
 
 ```
