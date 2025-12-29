@@ -78,10 +78,18 @@ export default function App() {
   useKeyCombination(null, (e) => (e.metaKey || e.ctrlKey) && e.key === "f", openSearch);
   useKeyCombination(searchInputRef, (e) => e.key === "Escape", closeSearch);
 
-  // 스티키 상태 감지
+  // 트레이스가 많으면 스크롤을 넘기는 중에 "내가 지금 어떤 스위트/케이스를 보고 있는 거지?"하고 길을 잃기 쉽습니다.
+  // 사용자를 돕기 위해 마치 VSCode 파일 탐색기의 그것과 같은 스티키 헤더를 제공합니다.
+  // "스티키해진"(.stuck 클래스가 붙은) 헤더들은 하단으로 향하는 그림자를 표시하게 됩니다.
+  // 그리고 이 훅 호출은 헤더들의 스크롤 위치를 알아내어서 그들이 "스티키한" 상태인지 판단한 다음에 .stuck 클래스를 토글해줍니다.
+  // 즉슨 이 훅은 현재 스크롤 상태를 집어다가 "스티키함" 클래스를 토글해주는 친구인겁니다.
+  // 그렇다면 그 동작은 언제 수행하는가? 목록이 바뀌거나 스크롤이 이동되었을 때 수행합니다.
+  // 목록이 바뀌었는지를 감지해야 하기 때문에, 목록 컨텐츠에 변화를 줄 수 있는 dependencies를 인자로 받습니다.
   useStickyState([
     state.testResults,
+    state.collapsedSuites,
     state.expandedTests,
+    state.expandedTraces,
     state.searchMode,
     state.debouncedSearchQuery,
   ]);
