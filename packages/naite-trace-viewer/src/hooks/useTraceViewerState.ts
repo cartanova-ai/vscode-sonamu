@@ -1,7 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { useReducer } from "react";
-import { vscode } from "../../lib/vscode-api";
-import type { PersistedState, TraceViewerState } from "../../types";
+import { vscode } from "../lib/vscode-api";
+import type { PersistedState, TraceViewerState } from "../types";
 import { createTestKey, createTraceKey } from "../utils";
 
 type Action =

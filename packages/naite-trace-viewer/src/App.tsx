@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react";
-
+import { Header } from "./components";
 import { SearchView, useSearch } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
 import { sendFollowStateChanged, useVSCodeSync } from "./features/vscode-sync";
-import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./shared/hooks";
-import { Header } from "./shared/ui";
-import { escapeId } from "./shared/utils";
+import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./hooks";
+import { escapeId } from "./utils";
 
 export default function App() {
   const { state, dispatch } = useTraceViewerState();

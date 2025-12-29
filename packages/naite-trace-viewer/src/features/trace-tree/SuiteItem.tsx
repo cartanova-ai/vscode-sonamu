@@ -1,8 +1,8 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { useLayoutEffect, useRef } from "react";
 
-import { ExpandArrow } from "../../shared/ui";
-import { createTestKey, escapeId } from "../../shared/utils";
+import { ExpandArrow } from "../../components";
+import { createTestKey, escapeId } from "../../utils";
 import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
 import { goToLocation } from "../vscode-sync";

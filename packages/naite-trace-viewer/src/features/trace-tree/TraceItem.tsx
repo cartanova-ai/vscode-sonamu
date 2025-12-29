@@ -1,7 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
 
-import { ExpandArrow, JsonValue } from "../../shared/ui";
-import { createTraceKey, escapeId, formatTime, getFileName } from "../../shared/utils";
+import { ExpandArrow, JsonValue } from "../../components";
+import { createTraceKey, escapeId, formatTime, getFileName } from "../../utils";
 import { HighlightedText } from "../search/HighlightedText";
 import { handleStickyToggle } from "../sticky-headers";
 import { goToLocation } from "../vscode-sync";

@@ -11,10 +11,9 @@ src/
 │   ├── search/           # 검색 기능
 │   ├── sticky-headers/   # 스티키 헤더 시스템
 │   └── vscode-sync/      # VSCode 동기화
-├── shared/
-│   ├── ui/               # 재사용 UI
-│   ├── hooks/            # 앱 전반 훅
-│   └── utils/            # 공용 유틸
+├── components/           # 재사용 UI (Header, ExpandArrow, JsonValue)
+├── hooks/                # 앱 전반 훅 (useTraceViewerState, useHighlight, ...)
+├── utils/                # 공용 유틸 (keys, formatters, escapeId)
 ├── types/
 ├── lib/
 ├── App.tsx
@@ -44,7 +43,7 @@ src/
 - SuiteItem.tsx (L46-64)와 SearchView.tsx (L83-101)에 동일한 ResizeObserver 패턴 100% 중복
 
 **목표:**
-- `shared/hooks/useResizeObserverCSSVar.ts`로 추출
+- `hooks/useResizeObserverCSSVar.ts`로 추출
 - 사용: `useResizeObserverCSSVar(sourceRef, targetRef, "suite-header-height")`
 
 ---
@@ -59,7 +58,7 @@ src/
   - 스티키 오프셋 7, 6 등 (stickyOffsets.ts, useStickyState.ts)
 
 **목표:**
-- `shared/constants.ts`에 모두 모음
+- `constants.ts`에 모두 모음
 - CSS와 동기화 필요한 값들은 주석으로 명시
 
 ---

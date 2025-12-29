@@ -1,7 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
 
-import { ExpandArrow } from "../../shared/ui";
-import { createTestKey, createTraceKey, escapeId } from "../../shared/utils";
+import { ExpandArrow } from "../../components";
+import { createTestKey, createTraceKey, escapeId } from "../../utils";
 import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
 import { goToLocation } from "../vscode-sync";

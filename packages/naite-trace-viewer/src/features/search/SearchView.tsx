@@ -1,8 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
 import { useLayoutEffect, useRef } from "react";
-
-import { createTraceKey, getFileName } from "../../shared/utils";
 import type { MatchedTrace, SearchResultGroup } from "../../types";
+import { createTraceKey, getFileName } from "../../utils";
 import { TraceItem } from "../trace-tree/TraceItem";
 import { goToLocation } from "../vscode-sync";
 
