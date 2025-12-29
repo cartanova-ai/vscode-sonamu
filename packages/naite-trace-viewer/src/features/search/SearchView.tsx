@@ -1,6 +1,4 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useRef } from "react";
-import { useResizeObserverCSSVar } from "../../hooks";
 import type { MatchedTrace, SearchResultGroup } from "../../types";
 import { createTraceKey, getFileName } from "../../utils";
 import { TraceItem } from "../trace-tree/TraceItem";
@@ -76,18 +74,13 @@ function SearchResultItem({
   expandedTraces,
   onToggleTrace,
 }: SearchResultItemProps) {
-  const breadcrumbRef = useRef<HTMLDivElement>(null);
-  const tracesContainerRef = useRef<HTMLDivElement>(null);
-
-  useResizeObserverCSSVar(breadcrumbRef, tracesContainerRef, "breadcrumb-height");
-
   const handleLocationClick = () => {
     goToLocation(result.testFilePath, result.testLine);
   };
 
   return (
     <div className="search-result-item">
-      <div ref={breadcrumbRef} className="search-result-breadcrumb">
+      <div className="search-result-breadcrumb">
         <span className="breadcrumb-title">
           <span className="breadcrumb-suite">{suiteName}</span>
           <span className="breadcrumb-separator">›</span>
@@ -98,7 +91,7 @@ function SearchResultItem({
         </span>
         <span className="breadcrumb-count">{matchedTraces.length}</span>
       </div>
-      <div ref={tracesContainerRef} className="search-result-traces">
+      <div className="search-result-traces">
         {matchedTraces.map(({ trace, traceIdx }) => {
           const traceStateKey = createTraceKey(suiteName, testName, trace.key, trace.at, traceIdx);
           const isTraceExpanded = expandedTraces.has(traceStateKey);

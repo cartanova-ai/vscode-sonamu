@@ -218,9 +218,11 @@ body {
 }
 .suite-name {
   color: var(--vscode-symbolIcon-classForeground, #ee9d28);
-  word-break: break-word; /* 길면 줄바꿈 */
   min-width: 0;
-  flex-shrink: 1; /* 나중에 축소됨 */
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .suite-file {
   color: var(--vscode-descriptionForeground);
@@ -268,6 +270,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px 12px 8px 24px;
+  height: 18px; /* 고정 높이 */
   cursor: pointer;
   background: var(--bg);
   user-select: none;
@@ -277,6 +280,10 @@ body {
 }
 .test-name {
   color: var(--vscode-symbolIcon-functionForeground, #b180d7);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .test-line {
   color: var(--vscode-descriptionForeground);
@@ -304,9 +311,10 @@ body {
   top: calc(var(--suite-header-height) + var(--test-header-height) + 6px);
   z-index: 10;
   display: flex;
-  align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
+  align-items: center;
   gap: 8px;
   padding: 6px 12px 6px 36px;
+  height: 16px; /* 고정 높이 */
   cursor: pointer;
   user-select: none;
   font-size: 13px;
@@ -331,8 +339,10 @@ body {
 .key {
   color: var(--accent);
   font-family: var(--vscode-editor-font-family);
-  word-break: break-word; /* 길면 여러 줄로 */
-  min-width: 0; /* flex 축소 허용 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .location-link {
   color: var(--vscode-descriptionForeground);
@@ -500,17 +510,19 @@ body {
   top: 7px;
   z-index: 20;
   padding: 6px 12px;
+  height: 16px; /* 고정 높이 */
   background: var(--vscode-sideBar-background);
   font-size: 12px;
   display: flex;
-  align-items: flex-start; /* 여러 줄일 때 위쪽 정렬 */
+  align-items: center;
   gap: 6px;
   border-radius: 6px 6px 0 0;
 }
-/* 타이틀 영역 (suite > test) - 내용에 맞게, 여러 줄 허용 */
 .breadcrumb-title {
-  display: inline;
-  word-break: break-word; /* 긴 타이틀은 여러 줄로 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .breadcrumb-suite {
   color: var(--vscode-symbolIcon-classForeground, #ee9d28);

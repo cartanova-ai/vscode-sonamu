@@ -1,8 +1,6 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useRef } from "react";
 
 import { ExpandArrow } from "../../components";
-import { useResizeObserverCSSVar } from "../../hooks";
 import { createTestKey, escapeId } from "../../utils";
 import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
@@ -40,10 +38,6 @@ export function SuiteItem({
 }: SuiteItemProps) {
   const suiteId = escapeId(suiteName);
   const testFileName = suiteFilePath ? suiteFilePath.split("/").pop() : null;
-  const suiteHeaderRef = useRef<HTMLDivElement>(null);
-  const suiteContentRef = useRef<HTMLDivElement>(null);
-
-  useResizeObserverCSSVar(suiteHeaderRef, suiteContentRef, "suite-header-height");
 
   // 통계 계산
   const suiteTestCount = testMap.size;
@@ -75,7 +69,7 @@ export function SuiteItem({
       className={`suite-group ${searchQuery && !hasSuiteMatchingTrace ? "search-hidden" : ""}`}
       data-suite={suiteName}
     >
-      <div ref={suiteHeaderRef} className="suite-header" onClick={handleHeaderClick}>
+      <div className="suite-header" onClick={handleHeaderClick}>
         <ExpandArrow expanded={expanded} className="suite-arrow" id={`suite-arrow-${suiteId}`} />
         <span className="suite-name">{suiteName}</span>
         {testFileName && suiteFilePath && (
@@ -88,11 +82,7 @@ export function SuiteItem({
         </span>
       </div>
 
-      <div
-        ref={suiteContentRef}
-        className={`suite-content ${expanded ? "" : "collapsed"}`}
-        id={`suite-content-${suiteId}`}
-      >
+      <div className={`suite-content ${expanded ? "" : "collapsed"}`} id={`suite-content-${suiteId}`}>
         {Array.from(testMap.entries()).map(([testName, result]) => {
           const testKey = createTestKey(suiteName, testName);
           const isTestExpanded = expandedTests.has(testKey);
