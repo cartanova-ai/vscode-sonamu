@@ -45,8 +45,20 @@ import { NormalView } from "./features/trace-tree";
 import { useKeyboardShortcuts, useScrollToHighlight, useTraceViewerState } from "./hooks";
 
 export default function App() {
-  const { state, actions } = useTraceViewerState();
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 모든 상태를 관리하는 하나의 엔트리 포인트입니다.
+  // 이 친구가 주는 state으로 UI를 그리면 되고, 이벤트는 actions를 통해 전달하면 됩니다.
+  // VSCode와의 통신, 상태 저장과 복원 등 많은 일을 해줍니다.
+  const { state, actions } = useTraceViewerState();
+
+  // 코드에서 테스트 케이스 제목이나 Naite 호출 구문을 클릭하면
+  // 관련 테스트 또는 트레이스가 Naite Trace Viewer에서 하이라이트되고
+  // 그 위치로 스크롤도 해주는 기능이 있습니다.
+  // useTraceViewerState가 지저분한 일은 다 해줘서,
+  // "지금" 어떤 타겟(테스트 또는 트레이스)이 하이라이트 되어 있는지 state을 통해 알 수 있습니다.
+  // 이 훅 호출은 이 타겟이 지정될 때 그 곳으로 스크롤을 수행해줍니다.
+  useScrollToHighlight(state.highlightedTest, state.highlightedTraces);
 
   // 검색 기능
   const {
@@ -57,9 +69,6 @@ export default function App() {
     closeSearch,
     handleSearchChange,
   } = useSearch(state.testResults, actions.setSearchMode, actions.setSearchQuery, searchInputRef);
-
-  // 하이라이트 대상으로 스크롤 (해제는 useTraceViewerState에서 자동 처리)
-  useScrollToHighlight(state.highlightedTest, state.highlightedTraces);
 
   // 키보드 단축키
   useKeyboardShortcuts(state.searchMode, openSearch, closeSearch, searchInputRef);
