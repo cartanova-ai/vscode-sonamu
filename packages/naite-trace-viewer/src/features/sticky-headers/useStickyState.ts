@@ -7,6 +7,10 @@ import { useEffect } from "react";
  * - 스티키 상태일 때 .stuck 클래스 추가 (그림자 표시용)
  * - requestAnimationFrame으로 성능 최적화
  * - passive listener로 스크롤 성능 저하 방지
+ *
+ * CSS 변수와 동기화:
+ * - --sticky-offset-base: suite-header, breadcrumb의 top 오프셋
+ * - --sticky-offset-trace: trace-header가 test-header 아래 떨어진 거리
  */
 export function useStickyState(dependencies: unknown[]) {
   useEffect(() => {
@@ -17,7 +21,11 @@ export function useStickyState(dependencies: unknown[]) {
 
     const updateStickyState = () => {
       const rootStyle = getComputedStyle(document.documentElement);
+
+      // CSS 변수에서 값 읽기
       const testHeaderHeight = parseInt(rootStyle.getPropertyValue("--test-header-height")) || 34;
+      const stickyOffsetBase = parseInt(rootStyle.getPropertyValue("--sticky-offset-base")) || 7;
+      const stickyOffsetTrace = parseInt(rootStyle.getPropertyValue("--sticky-offset-trace")) || 6;
 
       // 컨테이너의 상단 위치 (헤더 바로 아래)
       const containerRect = container.getBoundingClientRect();
@@ -29,22 +37,22 @@ export function useStickyState(dependencies: unknown[]) {
 
         let stickyTop: number;
         if (isSearchResult) {
-          // 검색 결과: breadcrumb 높이 + 7px (CSS top 값과 일치)
+          // 검색 결과: breadcrumb 높이 + base 오프셋
           const tracesContainerEl = header.closest(".search-result-traces");
           const breadcrumbHeight = tracesContainerEl
             ? parseInt(
                 getComputedStyle(tracesContainerEl).getPropertyValue("--breadcrumb-height"),
               ) || 28
             : 28;
-          stickyTop = containerRect.top + breadcrumbHeight + 7;
+          stickyTop = containerRect.top + breadcrumbHeight + stickyOffsetBase;
         } else {
-          // 일반 뷰: suite + test 헤더 높이 + 6px (CSS top 값과 일치)
+          // 일반 뷰: suite + test 헤더 높이 + trace 오프셋
           const suiteContent = header.closest(".suite-content");
           const suiteHeaderHeight = suiteContent
             ? parseInt(getComputedStyle(suiteContent).getPropertyValue("--suite-header-height")) ||
               32
             : 32;
-          stickyTop = containerRect.top + suiteHeaderHeight + testHeaderHeight + 6;
+          stickyTop = containerRect.top + suiteHeaderHeight + testHeaderHeight + stickyOffsetTrace;
         }
 
         // 약간의 여유를 두고 판단 (1px)

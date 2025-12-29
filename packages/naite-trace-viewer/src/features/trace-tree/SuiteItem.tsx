@@ -82,7 +82,10 @@ export function SuiteItem({
         </span>
       </div>
 
-      <div className={`suite-content ${expanded ? "" : "collapsed"}`} id={`suite-content-${suiteId}`}>
+      <div
+        className={`suite-content ${expanded ? "" : "collapsed"}`}
+        id={`suite-content-${suiteId}`}
+      >
         {Array.from(testMap.entries()).map(([testName, result]) => {
           const testKey = createTestKey(suiteName, testName);
           const isTestExpanded = expandedTests.has(testKey);

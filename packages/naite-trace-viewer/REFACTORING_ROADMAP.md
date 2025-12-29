@@ -24,9 +24,11 @@ src/
 
 ---
 
-## 남은 개선 과제
+## 완료된 개선 과제
 
-### 2. 메시지 처리 로직 통합 ✅ 완료
+### 1. 폴더 구조 기능 기반 변경 ✅
+
+### 2. 메시지 처리 로직 통합 ✅
 
 **해결:**
 - useTraceViewerState.ts의 FOCUS_KEY/FOCUS_TEST 액션에서 `pendingHighlight` 설정
@@ -35,45 +37,51 @@ src/
 
 **효과:** "포커스 기능을 수정하려면?" → useTraceViewerState.ts만 보면 됨
 
----
+### 3. ResizeObserver → 고정 높이 + ellipsis 방식으로 대체 ✅
 
-### 3. ResizeObserver 훅 추출 ✅ 완료
+**변경 내용:**
+- useResizeObserverCSSVar 훅 삭제 (비일반적인 CSS-JS 통신 패턴)
+- 모든 헤더에 고정 height + ellipsis 적용
+- CSS 변수에 계산 방식 주석 추가
 
-**해결:**
-- `hooks/useResizeObserverCSSVar.ts` 생성
-- SuiteItem.tsx, SearchView.tsx의 19줄 중복 코드 → 1줄로 단순화
+**효과:** 일반적인 CSS 패턴으로 단순화, 유지보수 용이
 
-**효과:** 동일 패턴 중복 제거, 유지보수 용이
-
----
-
-### 4. 상수 파일 통합 → 불필요 (스킵)
+### 4. 상수 파일 통합 → 불필요 (스킵) ✅
 
 **분석 결과:**
 - 각 상수가 한 곳에서만 사용됨 (공유 안 함)
 - 해당 로직 근처에 있는 게 더 직관적
-- 주석으로 용도 설명 충분
 
-**현재 상태:**
-- `HIGHLIGHT_DURATION_MS`, `SCROLL_DELAY_MS` → useHighlight.ts (하이라이트 전용)
-- `DEBOUNCE_MS` → useSearch.ts (검색 전용)
-- 스티키 오프셋 → sticky-headers/ 내부 (CSS와 동기화 주석 있음)
+### 5. 죽은 코드 제거 ✅
+
+- stickyOffsets.ts 삭제 (미사용)
+- StickyOffsets 타입 삭제
 
 ---
 
-### 5. App.tsx 책임 분리 (신규)
+## 남은 개선 과제
 
-**현재 문제:**
-- App.tsx가 188줄로 너무 많은 책임을 가짐
-  - 상태 초기화
-  - 메시지 핸들링 (L45-75)
-  - 스크롤 타겟 처리 (L77-89)
-  - 토글 핸들러들 (L94-126)
-  - 통계 계산
+### 6. App.tsx 책임 분리 ← **다음 작업**
 
-**목표:**
-- 메시지 핸들링 + 스크롤 로직을 별도 훅으로 분리
-- App.tsx는 컴포넌트 조합에만 집중
+**현재 상태 (167줄):**
+
+| 구간 | 역할 | 줄 수 |
+|------|------|-------|
+| L11-41 | 훅 호출 (상태, 검색, 하이라이트, 키보드, 스티키) | 31 |
+| L43-68 | 사이드이펙트 (pendingHighlight, scrollTarget) | 26 |
+| L70-106 | 핸들러 정의 (토글, 검색) | 37 |
+| L108-151 | JSX 렌더링 | 44 |
+| L154-166 | calculateStats 함수 | 13 |
+
+**분석:**
+- 이미 많이 개선됨 (188줄 → 167줄)
+- 훅들이 로직을 잘 분리하고 있음
+- 핸들러들은 단순 dispatch 래퍼라 분리 가치 낮음
+
+**결론:** 현재 상태로 충분. 추가 분리 불필요.
+
+> 원칙: util 분리는 (1) 두 군데 이상에서 사용되거나, (2) 의미상 명확히 구분되거나, (3) 정말 클 때만.
+> 직관이 엔지니어링보다 우선한다.
 
 ---
 
@@ -81,15 +89,21 @@ src/
 
 - [x] 1. 폴더 구조 기능 기반 변경
 - [x] 2. 메시지 처리 통합
-- [x] 3. ResizeObserver 훅 추출
+- [x] 3. ResizeObserver → 고정 높이 + ellipsis
 - [x] 4. 상수 파일 통합 → 불필요 (스킵)
-- [ ] 5. App.tsx 책임 분리 ← **다음 작업** (2번 완료로 대부분 해결됨)
+- [x] 5. 죽은 코드 제거
+- [x] 6. App.tsx 책임 분리 → 현재 상태로 충분 (완료)
 
 ---
 
-## 권장 진행 순서
+## 최종 평가
 
-1. ~~메시지 처리 통합~~ ✅
-2. ~~ResizeObserver 훅 추출~~ ✅
-3. ~~상수 파일 통합~~ → 불필요 (스킵)
-4. **App.tsx 책임 분리** (이미 많이 개선됨)
+**목표 달성도:** ✅ 달성
+
+"기능 X를 수정하려면?" 질문에 대한 답:
+- 검색 기능 → `features/search/`
+- 트레이스 트리 → `features/trace-tree/`
+- 스티키 헤더 → `features/sticky-headers/`
+- VSCode 동기화 → `features/vscode-sync/`
+- 상태 관리 → `hooks/useTraceViewerState.ts`
+- 하이라이트 → `hooks/useHighlight.ts`
