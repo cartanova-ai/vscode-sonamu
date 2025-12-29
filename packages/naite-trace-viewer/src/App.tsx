@@ -6,7 +6,7 @@ import { NormalView } from "./features/trace-tree";
 import { sendFollowStateChanged, useVSCodeSync } from "./features/vscode-sync";
 import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./shared/hooks";
 import { Header } from "./shared/ui";
-import { createTraceKey } from "./shared/utils";
+import { createTraceKey, escapeId } from "./shared/utils";
 
 export default function App() {
   const { state, dispatch } = useTraceViewerState();
@@ -78,9 +78,10 @@ export default function App() {
   useEffect(() => {
     if (!scrollTarget) return;
 
+    const escapedId = escapeId(scrollTarget);
     const element =
-      document.getElementById(`item-${scrollTarget}`) ||
-      document.getElementById(`test-${scrollTarget}`);
+      document.getElementById(`item-${escapedId}`) ||
+      document.getElementById(`test-${escapedId}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
     }
