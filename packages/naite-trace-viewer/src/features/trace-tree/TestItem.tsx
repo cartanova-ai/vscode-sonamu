@@ -42,7 +42,7 @@ export function TestItem({
     : true;
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    handleStickyToggle(e.currentTarget, "test", expanded, onToggle);
+    handleStickyToggle(e.currentTarget, expanded, onToggle);
   };
 
   const handleLineClick = (e: React.MouseEvent) => {

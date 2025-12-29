@@ -1,7 +1,3 @@
-import { getStickyOffsets } from "./stickyOffsets";
-
-type StickyLevel = "suite" | "test" | "trace" | "searchTrace";
-
 /**
  * 스티키 상태에서 토글 시 스크롤 보정을 위한 헬퍼
  *
@@ -9,13 +5,11 @@ type StickyLevel = "suite" | "test" | "trace" | "searchTrace";
  * 접은 후 헤더가 스티키 위치에 오도록 스크롤을 조정합니다.
  *
  * @param headerElement - 토글할 헤더 요소
- * @param level - 스티키 레벨 (suite, test, trace, searchTrace)
  * @param willCollapse - 접을 것인지 여부
  * @param onToggle - 실제 토글 수행 함수
  */
 export function handleStickyToggle(
   headerElement: HTMLElement | undefined,
-  level: StickyLevel,
   willCollapse: boolean,
   onToggle: () => void,
 ) {
@@ -31,10 +25,13 @@ export function handleStickyToggle(
     return;
   }
 
+  // 헤더 요소의 실제 계산된 top 값 읽기 (CSS 변수가 적용된 값)
+  const computedStyle = getComputedStyle(headerElement);
+  const stickyTopValue = parseFloat(computedStyle.top) || 0;
+
   const rect = headerElement.getBoundingClientRect();
   const containerRect = container.getBoundingClientRect();
-  const offsets = getStickyOffsets();
-  const stickyTop = containerRect.top + offsets[level];
+  const stickyTop = containerRect.top + stickyTopValue;
 
   // 현재 스티키 상태인지 확인 (1px 여유)
   const isStuck = rect.top <= stickyTop + 1;
@@ -50,6 +47,6 @@ export function handleStickyToggle(
   // DOM 업데이트 후 스크롤 조정
   requestAnimationFrame(() => {
     headerElement.scrollIntoView({ block: "start" });
-    container.scrollBy({ top: -offsets[level], behavior: "instant" });
+    container.scrollBy({ top: -stickyTopValue, behavior: "instant" });
   });
 }

@@ -36,12 +36,7 @@ export function TraceItem({
   const isSearchMatch = !!searchQuery; // 검색 모드에서 이 컴포넌트가 렌더되면 매칭된 것
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    handleStickyToggle(
-      e.currentTarget,
-      isSearchResult ? "searchTrace" : "trace",
-      expanded, // willCollapse
-      onToggle,
-    );
+    handleStickyToggle(e.currentTarget, expanded, onToggle);
   };
 
   const handleLocationClick = (e: React.MouseEvent) => {

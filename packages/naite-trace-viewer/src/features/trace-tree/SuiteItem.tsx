@@ -78,7 +78,7 @@ export function SuiteItem({
     : true;
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    handleStickyToggle(e.currentTarget, "suite", expanded, onToggle);
+    handleStickyToggle(e.currentTarget, expanded, onToggle);
   };
 
   const handleFileClick = (e: React.MouseEvent) => {
