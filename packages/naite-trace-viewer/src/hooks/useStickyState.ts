@@ -29,21 +29,21 @@ export function useStickyState(dependencies: unknown[]) {
 
         let stickyTop: number;
         if (isSearchResult) {
-          // 검색 결과: breadcrumb 높이만큼
+          // 검색 결과: breadcrumb 높이 + 7px (CSS top 값과 일치)
           const tracesContainerEl = header.closest(".search-result-traces");
           const breadcrumbHeight = tracesContainerEl
             ? parseInt(getComputedStyle(tracesContainerEl).getPropertyValue("--breadcrumb-height")) ||
               28
             : 28;
-          stickyTop = containerRect.top + breadcrumbHeight;
+          stickyTop = containerRect.top + breadcrumbHeight + 7;
         } else {
-          // 일반 뷰: suite + test 헤더 높이만큼
+          // 일반 뷰: suite + test 헤더 높이 + 6px (CSS top 값과 일치)
           const suiteContent = header.closest(".suite-content");
           const suiteHeaderHeight = suiteContent
             ? parseInt(getComputedStyle(suiteContent).getPropertyValue("--suite-header-height")) ||
               32
             : 32;
-          stickyTop = containerRect.top + suiteHeaderHeight + testHeaderHeight;
+          stickyTop = containerRect.top + suiteHeaderHeight + testHeaderHeight + 6;
         }
 
         // 약간의 여유를 두고 판단 (1px)

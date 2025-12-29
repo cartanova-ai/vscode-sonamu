@@ -27,11 +27,11 @@ export function getStickyOffsets(): StickyOffsets {
     testHeaderHeight,
     traceHeaderHeight,
     breadcrumbHeight,
-    // 각 헤더 타입의 스티키 top 위치 (헤더 아래 스크롤 컨테이너 기준)
-    suite: 0,
-    test: suiteHeaderHeight,
-    trace: suiteHeaderHeight + testHeaderHeight,
-    searchBreadcrumb: 0,
-    searchTrace: breadcrumbHeight,
+    // 각 헤더 타입의 스티키 top 위치 (CSS top 값과 일치해야 함)
+    suite: 7,
+    test: suiteHeaderHeight + 7,
+    trace: suiteHeaderHeight + testHeaderHeight + 6,
+    searchBreadcrumb: 7,
+    searchTrace: breadcrumbHeight + 7,
   };
 }
