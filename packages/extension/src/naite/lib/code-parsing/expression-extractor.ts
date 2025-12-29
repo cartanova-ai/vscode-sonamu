@@ -25,7 +25,9 @@ export default class NaiteExpressionExtractor {
 
     for (const patternStr of patterns) {
       const [obj, method] = patternStr.split(".");
-      if (!obj || !method) { continue; }
+      if (!obj || !method) {
+        continue;
+      }
 
       const regex = new RegExp(`${obj}\\.${method}\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`, "g");
 

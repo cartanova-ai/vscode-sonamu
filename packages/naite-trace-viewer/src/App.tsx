@@ -7,20 +7,20 @@
  *
  * ## 데이터 흐름
  * ```
- * VSCode Extension ──(postMessage)──▶ useVSCodeSync ──(dispatch)──▶ useTraceViewerState
- *                                                                          │
- *                                      ┌───────────────────────────────────┘
- *                                      ▼
- *                          ┌───────────────────────┐
- *                          │  state.testResults    │
- *                          │  state.expanded*      │
- *                          │  state.searchMode     │
- *                          └───────────┬───────────┘
- *                                      │
- *                    ┌─────────────────┼─────────────────┐
- *                    ▼                 ▼                 ▼
- *              NormalView        SearchView          Header
- *              (트리 뷰)         (검색 결과)        (검색/액션)
+ * VSCode Extension ──(postMessage)──▶ useTraceViewerState ──▶ state
+ *                                              │
+ *                    ┌─────────────────────────┘
+ *                    ▼
+ *        ┌───────────────────────┐
+ *        │  state.testResults    │
+ *        │  state.expanded*      │
+ *        │  state.searchMode     │
+ *        └───────────┬───────────┘
+ *                    │
+ *      ┌─────────────┼─────────────┐
+ *      ▼             ▼             ▼
+ * NormalView   SearchView      Header
+ * (트리 뷰)    (검색 결과)    (검색/액션)
  * ```
  *
  * ## 주요 상태 (useTraceViewerState)
@@ -33,8 +33,7 @@
  * - 검색 기능 → features/search/
  * - 트리 렌더링 → features/trace-tree/
  * - 스티키 헤더 → features/sticky-headers/
- * - VSCode 통신 → features/vscode-sync/
- * - 상태 관리 → hooks/useTraceViewerState.ts
+ * - 상태 관리 + VSCode 통신 → hooks/useTraceViewerState.ts
  * - 스타일 → index.css
  */
 
@@ -43,16 +42,17 @@ import { Header } from "./components";
 import { SearchView, useSearch } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
-import { sendFollowStateChanged, useVSCodeSync } from "./features/vscode-sync";
-import { useHighlight, useKeyboardShortcuts, useTraceViewerState } from "./hooks";
+import {
+  sendFollowStateChanged,
+  useHighlight,
+  useKeyboardShortcuts,
+  useTraceViewerState,
+} from "./hooks";
 import { escapeId } from "./utils";
 
 export default function App() {
   const { state, dispatch } = useTraceViewerState();
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // VSCode 상태 동기화
-  useVSCodeSync(state, dispatch);
 
   // 검색 기능
   const {

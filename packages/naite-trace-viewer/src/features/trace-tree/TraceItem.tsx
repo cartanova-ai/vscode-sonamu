@@ -1,10 +1,10 @@
 import type { NaiteMessagingTypes } from "naite-types";
 
 import { ExpandArrow, JsonValue } from "../../components";
+import { goToLocation } from "../../hooks";
 import { createTraceKey, escapeId, formatTime, getFileName } from "../../utils";
 import { HighlightedText } from "../search/HighlightedText";
 import { handleStickyToggle } from "../sticky-headers";
-import { goToLocation } from "../vscode-sync";
 
 type TraceItemProps = {
   trace: NaiteMessagingTypes.NaiteTrace;

@@ -1,8 +1,8 @@
 import type { NaiteMessagingTypes } from "naite-types";
+import { goToLocation } from "../../hooks";
 import type { MatchedTrace, SearchResultGroup } from "../../types";
 import { createTraceKey, getFileName } from "../../utils";
 import { TraceItem } from "../trace-tree/TraceItem";
-import { goToLocation } from "../vscode-sync";
 
 type SearchViewProps = {
   searchResultGroups: SearchResultGroup[];

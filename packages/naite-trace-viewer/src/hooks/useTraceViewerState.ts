@@ -1,7 +1,7 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useReducer } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import { vscode } from "../lib/vscode-api";
-import type { PersistedState, TraceViewerState } from "../types";
+import type { PersistedState, TraceViewerState, VSCodeOutgoingMessage } from "../types";
 import { createTestKey, createTraceKey } from "../utils";
 
 type Action =
@@ -193,9 +193,68 @@ export function serializeState(state: TraceViewerState): PersistedState {
 
 /**
  * Trace Viewer 핵심 상태 관리 훅
+ *
+ * - reducer 기반 상태 관리
+ * - VSCode 상태 저장/복원 (vscode.getState/setState)
+ * - VSCode 메시지 수신 → dispatch 연결
  */
 export function useTraceViewerState() {
   const [state, dispatch] = useReducer(reducer, null, createInitialState);
+  const isFirstRender = useRef(true);
+
+  // 상태 변경 시 VSCode에 저장 (첫 렌더 제외)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    vscode.setState(serializeState(state));
+  }, [state]);
+
+  // VSCode 메시지 수신 처리
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+
+      if (message.type === "updateTestResults") {
+        dispatch({
+          type: "SET_TEST_RESULTS",
+          testResults: message.testResults || [],
+        });
+      }
+
+      if (message.type === "focusKey") {
+        dispatch({ type: "FOCUS_KEY", key: message.key });
+      }
+
+      if (message.type === "focusTest") {
+        dispatch({
+          type: "FOCUS_TEST",
+          suiteName: message.suiteName,
+          testName: message.testName,
+        });
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   return { state, dispatch };
+}
+
+/**
+ * 파일 위치로 이동 메시지 발신
+ */
+export function goToLocation(filePath: string, lineNumber: number) {
+  const message: VSCodeOutgoingMessage = { type: "goToLocation", filePath, lineNumber };
+  vscode.postMessage(message);
+}
+
+/**
+ * Follow 상태 변경 메시지 발신
+ */
+export function sendFollowStateChanged(enabled: boolean) {
+  const message: VSCodeOutgoingMessage = { type: "followStateChanged", enabled };
+  vscode.postMessage(message);
 }

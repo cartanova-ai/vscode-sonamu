@@ -19,7 +19,9 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
     const methodsByObject = new Map<string, string[]>();
     for (const pattern of allPatterns) {
       const [obj, method] = pattern.split(".");
-      if (!obj || !method) { continue; }
+      if (!obj || !method) {
+        continue;
+      }
       if (!methodsByObject.has(obj)) {
         methodsByObject.set(obj, []);
       }
@@ -60,7 +62,9 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
           `- ${vscode.workspace.asRelativePath(loc.uri)}:${loc.range.start.line + 1}\n`,
         );
       }
-      if (setLocs.length > 3) { md.appendMarkdown(`- ... 외 ${setLocs.length - 3}개\n`); }
+      if (setLocs.length > 3) {
+        md.appendMarkdown(`- ... 외 ${setLocs.length - 3}개\n`);
+      }
 
       md.appendMarkdown(`\n**사용**: ${getLocs.length}개\n\n`);
       for (const loc of getLocs.slice(0, 3)) {
@@ -68,7 +72,9 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
           `- ${vscode.workspace.asRelativePath(loc.uri)}:${loc.range.start.line + 1}\n`,
         );
       }
-      if (getLocs.length > 3) { md.appendMarkdown(`- ... 외 ${getLocs.length - 3}개\n`); }
+      if (getLocs.length > 3) {
+        md.appendMarkdown(`- ... 외 ${getLocs.length - 3}개\n`);
+      }
 
       item.documentation = md;
 

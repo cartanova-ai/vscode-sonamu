@@ -1,10 +1,10 @@
 import type { NaiteMessagingTypes } from "naite-types";
 
 import { ExpandArrow } from "../../components";
+import { goToLocation } from "../../hooks";
 import { createTestKey, escapeId } from "../../utils";
 import { traceMatchesQuery } from "../search/fuzzyMatch";
 import { handleStickyToggle } from "../sticky-headers";
-import { goToLocation } from "../vscode-sync";
 import { TestItem } from "./TestItem";
 
 type SuiteItemProps = {
