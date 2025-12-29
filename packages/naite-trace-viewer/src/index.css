@@ -278,6 +278,35 @@ body {
   color: var(--accent);
   text-decoration: underline;
 }
+.suite-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  flex-shrink: 999; /* suite-count와 같이 가장 먼저 사라짐 */
+  min-width: 0;
+  overflow: hidden;
+}
+.suite-status .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.suite-status.passed .status-dot {
+  background: #4ec9b0; /* VSCode 초록 */
+}
+.suite-status.failed .status-dot {
+  background: #f14c4c; /* VSCode 빨강 */
+}
+.suite-status .status-duration {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .suite-count {
   margin-left: auto;
   color: var(--vscode-descriptionForeground);

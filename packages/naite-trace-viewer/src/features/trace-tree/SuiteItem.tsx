@@ -38,8 +38,14 @@ export function SuiteItem({
   // 통계 계산
   const suiteTestCount = testMap.size;
   let suiteTraceCount = 0;
+  let totalDuration = 0;
+  let hasFailure = false;
   for (const result of testMap.values()) {
     suiteTraceCount += result.traces.length;
+    totalDuration += result.duration ?? 0;
+    if (result.status === "failed") {
+      hasFailure = true;
+    }
   }
 
   const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -63,6 +69,10 @@ export function SuiteItem({
             {testFileName}
           </span>
         )}
+        <span className={`suite-status ${hasFailure ? "failed" : "passed"}`}>
+          <span className="status-dot" />
+          <span className="status-duration">{totalDuration}ms</span>
+        </span>
         <span className="suite-count">
           {suiteTestCount} tests · {suiteTraceCount} traces
         </span>
