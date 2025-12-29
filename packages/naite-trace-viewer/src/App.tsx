@@ -51,7 +51,7 @@ export default function App() {
   // 이 친구가 주는 state으로 UI를 그리면 되고, 이벤트는 actions를 통해 전달하면 됩니다.
   // VSCode와의 통신, 상태 저장과 복원 등 많은 일을 해줍니다.
   // searchResult는 state에서 유도되는 derived state입니다.
-  const { state, actions, searchResult } = useTraceViewerState();
+  const { state, actions } = useTraceViewerState();
 
   // 코드에서 테스트 케이스 제목이나 Naite 호출 구문을 클릭하면
   // 관련 테스트 또는 트레이스가 Naite Trace Viewer에서 하이라이트되고
@@ -91,7 +91,7 @@ export default function App() {
       <Header
         searchMode={state.searchMode}
         searchQuery={state.searchQuery}
-        matchCount={searchResult.matchCount}
+        matchCount={state.searchResult.matchCount}
         followEnabled={state.followEnabled}
         stats={calculateStats(state.testResults)}
         searchInputRef={searchInputRef}
@@ -107,7 +107,7 @@ export default function App() {
           <div className="empty">테스트를 실행하면 trace가 여기에 표시됩니다.</div>
         ) : state.searchMode && state.searchQuery ? (
           <SearchView
-            searchResultGroups={searchResult.groups}
+            searchResultGroups={state.searchResult.groups}
             searchQuery={state.searchQuery}
             expandedTraces={state.expandedTraces}
             onToggleTrace={actions.toggleTrace}

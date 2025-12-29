@@ -18,6 +18,14 @@ export type TraceViewerState = {
 };
 
 /**
+ * useTraceViewerState 훅이 반환하는 state 타입
+ * TraceViewerState + derived state (searchResult)
+ */
+export type TraceViewerStateWithDerived = TraceViewerState & {
+  searchResult: { groups: SearchResultGroup[]; matchCount: number };
+};
+
+/**
  * VSCode 저장용 상태 (Array로 직렬화)
  * vscode.setState()에 저장되는 형태
  */

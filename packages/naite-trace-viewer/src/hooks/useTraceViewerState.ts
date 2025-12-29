@@ -295,10 +295,13 @@ export function useTraceViewerState() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // 검색 결과 (derived state)
-  const searchResult = useMemo(
-    () => filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
-    [state.testResults, state.debouncedSearchQuery],
+  // 검색 결과 (derived state) - state와 합쳐서 반환
+  const stateWithDerived = useMemo(
+    () => ({
+      ...state,
+      searchResult: filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
+    }),
+    [state],
   );
 
   // 편의용 actions (dispatch 래핑)
@@ -334,7 +337,7 @@ export function useTraceViewerState() {
     },
   };
 
-  return { state, actions, searchResult };
+  return { state: stateWithDerived, actions };
 }
 
 /**
