@@ -1,5 +1,6 @@
 import type { NaiteMessagingTypes } from "naite-types";
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
+import { filterBySearchQuery } from "../features/search";
 import { vscode } from "../lib/vscode-api";
 import type { PersistedState, TraceViewerState, VSCodeOutgoingMessage } from "../types";
 import { createTestKey, createTraceKey } from "../utils";
@@ -294,6 +295,12 @@ export function useTraceViewerState() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+  // 검색 결과 (derived state)
+  const searchResult = useMemo(
+    () => filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
+    [state.testResults, state.debouncedSearchQuery],
+  );
+
   // 편의용 actions (dispatch 래핑)
   const actions = {
     toggleSuite: (suiteName: string) => {
@@ -327,7 +334,7 @@ export function useTraceViewerState() {
     },
   };
 
-  return { state, actions };
+  return { state, actions, searchResult };
 }
 
 /**

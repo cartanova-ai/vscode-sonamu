@@ -37,12 +37,12 @@
  * - 스타일 → index.css
  */
 
-import { useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Header } from "./components";
-import { filterBySearchQuery, SearchView } from "./features/search";
+import { SearchView } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
 import { NormalView } from "./features/trace-tree";
-import { useKeyboardShortcuts, useScrollToHighlight, useTraceViewerState } from "./hooks";
+import { useScrollToHighlight, useTraceViewerState } from "./hooks";
 
 export default function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +50,8 @@ export default function App() {
   // 모든 상태를 관리하는 하나의 엔트리 포인트입니다.
   // 이 친구가 주는 state으로 UI를 그리면 되고, 이벤트는 actions를 통해 전달하면 됩니다.
   // VSCode와의 통신, 상태 저장과 복원 등 많은 일을 해줍니다.
-  const { state, actions } = useTraceViewerState();
+  // searchResult는 state에서 유도되는 derived state입니다.
+  const { state, actions, searchResult } = useTraceViewerState();
 
   // 코드에서 테스트 케이스 제목이나 Naite 호출 구문을 클릭하면
   // 관련 테스트 또는 트레이스가 Naite Trace Viewer에서 하이라이트되고
@@ -60,30 +61,29 @@ export default function App() {
   // 이 훅 호출은 이 타겟이 지정될 때 그 곳으로 스크롤을 수행해줍니다.
   useScrollToHighlight(state.highlightedTest, state.highlightedTraces);
 
-  // 검색 결과 계산 (순수 함수 + 메모이제이션)
-  const searchResult = useMemo(
-    () => filterBySearchQuery(state.testResults, state.debouncedSearchQuery),
-    [state.testResults, state.debouncedSearchQuery],
-  );
-
-  // 검색 input 포커스 헬퍼
-  const focusSearchInput = () => {
+  const openSearch = () => {
+    actions.setSearchMode(true);
     setTimeout(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
     }, 50);
   };
 
-  // 키보드 단축키
-  useKeyboardShortcuts(
-    state.searchMode,
-    () => {
-      actions.setSearchMode(true);
-      focusSearchInput();
-    },
-    () => actions.setSearchMode(false),
-    searchInputRef,
-  );
+  const closeSearch = () => {
+    actions.setSearchMode(false);
+  };
+
+  // Cmd/Ctrl+F: 검색창 열기
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        openSearch();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // 스티키 상태 감지
   useStickyState([
@@ -105,14 +105,11 @@ export default function App() {
         onSearchChange={actions.setSearchQuery}
         onSearchKeyDown={(e) => {
           if (e.key === "Escape") {
-            actions.setSearchMode(false);
+            closeSearch();
           }
         }}
-        onOpenSearch={() => {
-          actions.setSearchMode(true);
-          focusSearchInput();
-        }}
-        onCloseSearch={() => actions.setSearchMode(false)}
+        onOpenSearch={openSearch}
+        onCloseSearch={closeSearch}
         onToggleFollow={actions.toggleFollow}
         onCollapseAll={actions.collapseAll}
       />
