@@ -81,11 +81,24 @@ export class NaiteTraceViewerProvider {
     });
 
     // 메시지 핸들러
-    panel.webview.onDidReceiveMessage(async (message) => {
+    panel.webview.onDidReceiveMessage(async (message: unknown) => {
+      if (!this._isValidMessage(message)) {
+        console.warn("[Trace Viewer] Invalid message received:", message);
+        return;
+      }
+
       if (message.type === "goToLocation") {
-        await goToLocation(message.filePath, message.lineNumber);
+        if (typeof message.filePath === "string" && typeof message.lineNumber === "number") {
+          await goToLocation(message.filePath, message.lineNumber);
+        } else {
+          console.warn("[Trace Viewer] Invalid goToLocation payload:", message);
+        }
       } else if (message.type === "followStateChanged") {
-        this._followEnabled = message.enabled;
+        if (typeof message.enabled === "boolean") {
+          this._followEnabled = message.enabled;
+        } else {
+          console.warn("[Trace Viewer] Invalid followStateChanged payload:", message);
+        }
       }
     });
 
@@ -148,6 +161,18 @@ export class NaiteTraceViewerProvider {
       type: "updateTestResults",
       testResults,
     });
+  }
+
+  /**
+   * webview에서 수신한 메시지가 유효한 구조인지 검증
+   */
+  private _isValidMessage(message: unknown): message is { type: string; [key: string]: unknown } {
+    return (
+      typeof message === "object" &&
+      message !== null &&
+      "type" in message &&
+      typeof (message as { type: unknown }).type === "string"
+    );
   }
 
   dispose(): void {
