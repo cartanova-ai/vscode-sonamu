@@ -45,8 +45,11 @@ class NaiteSocketServerClass {
     if (process.platform !== "win32") {
       try {
         await fs.mkdir(this.SOCKET_DIR, { recursive: true });
-      } catch {
-        // 이미 존재하면 무시
+      } catch (err) {
+        // EEXIST는 정상적인 상황 (이미 존재)
+        if ((err as NodeJS.ErrnoException).code !== "EEXIST") {
+          console.warn(`[Naite Socket Server] Failed to create socket directory:`, err);
+        }
       }
     }
 
@@ -88,8 +91,11 @@ class NaiteSocketServerClass {
     if (process.platform !== "win32") {
       try {
         await fs.unlink(socketPath);
-      } catch {
-        // 파일이 없으면 무시
+      } catch (err) {
+        // ENOENT는 정상적인 상황 (파일 없음)
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`[Naite Socket Server] Failed to remove existing socket file:`, err);
+        }
       }
     }
 
@@ -152,8 +158,11 @@ class NaiteSocketServerClass {
     if (process.platform !== "win32") {
       try {
         await fs.unlink(instance.socketPath);
-      } catch {
-        // 파일이 없으면 무시
+      } catch (err) {
+        // ENOENT는 정상적인 상황 (파일 없음)
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+          console.warn(`[Naite Socket Server] Failed to remove socket file on stop:`, err);
+        }
       }
     }
 

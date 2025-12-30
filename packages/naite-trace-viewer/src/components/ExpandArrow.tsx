@@ -10,9 +10,5 @@ type ExpandArrowProps = {
 };
 
 export function ExpandArrow({ expanded, className = "" }: ExpandArrowProps) {
-  return (
-    <span className={`arrow ${className} ${expanded ? "expanded" : ""}`}>
-      ▶
-    </span>
-  );
+  return <span className={`arrow ${className} ${expanded ? "expanded" : ""}`}>▶</span>;
 }

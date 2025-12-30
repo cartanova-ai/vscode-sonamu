@@ -65,12 +65,24 @@ export function updateKeyDecorations(editor: vscode.TextEditor) {
   for (const entry of entries) {
     // 호출문 텍스트에서 키 위치 찾기
     const callText = editor.document.getText(entry.location.range);
-    const keyIndex = callText.indexOf(`"${entry.key}"`) + 1; // +1 to skip opening quote
-    const keyIndexSingle = callText.indexOf(`'${entry.key}'`) + 1;
-    const keyIndexBacktick = callText.indexOf(`\`${entry.key}\``) + 1;
 
-    const offset = keyIndex > 0 ? keyIndex : keyIndexSingle > 0 ? keyIndexSingle : keyIndexBacktick;
-    if (offset <= 0) {
+    // 다양한 따옴표 형식 지원 (큰따옴표, 작은따옴표, 백틱)
+    const quotePatterns = [
+      { pattern: `"${entry.key}"`, quoteLength: 1 },
+      { pattern: `'${entry.key}'`, quoteLength: 1 },
+      { pattern: `\`${entry.key}\``, quoteLength: 1 },
+    ];
+
+    let offset = -1;
+    for (const { pattern, quoteLength } of quotePatterns) {
+      const index = callText.indexOf(pattern);
+      if (index !== -1) {
+        offset = index + quoteLength; // 여는 따옴표 건너뛰기
+        break;
+      }
+    }
+
+    if (offset === -1) {
       continue;
     }
 
