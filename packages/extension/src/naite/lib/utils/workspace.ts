@@ -10,7 +10,7 @@ export async function findConfigFiles(): Promise<vscode.Uri[]> {
   const configFiles = await vscode.workspace.findFiles("**/sonamu.config.ts", "**/node_modules/**");
   if (configFiles.length === 0) {
     throw new Error(
-      "sonamu.config.ts를 찾을 수 없습니다. Naite 소켓 서버를 시작할 수 없습니다. 그치만 sonamu.config.ts가 없으면 extension 자체가 activate되지 않아야 함이 타당합니다. 어딘가에서 변경이 일어난 것으로 추정됩니다.",
+      "sonamu.config.ts를 찾을 수 없습니다. Sonamu 프로젝트가 워크스페이스에 열려있는지 확인하세요.",
     );
   }
 
