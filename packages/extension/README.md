@@ -67,11 +67,11 @@ code --install-extension sonamu-*.vsix --force
 
 | 설정 | 기본값 | 설명 |
 |------|--------|------|
-| `sonamu.codeLens.enabled` | `false` | Naite 키 위에 CodeLens 표시 |
-| `sonamu.decoration.enabled` | `true` | Naite 키 텍스트 데코레이션 |
-| `sonamu.decoration.style` | `underline` | 데코레이션 스타일 |
-| `sonamu.runtimeValue.enabled` | `true` | 실행 시 값 인라인 표시 |
-| `sonamu.runtimeValue.maxLength` | `50` | 표시할 값의 최대 길이 |
+| `sonamu.naite.decoration.enabled` | `true` | Naite 키 텍스트 데코레이션 |
+| `sonamu.naite.decoration.style` | `underline` | 데코레이션 스타일 |
+| `sonamu.naite.runtimeValue.enabled` | `true` | 실행 시 값 인라인 표시 |
+| `sonamu.naite.runtimeValue.maxLength` | `50` | 표시할 값의 최대 길이 |
+| `sonamu.naite.statusBarMessages.enabled` | `true` | 상태바 메시지 표시 |
 
 ## 개발
 
