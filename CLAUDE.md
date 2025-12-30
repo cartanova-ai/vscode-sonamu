@@ -35,6 +35,11 @@ vscode-sonamu/
 └── pnpm-workspace.yaml     # pnpm 워크스페이스 설정
 ```
 
+각 패키지별 상세 문서:
+- [packages/extension/CLAUDE.md](packages/extension/CLAUDE.md)
+- [packages/naite-trace-viewer/CLAUDE.md](packages/naite-trace-viewer/CLAUDE.md)
+- [packages/naite-types/CLAUDE.md](packages/naite-types/CLAUDE.md)
+
 이렇게 여러 패키지로 분리된 이유와 과정:
 - 처음에는 `extension`이 별도의 이름도 없이 단일 패키지로 존재했습니다.
 - 그런데 Naite Trace Viewer가 점점 커지면서 이 부분을 React로 개발하고 싶어, 별도로 분리하였습니다.
