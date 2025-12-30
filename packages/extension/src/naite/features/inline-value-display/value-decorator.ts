@@ -5,7 +5,22 @@ import { TraceStore } from "../../lib/messaging/trace-store";
 // decoration type (line 끝에 값 표시)
 let inlineValueDecorationType: vscode.TextEditorDecorationType | null = null;
 
-function formatValue(value: unknown, maxLength: number = 50): string {
+interface FormatOptions {
+  /** 최대 길이 제한. undefined이면 제한 없음 (full 모드) */
+  maxLength?: number;
+  /** full 모드에서 JSON에 들여쓰기 적용 */
+  pretty?: boolean;
+}
+
+/**
+ * 값을 문자열로 포맷팅합니다.
+ * @param value 포맷팅할 값
+ * @param options 포맷 옵션
+ */
+function formatValueCore(value: unknown, options: FormatOptions = {}): string {
+  const { maxLength, pretty = false } = options;
+  const isLimited = maxLength !== undefined;
+
   try {
     if (value === null) {
       return "null";
@@ -14,28 +29,31 @@ function formatValue(value: unknown, maxLength: number = 50): string {
       return "undefined";
     }
     if (typeof value === "string") {
-      return `"${truncate(value, maxLength - 2)}"`;
+      if (isLimited) {
+        return `"${truncate(value, maxLength - 2)}"`;
+      }
+      return JSON.stringify(value);
     }
     if (typeof value === "number" || typeof value === "boolean") {
       return String(value);
     }
-    if (Array.isArray(value)) {
+    if (Array.isArray(value) && isLimited) {
       const preview = JSON.stringify(value);
       if (preview.length <= maxLength) {
         return preview;
       }
       const truncated = value
         .slice(0, 3)
-        .map((v) => formatValue(v, 10))
+        .map((v) => formatValueCore(v, { maxLength: 10 }))
         .join(", ");
       return `[${truncated}, ... +${value.length - 3}]`;
     }
     if (typeof value === "object") {
-      const preview = JSON.stringify(value);
-      if (preview.length <= maxLength) {
-        return preview;
+      const preview = JSON.stringify(value, null, pretty ? 2 : undefined);
+      if (isLimited && preview.length > maxLength) {
+        return truncate(preview, maxLength);
       }
-      return truncate(preview, maxLength);
+      return preview;
     }
     return String(value);
   } catch {
@@ -43,24 +61,14 @@ function formatValue(value: unknown, maxLength: number = 50): string {
   }
 }
 
+/** 인라인 표시용 짧은 포맷 (기본 50자 제한) */
+function formatValue(value: unknown, maxLength: number = 50): string {
+  return formatValueCore(value, { maxLength });
+}
+
+/** 호버 표시용 전체 포맷 (제한 없음, 들여쓰기 적용) */
 function formatValueFull(value: unknown): string {
-  try {
-    if (value === null) {
-      return "null";
-    }
-    if (value === undefined) {
-      return "undefined";
-    }
-    if (typeof value === "string") {
-      return JSON.stringify(value);
-    }
-    if (typeof value === "number" || typeof value === "boolean") {
-      return String(value);
-    }
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return "[Error]";
-  }
+  return formatValueCore(value, { pretty: true });
 }
 
 function truncate(str: string, maxLength: number): string {
