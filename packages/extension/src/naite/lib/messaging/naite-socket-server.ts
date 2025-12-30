@@ -125,8 +125,11 @@ class NaiteSocketServerClass {
         }
       });
 
-      socket.on("error", () => {
-        // 연결 에러는 무시
+      socket.on("error", (err) => {
+        // 클라이언트 연결 에러 로깅 (ECONNRESET 등 일반적인 연결 종료는 제외)
+        if ((err as NodeJS.ErrnoException).code !== "ECONNRESET") {
+          console.warn(`[Naite Socket ${projectHash}] Connection error:`, err);
+        }
       });
     });
 
