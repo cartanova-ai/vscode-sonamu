@@ -15,12 +15,16 @@ export function formatTime(isoString: string): string {
 
 /**
  * 파일 경로에서 파일명만 추출
+ * Unix와 Windows 경로 모두 지원합니다.
  *
  * @example
  * getFileName("/src/utils/math.ts") → "math.ts"
+ * getFileName("C:\\src\\utils\\math.ts") → "math.ts"
  * getFileName("math.ts") → "math.ts"
  * getFileName("") → ""
  */
 export function getFileName(filePath: string): string {
-  return filePath.split("/").pop() || filePath;
+  // 백슬래시를 슬래시로 정규화하여 Windows 경로도 지원
+  const normalized = filePath.replace(/\\/g, "/");
+  return normalized.split("/").pop() || filePath;
 }

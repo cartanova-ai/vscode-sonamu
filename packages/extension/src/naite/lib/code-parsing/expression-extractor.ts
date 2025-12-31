@@ -1,6 +1,14 @@
 import type vscode from "vscode";
 
 /**
+ * 정규식 특수문자를 이스케이프합니다.
+ * 사용자 입력을 정규식 패턴에 안전하게 포함시킬 때 사용합니다.
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
  * Document와 위치가 주어졌을 때, 해당 위치에서 Naite 호출문의 key를 추출합니다.
  *
  * 주어진 문서를 AST 분석하여 모든 Naite key를 추출하는 {@link NaiteExpressionScanner}와 달리,
@@ -29,7 +37,10 @@ export default class NaiteExpressionExtractor {
         continue;
       }
 
-      const regex = new RegExp(`${obj}\\.${method}\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`, "g");
+      const regex = new RegExp(
+        `${escapeRegex(obj)}\\.${escapeRegex(method)}\\s*\\(\\s*["'\`]([^"'\`]+)["'\`]`,
+        "g",
+      );
 
       let match = regex.exec(line);
       while (match) {
