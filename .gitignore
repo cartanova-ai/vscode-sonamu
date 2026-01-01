@@ -5,3 +5,8 @@ node_modules
 *.vsix
 .DS_Store
 *.tsbuildinfo
+
+# Environment files (may contain secrets)
+.env
+.env.local
+.env.*.local

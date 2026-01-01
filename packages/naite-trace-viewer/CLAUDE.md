@@ -39,12 +39,10 @@ src/
 ├── features/
 │   ├── trace-tree/       # 메인 트리 뷰 (Suite > Test > Trace 계층)
 │   ├── search/           # 검색 기능 (퍼지 매칭, 하이라이트)
-│   ├── sticky-headers/   # 스티키 헤더 시스템
-│   └── vscode-sync/      # VSCode 상태 동기화
-├── shared/
-│   ├── ui/               # 재사용 UI (ExpandArrow, JsonValue, Header)
-│   ├── hooks/            # 앱 전반 훅 (상태관리, 하이라이트, 키보드)
-│   └── utils/            # 공용 유틸 (formatters, keys, escapeId)
+│   └── sticky-headers/   # 스티키 헤더 시스템
+├── components/           # 재사용 UI (ExpandArrow, JsonValue, Header)
+├── hooks/                # 앱 전반 훅 (상태관리, VSCode 동기화, 하이라이트, 키보드)
+├── utils/                # 공용 유틸 (formatters, keys, escapeId)
 ├── types/
 ├── lib/
 ├── App.tsx
@@ -63,27 +61,31 @@ Suite > Test > Trace 계층 구조 렌더링
 ### features/search/
 검색 기능 전체
 - SearchView.tsx - 검색 결과 플랫 리스트
-- useSearch.ts - 디바운싱, 결과 그룹화
+- filterBySearchQuery.ts - 검색 필터링 로직
 - fuzzyMatch.ts - 퍼지 매칭 알고리즘
 - HighlightedText.tsx - 매칭 문자 하이라이트
 
-### features/sticky-headers/ (복잡함!)
+> **참고**: 디바운싱은 `hooks/useTraceViewerState.ts`에서 처리됨
+
+### features/sticky-headers/
 3단계 스티키 헤더 시스템:
 1. suite-header (top: 7px)
 2. test-header (top: suite높이 + 7px)
 3. trace-header (top: suite + test + 6px)
 
 **파일들:**
-- stickyOffsets.ts - CSS 오프셋 계산 (**CSS와 반드시 일치해야 함!**)
-- useStickyState.ts - .stuck 클래스 토글
+- useStickyState.ts - .stuck 클래스 토글, CSS 변수에서 오프셋 읽음
 - useStickyToggle.ts - 접을 때 스크롤 보정
 
-**⚠️ CSS top 값 수정 시 stickyOffsets.ts도 함께 수정 필수**
+**⚠️ CSS top 값은 CSS 변수(`--test-header-height`, `--sticky-offset-base`, `--sticky-offset-trace`)로 관리됨. index.css 수정 시 useStickyState.ts에서 올바르게 읽히는지 확인 필요**
 
-### features/vscode-sync/
-VSCode 확장과 통신
-- useVSCodeSync.ts - 상태 저장/복원, 메시지 처리
-- goToLocation(), sendFollowStateChanged() - 메시지 발신
+### hooks/ (VSCode 동기화 포함)
+앱 전반 훅들:
+- useTraceViewerState.ts - 메인 상태 관리, VSCode 상태 저장/복원, 메시지 처리
+- useScrollToHighlight.ts - 하이라이트된 항목으로 스크롤
+- useKeyCombination.ts - 키보드 단축키 처리
+
+> **참고**: VSCode 통신(goToLocation, sendFollowStateChanged)은 useTraceViewerState.ts에 포함됨
 
 ### 레이아웃 구조
 
@@ -111,5 +113,5 @@ pnpm test:watch  # watch 모드
 ```
 
 `*.test.ts` 파일들:
-- `src/shared/utils/escapeId.test.ts`
+- `src/utils/escapeId.test.ts`
 - `src/features/search/fuzzyMatch.test.ts`
