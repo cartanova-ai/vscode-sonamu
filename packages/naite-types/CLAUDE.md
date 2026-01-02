@@ -22,6 +22,11 @@ type Result = NaiteMessagingTypes.TestResult;
 - `lineNumber`: 라인 번호 (number)
 - `at`: 기록 시간 (string)
 
+### TestError
+테스트 실패 시 에러 정보:
+- `message`: 에러 메시지 (string)
+- `stack`: 스택 트레이스 (optional)
+
 ### TestResult
 개별 테스트 실행 결과:
 - `suiteName`: 스위트 이름
@@ -31,7 +36,7 @@ type Result = NaiteMessagingTypes.TestResult;
 - `testLine`: 테스트 라인 번호
 - `status`: 테스트 상태
 - `duration`: 실행 시간 (ms)
-- `error`: 에러 정보 (optional)
+- `error`: TestError (optional, 테스트 실패 시 에러 정보)
 - `traces`: NaiteTrace[] (트레이스 목록)
 - `receivedAt`: 수신 시간
 
