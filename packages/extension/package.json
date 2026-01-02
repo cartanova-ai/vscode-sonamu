@@ -53,10 +53,6 @@
     },
     "commands": [
       {
-        "command": "sonamu.helloWorld",
-        "title": "Sonamu: Hello World"
-      },
-      {
         "command": "sonamu.rescanNaiteKeys",
         "title": "Sonamu: Rescan Naite Keys"
       },

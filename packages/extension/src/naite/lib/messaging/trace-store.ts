@@ -24,8 +24,12 @@ class TraceStoreClass {
     }, this.TEST_RESULT_ADDED_DEBOUNCE_DELAY);
   }
 
+  /**
+   * NaiteSocketServer에서 "run/end" 메시지 수신 시 호출됩니다.
+   * 현재는 특별한 처리가 없지만, 향후 확장될 수 있습니다.
+   */
   addRunEnd(): void {
-    //
+    // 현재는 처리할 작업 없음
   }
 
   getAllTestResults(): NaiteMessagingTypes.TestResult[] {

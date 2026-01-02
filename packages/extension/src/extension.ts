@@ -115,10 +115,6 @@ function registerCommands(
       vscode.window.showInformationMessage(`Found ${NaiteTracker.getAllKeys().length} Naite keys`);
     }),
 
-    vscode.commands.registerCommand("sonamu.helloWorld", () => {
-      vscode.window.showInformationMessage(`Sonamu: ${NaiteTracker.getAllKeys().length} keys`);
-    }),
-
     vscode.commands.registerCommand("sonamu.openTraceViewer", () => {
       traceTabProvider.show();
     }),
