@@ -22,7 +22,7 @@ pnpm dev
 # → localhost:5173에서 mock 데이터로 UI 확인
 ```
 
-mock 데이터: `src/lib/mock-data.ts` (8개 스위트, 24개 테스트 케이스)
+mock 데이터: `src/lib/mock-data.ts` (8개 스위트, 26개 테스트 케이스)
 
 ## 빌드
 
