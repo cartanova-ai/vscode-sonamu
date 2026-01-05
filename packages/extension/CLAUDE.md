@@ -36,11 +36,22 @@ src/
     │   ├── key-undefined-warning/ # 미정의 키 경고
     │   └── inline-value-display/ # 인라인 값 표시
     └── lib/
-        ├── code-parsing/        # 표현식 파싱
+        ├── code-parsing/        # 표현식 파싱 (NaiteExpressionExtractor, NaiteExpressionScanner)
         ├── messaging/           # 소켓 서버, 트레이스 저장소
-        ├── tracking/            # 트레이스 패턴 정의
-        └── utils/               # 에디터 네비게이션 등
+        ├── tracking/            # Naite 키 추적 (tracker.ts, patterns.ts)
+        └── utils/               # 에디터 네비게이션, 워크스페이스 등
 ```
+
+## 워크스페이스 스캔 동작
+
+`NaiteTracker.scanWorkspace()`는 다음 두 위치에서 Naite 호출(`Naite.t`, `Naite.get`)을 찾습니다:
+
+1. **프로젝트 루트**: `sonamu.config.ts`가 있는 디렉토리 아래의 모든 `.ts` 파일
+   - `node_modules/`, `build/`, `out/`, `dist/`, `*.d.ts` 제외
+2. **sonamu 패키지 내부**: `node_modules/sonamu/src/**/*.ts` 파일들
+   - Sonamu 프레임워크 자체에 정의된 Naite 키도 인덱싱하기 위함
+
+이렇게 하면 사용자의 코드뿐만 아니라 Sonamu 내부에 정의된 키도 "정의로 이동", "참조 찾기" 등의 기능에서 사용할 수 있습니다.
 
 ## 웹뷰 통신
 
