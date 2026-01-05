@@ -16,6 +16,8 @@ export class NaiteTraceViewerProvider {
   private _panel: vscode.WebviewPanel | null = null;
   private _disposables: vscode.Disposable[] = [];
   private _followEnabled: boolean = true;
+  private _webviewReady: boolean = false;
+  private _pendingMessages: Array<Record<string, unknown>> = [];
 
   constructor(private readonly _context: vscode.ExtensionContext) {}
 
@@ -74,6 +76,10 @@ export class NaiteTraceViewerProvider {
    * 패널 공통 설정 (생성/복원 시 모두 사용)
    */
   private _setupPanel(panel: vscode.WebviewPanel): void {
+    // 패널 재생성 시 상태 초기화
+    this._webviewReady = false;
+    this._pendingMessages = [];
+
     panel.webview.html = traceViewerHtml;
 
     panel.onDidDispose(() => {
@@ -84,6 +90,13 @@ export class NaiteTraceViewerProvider {
     panel.webview.onDidReceiveMessage(async (message: unknown) => {
       if (!this._isValidMessage(message)) {
         console.warn("[Trace Viewer] Invalid message received:", message);
+        return;
+      }
+
+      // webview가 준비됨을 알리는 메시지 처리
+      if (message.type === "ready") {
+        this._webviewReady = true;
+        this._flushPendingMessages();
         return;
       }
 
@@ -125,12 +138,10 @@ export class NaiteTraceViewerProvider {
       return;
     }
 
-    setTimeout(() => {
-      this._panel?.webview.postMessage({
-        type: "focusKey",
-        key,
-      });
-    }, 100);
+    this._postMessageWhenReady({
+      type: "focusKey",
+      key,
+    });
   }
 
   /**
@@ -141,13 +152,32 @@ export class NaiteTraceViewerProvider {
       return;
     }
 
-    setTimeout(() => {
-      this._panel?.webview.postMessage({
-        type: "focusTest",
-        suiteName,
-        testName,
-      });
-    }, 100);
+    this._postMessageWhenReady({
+      type: "focusTest",
+      suiteName,
+      testName,
+    });
+  }
+
+  /**
+   * webview가 준비되면 메시지를 전송하고, 아직 준비되지 않았으면 큐에 저장
+   */
+  private _postMessageWhenReady(message: Record<string, unknown>): void {
+    if (this._webviewReady) {
+      this._panel?.webview.postMessage(message);
+    } else {
+      this._pendingMessages.push(message);
+    }
+  }
+
+  /**
+   * 큐에 저장된 모든 메시지를 전송
+   */
+  private _flushPendingMessages(): void {
+    for (const message of this._pendingMessages) {
+      this._panel?.webview.postMessage(message);
+    }
+    this._pendingMessages = [];
   }
 
   private _sendData(): void {
