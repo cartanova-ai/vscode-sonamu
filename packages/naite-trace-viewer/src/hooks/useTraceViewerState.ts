@@ -106,10 +106,9 @@ export function useTraceViewerState() {
       const message = event.data;
 
       if (message.type === "updateTestResults") {
-        dispatch({
-          type: "SET_TEST_RESULTS",
-          testResults: message.testResults || [],
-        });
+        // 타입 검증: 배열이 아닌 값이 전달되는 경우 방어
+        const testResults = Array.isArray(message.testResults) ? message.testResults : [];
+        dispatch({ type: "SET_TEST_RESULTS", testResults });
       }
 
       if (message.type === "focusKey") {
