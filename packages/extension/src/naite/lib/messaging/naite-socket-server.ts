@@ -99,11 +99,23 @@ class NaiteSocketServerClass {
       }
     }
 
+    // 버퍼 크기 제한: 악의적이거나 비정상적인 클라이언트로부터 메모리 고갈 방지
+    const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
+
     const server = net.createServer((socket) => {
       let buffer = Buffer.alloc(0);
 
       socket.on("data", (chunk) => {
         buffer = Buffer.concat([buffer, chunk]);
+
+        // 버퍼 크기 초과 시 연결 종료
+        if (buffer.length > MAX_BUFFER_SIZE) {
+          console.error(
+            `[Naite Socket ${projectHash}] Buffer overflow (${buffer.length} bytes), closing connection`,
+          );
+          socket.destroy();
+          return;
+        }
 
         // 줄바꿈으로 메시지 구분
         let newlineIndex = buffer.indexOf(0x0a);
