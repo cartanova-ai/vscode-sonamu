@@ -89,7 +89,11 @@ export class NaiteTraceViewerProvider {
 
       if (message.type === "goToLocation") {
         if (typeof message.filePath === "string" && typeof message.lineNumber === "number") {
-          await goToLocation(message.filePath, message.lineNumber);
+          try {
+            await goToLocation(message.filePath, message.lineNumber);
+          } catch (err) {
+            console.error("[Trace Viewer] Failed to navigate:", err);
+          }
         } else {
           console.warn("[Trace Viewer] Invalid goToLocation payload:", message);
         }
