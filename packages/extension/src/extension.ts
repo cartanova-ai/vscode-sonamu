@@ -60,6 +60,12 @@ export async function deactivate() {
   disposeKeyDecorations();
   disposeInlineValueDecorations();
   await NaiteSocketServer.stop();
+
+  // debounce 타이머 정리
+  for (const timer of scanDebounceMap.values()) {
+    clearTimeout(timer);
+  }
+  scanDebounceMap.clear();
 }
 
 // ============================================================================

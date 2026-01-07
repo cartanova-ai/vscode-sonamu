@@ -15,7 +15,7 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
     // 설정된 모든 패턴에 대해 체크
     const allPatterns = NaiteCallPatterns.all();
 
-    // 패턴 매칭 regex 생성 (예: /Naite\.(t|get|safeGet|expect|expectWithSnapshot)\(["']$/)
+    // 패턴 매칭 regex 생성 (예: /Naite\.(t|get|del)\(["']$/)
     const methodsByObject = new Map<string, string[]>();
     for (const pattern of allPatterns) {
       const [obj, method] = pattern.split(".");

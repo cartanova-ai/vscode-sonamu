@@ -14,7 +14,7 @@ export class NaiteReferenceProvider implements vscode.ReferenceProvider {
       return undefined;
     }
 
-    // References = 사용된 곳 (get, 즉 Naite.get/expect 등)
+    // References = 사용된 곳 (get, 즉 Naite.get/del 등)
     let locations = NaiteTracker.getKeyLocations(key, "get");
 
     // 없으면 현재 문서 스캔 후 재시도
