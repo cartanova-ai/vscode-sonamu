@@ -16,7 +16,7 @@ function escapeRegex(str: string): string {
  *
  * 왜 이미 스캔해둔 NaiteKey들 중에서 찾지 않고 정규식으로 직접 추출하는가?
  * 그게 더 직접적이고 확실하기 때문입니다.
- * 이 친구는 정의/사용 참조처를 띄워줄 때에 사용되는데({@link NaiteDefinitionProvider}, {@link NaiteUsageProvider}),
+ * 이 친구는 정의/사용 참조처를 띄워줄 때에 사용되는데({@link NaiteDefinitionProvider}, {@link NaiteReferenceProvider}),
  * 이 시점에서 아직 해당 파일의 Naite key가 정확하게 스캔되지 않았을 수 있습니다.
  * 반면 이미 문서와 위치가 주어졌기에 텍스트가 특정된 상황이므로, 정규식으로 직접 추출하는 것이 더 낫습니다.
  *
