@@ -100,12 +100,12 @@ cd packages/naite-trace-viewer && pnpm lint
 ## 주요 기능
 
 ### Naite 트레이스 시스템
-- 테스트 실행 시 `naite.trace()` 호출을 수집
+- 테스트 실행 시 `Naite.t("key", value)` 호출을 수집
 - 소켓 서버로 실시간 수신 → 웹뷰에 표시
 - 키 클릭 시 해당 코드 위치로 점프
 
 ### 키 하이라이팅/네비게이션
-- `naite.trace("key", ...)` 형태의 키를 파싱
+- `Naite.t("key", ...)`, `Naite.get("key")`, `Naite.del("key")` 형태의 키를 파싱
 - 정의/참조 이동, 심볼 검색, 자동완성 지원
 
 ## 자주 발생하는 문제
