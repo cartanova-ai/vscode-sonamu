@@ -48,8 +48,11 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
       const getLocs = NaiteTracker.getKeyLocations(key, "get");
 
       // 정의된 파일명 (첫 번째 set 위치)
+      // Windows 경로(백슬래시)도 지원하기 위해 fsPath 사용 후 정규화
       const definedIn =
-        setLocs.length > 0 ? setLocs[0].uri.path.split("/").pop() || "(정의 없음)" : "(정의 없음)";
+        setLocs.length > 0
+          ? setLocs[0].uri.fsPath.replace(/\\/g, "/").split("/").pop() || "(정의 없음)"
+          : "(정의 없음)";
 
       const item = new vscode.CompletionItem(key, vscode.CompletionItemKind.Constant);
       item.detail = definedIn;
