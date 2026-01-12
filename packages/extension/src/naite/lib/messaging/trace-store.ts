@@ -10,6 +10,11 @@ class TraceStoreClass {
   private readonly TEST_RESULT_ADDED_DEBOUNCE_DELAY = 100;
 
   addRunStart(): void {
+    // 이전 테스트 실행에서 남아있을 수 있는 debounce 타이머 정리
+    if (this.testResultAddedDebounceTimer) {
+      clearTimeout(this.testResultAddedDebounceTimer);
+      this.testResultAddedDebounceTimer = null;
+    }
     this.currentTestResults = [];
   }
 

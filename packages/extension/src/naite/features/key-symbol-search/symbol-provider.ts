@@ -50,7 +50,9 @@ export class NaiteWorkspaceSymbolProvider implements vscode.WorkspaceSymbolProvi
       const locations = NaiteTracker.getKeyLocations(key, "set");
 
       for (const location of locations) {
-        const fileName = location.uri.fsPath.split("/").pop() || location.uri.fsPath;
+        // Windows 경로(백슬래시)도 지원하기 위해 정규화
+        const normalizedPath = location.uri.fsPath.replace(/\\/g, "/");
+        const fileName = normalizedPath.split("/").pop() || location.uri.fsPath;
         symbols.push(new vscode.SymbolInformation(key, vscode.SymbolKind.Key, fileName, location));
       }
     }
