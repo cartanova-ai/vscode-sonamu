@@ -44,10 +44,14 @@ src/
 
 ## 웹뷰 통신
 
-익스텐션 ↔ 웹뷰 메시지:
+익스텐션 → 웹뷰:
 - `updateTestResults`: 트레이스 데이터 전송
-- `openFile`: 파일 열기 요청 (웹뷰 → 익스텐션)
-- `revealTrace`: 특정 트레이스로 스크롤 (익스텐션 → 웹뷰)
+- `focusKey`: 특정 키의 트레이스로 이동 및 펼치기
+- `focusTest`: 특정 테스트 케이스로 이동 및 펼치기
+
+웹뷰 → 익스텐션:
+- `goToLocation`: 파일 위치로 이동 요청
+- `followStateChanged`: Follow 모드 상태 변경 알림
 
 ## 배포
 
