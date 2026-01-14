@@ -83,7 +83,7 @@ function SearchModeHeader({
           ref={searchInputRef}
           type="text"
           className="search-input"
-          placeholder="key 또는 value 검색..."
+          placeholder="key 검색..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -139,7 +139,7 @@ function NormalModeHeader({
           type="button"
           className="header-btn icon-btn"
           onClick={onOpenSearch}
-          title="검색 (key 또는 value)"
+          title="key 검색"
         >
           <SearchIcon />
         </button>
