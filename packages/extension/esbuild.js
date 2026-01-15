@@ -36,7 +36,7 @@ const traceViewerLoader = {
 <body>
   <div style="padding: 20px; color: #ccc;">
     <h2>Naite Trace Viewer</h2>
-    <p>Run <code>pnpm build:ui</code> first to build the UI.</p>
+    <p>Run <code>pnpm --filter naite-trace-viewer build</code> first to build the UI.</p>
   </div>
 </body>
 </html>`;
