@@ -72,6 +72,10 @@ function formatValueFull(value: unknown): string {
 }
 
 function truncate(str: string, maxLength: number): string {
+  if (maxLength < 4) {
+    // 최소한 "..." 표시를 위해 4자 이상 필요
+    return str.slice(0, Math.max(0, maxLength));
+  }
   if (str.length <= maxLength) {
     return str;
   }
