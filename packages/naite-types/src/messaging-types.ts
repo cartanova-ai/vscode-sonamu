@@ -35,13 +35,15 @@ export namespace NaiteMessagingTypes {
     stack?: string;
   };
 
+  export type TestStatus = "pass" | "fail" | "skip";
+
   export type TestResult = {
     suiteName: string;
     suiteFilePath?: string;
     testName: string;
     testFilePath: string;
     testLine: number;
-    status: string;
+    status: TestStatus;
     duration: number;
     error?: TestError;
     traces: NaiteTrace[];
