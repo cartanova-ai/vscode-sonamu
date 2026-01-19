@@ -2,7 +2,7 @@ import type { NaiteMessagingTypes } from "naite-types";
 
 import { ExpandArrow } from "../../components";
 import { goToLocation } from "../../hooks";
-import { createTestKey, createTraceKey, escapeId } from "../../utils";
+import { createTestKey, createTraceKey, escapeId, getFileName } from "../../utils";
 import { handleStickyToggle } from "../sticky-headers";
 import { TraceItem } from "./TraceItem";
 
@@ -60,7 +60,7 @@ export function TestItem({
         <span className="test-name">{testName}</span>
         {result.testFilePath && result.testLine && (
           <span className="test-line" onClick={handleLineClick}>
-            {result.testFilePath.split("/").pop()}:{result.testLine}
+            {getFileName(result.testFilePath)}:{result.testLine}
           </span>
         )}
         <span className={`test-duration ${status}`}>
