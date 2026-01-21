@@ -19,6 +19,10 @@ export default class NaiteExpressionScanner {
    * - 모양이 주어진 패턴('Naite.t', 'Naite.get', 'Naite.del' 등)에 맞음.
    * - 첫 번째 인자가 스트링 리터럴(isStringLiteral)이거나 템플릿 리터럴(isNoSubstitutionTemplateLiteral)임.
    *
+   * **주의**: `${...}` 치환 표현식을 포함하는 템플릿 리터럴(TemplateExpression)은 지원되지 않습니다.
+   * 예: `Naite.t(\`key-${var}\`, value)`는 스캔되지 않습니다.
+   * 이는 의도된 동작으로, 정적 분석 시 키 값을 확정할 수 없기 때문입니다.
+   *
    * Generator를 반환하므로 lazy하게 움직입니다. for...of 문으로 순회하면 됩니다.
    * 생긴건 변태같지만(?) 써보시면 좋아요.
    *
