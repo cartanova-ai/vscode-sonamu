@@ -38,6 +38,7 @@ export class NaiteDiagnosticProvider {
           `정의되지 않은 Naite 키: "${expr.key}"`,
           vscode.DiagnosticSeverity.Warning,
         );
+        diagnostic.source = "Naite";
         diagnostics.push(diagnostic);
       }
     }
