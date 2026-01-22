@@ -24,10 +24,14 @@ export function useStickyState(dependencies: unknown[]) {
     const updateStickyState = () => {
       const rootStyle = getComputedStyle(document.documentElement);
 
-      // CSS 변수에서 값 읽기
-      const testHeaderHeight = parseInt(rootStyle.getPropertyValue("--test-header-height")) || 34;
-      const stickyOffsetBase = parseInt(rootStyle.getPropertyValue("--sticky-offset-base")) || 7;
-      const stickyOffsetTrace = parseInt(rootStyle.getPropertyValue("--sticky-offset-trace")) || 6;
+      // CSS 변수에서 값 읽기 (NaN일 때만 기본값 사용, 0은 유효한 값)
+      const testHeaderHeightRaw = parseInt(rootStyle.getPropertyValue("--test-header-height"));
+      const stickyOffsetBaseRaw = parseInt(rootStyle.getPropertyValue("--sticky-offset-base"));
+      const stickyOffsetTraceRaw = parseInt(rootStyle.getPropertyValue("--sticky-offset-trace"));
+
+      const testHeaderHeight = Number.isNaN(testHeaderHeightRaw) ? 34 : testHeaderHeightRaw;
+      const stickyOffsetBase = Number.isNaN(stickyOffsetBaseRaw) ? 7 : stickyOffsetBaseRaw;
+      const stickyOffsetTrace = Number.isNaN(stickyOffsetTraceRaw) ? 6 : stickyOffsetTraceRaw;
 
       // 컨테이너의 상단 위치 (헤더 바로 아래)
       const containerRect = container.getBoundingClientRect();
