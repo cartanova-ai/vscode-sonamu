@@ -57,10 +57,13 @@ class NaiteTrackerClass {
       const allFiles = [...projectFiles, ...sonamuFiles];
 
       const scanningMessage = StatusBar.show(`스캔 중: ${allFiles.length}개 파일...`);
-      for (const file of allFiles) {
-        await this.scanFile(file);
+      try {
+        for (const file of allFiles) {
+          await this.scanFile(file);
+        }
+      } finally {
+        scanningMessage.dispose();
       }
-      scanningMessage.dispose();
     }
 
     const keyCount = this.getAllKeys().length;
