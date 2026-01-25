@@ -1,3 +1,4 @@
+import path from "path";
 import vscode from "vscode";
 import NaiteExpressionExtractor from "../code-parsing/expression-extractor";
 import NaiteExpressionScanner, { type NaiteExpression } from "../code-parsing/expression-scanner";
@@ -83,7 +84,7 @@ class NaiteTrackerClass {
    * 특정 파일을 스캔합니다.
    */
   async scanFile(uri: vscode.Uri): Promise<void> {
-    const fileName = uri.fsPath.split("/").pop() || uri.fsPath;
+    const fileName = path.basename(uri.fsPath);
     const statusMessage = StatusBar.show(`스캔 중: ${fileName}...`);
 
     this.forgetCallsInFile(uri);

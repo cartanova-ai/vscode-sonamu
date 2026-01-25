@@ -1,3 +1,4 @@
+import path from "path";
 import vscode from "vscode";
 import { NaiteCallPatterns } from "../../lib/tracking/patterns";
 import { NaiteTracker } from "../../lib/tracking/tracker";
@@ -50,7 +51,7 @@ export class NaiteWorkspaceSymbolProvider implements vscode.WorkspaceSymbolProvi
       const locations = NaiteTracker.getKeyLocations(key, "set");
 
       for (const location of locations) {
-        const fileName = location.uri.fsPath.split("/").pop() || location.uri.fsPath;
+        const fileName = path.basename(location.uri.fsPath);
         symbols.push(new vscode.SymbolInformation(key, vscode.SymbolKind.Key, fileName, location));
       }
     }

@@ -1,3 +1,4 @@
+import path from "path";
 import vscode from "vscode";
 import { NaiteCallPatterns } from "../../lib/tracking/patterns";
 import { NaiteTracker } from "../../lib/tracking/tracker";
@@ -48,8 +49,7 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
       const getLocs = NaiteTracker.getKeyLocations(key, "get");
 
       // 정의된 파일명 (첫 번째 set 위치)
-      const definedIn =
-        setLocs.length > 0 ? setLocs[0].uri.path.split("/").pop() || "(정의 없음)" : "(정의 없음)";
+      const definedIn = setLocs.length > 0 ? path.basename(setLocs[0].uri.fsPath) : "(정의 없음)";
 
       const item = new vscode.CompletionItem(key, vscode.CompletionItemKind.Constant);
       item.detail = definedIn;
