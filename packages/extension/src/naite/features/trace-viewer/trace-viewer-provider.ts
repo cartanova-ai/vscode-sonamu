@@ -66,6 +66,9 @@ export class NaiteTraceViewerProvider {
    * VSCode 재시작 시 패널 복원
    */
   restorePanel(panel: vscode.WebviewPanel): void {
+    // 기존 disposables가 있다면 먼저 정리 (중복 등록 방지)
+    this._disposeListeners();
+
     this._panel = panel;
     this._setupPanel(panel);
   }
@@ -180,8 +183,16 @@ export class NaiteTraceViewerProvider {
       this._panel.dispose();
       this._panel = null;
     }
+    this._disposeListeners();
+  }
+
+  /**
+   * TraceStore 이벤트 리스너들을 정리합니다.
+   */
+  private _disposeListeners(): void {
     for (const d of this._disposables) {
       d.dispose();
     }
+    this._disposables = [];
   }
 }
