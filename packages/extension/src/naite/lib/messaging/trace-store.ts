@@ -32,6 +32,17 @@ class TraceStoreClass {
     // 현재는 처리할 작업 없음
   }
 
+  /**
+   * 리소스를 정리합니다.
+   * 익스텐션 비활성화 시 호출되어야 합니다.
+   */
+  dispose(): void {
+    if (this.testResultAddedDebounceTimer) {
+      clearTimeout(this.testResultAddedDebounceTimer);
+      this.testResultAddedDebounceTimer = null;
+    }
+  }
+
   getAllTestResults(): NaiteMessagingTypes.TestResult[] {
     return this.currentTestResults;
   }

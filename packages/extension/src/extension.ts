@@ -59,6 +59,7 @@ export async function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
   disposeKeyDecorations();
   disposeInlineValueDecorations();
+  TraceStore.dispose();
   await NaiteSocketServer.stop();
 }
 
