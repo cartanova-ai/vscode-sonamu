@@ -171,6 +171,23 @@ class NaiteTrackerClass {
     const patterns = NaiteCallPatterns.all();
     return extractor.extractKeyAtPosition(position, patterns);
   }
+
+  /**
+   * 키의 위치를 조회하고, 없으면 문서를 스캔하여 재시도합니다.
+   * Definition/Reference Provider에서 공통으로 사용됩니다.
+   */
+  async getKeyLocationsWithFallback(
+    document: vscode.TextDocument,
+    key: string,
+    type: "set" | "get",
+  ): Promise<vscode.Location[]> {
+    let locations = this.getKeyLocations(key, type);
+    if (locations.length === 0) {
+      await this.scanFile(document.uri);
+      locations = this.getKeyLocations(key, type);
+    }
+    return locations;
+  }
 }
 
 export const NaiteTracker = new NaiteTrackerClass();
