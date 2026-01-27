@@ -42,9 +42,8 @@ Naite.t("result", data);  // → { id: 1, name: "test" }
 
 ```bash
 cd ~/Projects/vscode-sonamu
-pnpm install && pnpm build
-cd packages/extension && pnpm package
-code --install-extension sonamu-*.vsix
+pnpm install
+cd packages/extension && pnpm install-extension
 ```
 
 업데이트 시 `--force` 옵션 추가:
