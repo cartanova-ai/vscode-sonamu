@@ -21,10 +21,13 @@ export function formatTime(isoString: string): string {
  * getFileName("/src/utils/math.ts") → "math.ts"
  * getFileName("C:\\src\\utils\\math.ts") → "math.ts"
  * getFileName("math.ts") → "math.ts"
- * getFileName("") → ""
+ * getFileName("") → "(unknown)"
  */
 export function getFileName(filePath: string): string {
+  if (!filePath) {
+    return "(unknown)";
+  }
   // 백슬래시를 슬래시로 정규화하여 Windows 경로도 지원
   const normalized = filePath.replace(/\\/g, "/");
-  return normalized.split("/").pop() || filePath;
+  return normalized.split("/").pop() || "(unknown)";
 }
