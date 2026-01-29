@@ -33,8 +33,7 @@ import { findConfigPaths } from "./naite/lib/utils/workspace";
  * Extension의 시작점입니다.
  * package.json의 activationEvents에 명시된 이벤트가 발생하면 activate이 실행됩니다.
  *
- * @param context
- * @returns
+ * @param context 익스텐션 컨텍스트
  */
 export async function activate(context: vscode.ExtensionContext) {
   await NaiteTracker.scanWorkspace();
@@ -291,9 +290,9 @@ function debouncedScanAndUpdate(
 /**
  * 문서의 변경에 대응하여 모든 것을 업데이트하고 새로 표시합니다.
  * 코드 옆에 따라다녀야 하는 것들이 제 위치에 제대로 표시되도록 합니다.
- * @param doc
- * @param diagnosticProvider
- * @returns
+ *
+ * @param doc 업데이트할 문서
+ * @param diagnosticProvider 진단 정보를 업데이트할 provider
  */
 async function scanAndUpdate(
   doc: vscode.TextDocument,
@@ -366,9 +365,8 @@ async function syncTraceLineNumbersWithDocument(doc: vscode.TextDocument): Promi
  *
  * 코드에서 Naite 호출문이나 테스트 케이스를 선택하면 그걸 Trace Viewer Tab에서 보여주는 기능을 구현합니다.
  *
- * @param e
- * @param traceTabProvider
- * @returns
+ * @param e 에디터 선택 변경 이벤트
+ * @param traceTabProvider Naite Trace Viewer provider 인스턴스
  */
 function focusSelectionOnTraceTab(
   e: vscode.TextEditorSelectionChangeEvent,

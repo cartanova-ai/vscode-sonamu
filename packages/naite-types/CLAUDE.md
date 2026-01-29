@@ -34,7 +34,7 @@ type Result = NaiteMessagingTypes.TestResult;
 - `testName`: 테스트 이름
 - `testFilePath`: 테스트 파일 경로
 - `testLine`: 테스트 라인 번호
-- `status`: 테스트 상태
+- `status`: 테스트 상태 (예: "pass", "fail")
 - `duration`: 실행 시간 (ms)
 - `error`: TestError (optional, 테스트 실패 시 에러 정보)
 - `traces`: NaiteTrace[] (트레이스 목록)
