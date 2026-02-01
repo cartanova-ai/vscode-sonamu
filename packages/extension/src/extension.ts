@@ -49,7 +49,10 @@ export async function activate(context: vscode.ExtensionContext) {
   registerDocumentEventHandlers(context, traceViewerProvider, diagnosticProvider);
   registerTestResultAddedListener(context, traceViewerProvider);
 
-  await NaiteSocketServer.startAll(await findConfigPaths());
+  const configPaths = await findConfigPaths();
+  if (configPaths.length > 0) {
+    await NaiteSocketServer.startAll(configPaths);
+  }
 }
 
 /**

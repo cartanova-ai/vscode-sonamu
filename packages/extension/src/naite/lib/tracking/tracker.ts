@@ -29,12 +29,18 @@ class NaiteTrackerClass {
    * 워크스페이스의 모든 TypeScript 파일에서 Naite 호출을 스캔합니다.
    * - sonamu.config.ts가 있는 프로젝트 루트의 .ts 파일들
    * - 해당 프로젝트의 node_modules/sonamu/src 내의 .ts 파일들
+   *
+   * Sonamu 프로젝트가 아닌 워크스페이스에서는 아무 작업도 하지 않습니다.
    */
   async scanWorkspace(): Promise<void> {
     this.naiteCalls.clear();
 
     // sonamu.config.ts 위치 찾기 (프로젝트 루트 결정)
     const configFiles = await findConfigFiles();
+    if (configFiles.length === 0) {
+      // Sonamu 프로젝트가 아니면 스캔하지 않음
+      return;
+    }
 
     for (const configFile of configFiles) {
       // sonamu.config.ts가 있는 디렉토리 = 프로젝트 루트
