@@ -23,6 +23,8 @@ export function useScrollToHighlight(
       if (highlightedTest) {
         scrollToElement(highlightedTest);
       } else if (highlightedTraces.size > 0) {
+        // Set의 순회 순서는 삽입 순서이므로, 첫 번째 요소는 가장 먼저 삽입된 항목
+        // (useTraceViewerState의 FOCUS_KEY 액션에서 testResults 순회 순서대로 삽입됨)
         const firstKey = highlightedTraces.values().next().value;
         if (firstKey) {
           scrollToElement(firstKey);
