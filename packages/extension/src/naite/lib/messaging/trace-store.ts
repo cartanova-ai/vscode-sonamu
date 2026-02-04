@@ -26,10 +26,15 @@ class TraceStoreClass {
 
   /**
    * NaiteSocketServer에서 "run/end" 메시지 수신 시 호출됩니다.
-   * 현재는 특별한 처리가 없지만, 향후 확장될 수 있습니다.
+   * 남아있는 디바운스 타이머를 정리하고, 마지막 알림을 즉시 발송합니다.
    */
   addRunEnd(): void {
-    // 현재는 처리할 작업 없음
+    // 남아있는 디바운스 타이머 정리 후 즉시 알림
+    if (this.testResultAddedDebounceTimer) {
+      clearTimeout(this.testResultAddedDebounceTimer);
+      this.testResultAddedDebounceTimer = null;
+      this.notifyTestResultAdded();
+    }
   }
 
   getAllTestResults(): NaiteMessagingTypes.TestResult[] {
