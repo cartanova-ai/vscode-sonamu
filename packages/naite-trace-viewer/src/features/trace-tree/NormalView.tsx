@@ -1,4 +1,5 @@
 import type { NaiteMessagingTypes } from "naite-types";
+import { useMemo } from "react";
 
 import { SuiteItem } from "./SuiteItem";
 
@@ -31,25 +32,29 @@ export function NormalView({
   onToggleTest,
   onToggleTrace,
 }: NormalViewProps) {
-  // Suite > Test 구조로 그룹화
-  const suiteMap = new Map<
-    string,
-    { testMap: Map<string, NaiteMessagingTypes.TestResult>; suiteFilePath?: string }
-  >();
+  // Suite > Test 구조로 그룹화 (testResults가 변경될 때만 재계산)
+  const suiteMap = useMemo(() => {
+    const map = new Map<
+      string,
+      { testMap: Map<string, NaiteMessagingTypes.TestResult>; suiteFilePath?: string }
+    >();
 
-  for (const result of testResults) {
-    const suiteName = result.suiteName || "(no suite)";
-    const testName = result.testName || "(no test)";
+    for (const result of testResults) {
+      const suiteName = result.suiteName || "(no suite)";
+      const testName = result.testName || "(no test)";
 
-    if (!suiteMap.has(suiteName)) {
-      suiteMap.set(suiteName, { testMap: new Map(), suiteFilePath: result.suiteFilePath });
+      if (!map.has(suiteName)) {
+        map.set(suiteName, { testMap: new Map(), suiteFilePath: result.suiteFilePath });
+      }
+      const suiteData = map.get(suiteName) as {
+        testMap: Map<string, NaiteMessagingTypes.TestResult>;
+        suiteFilePath?: string;
+      };
+      suiteData.testMap.set(testName, result);
     }
-    const suiteData = suiteMap.get(suiteName) as {
-      testMap: Map<string, NaiteMessagingTypes.TestResult>;
-      suiteFilePath?: string;
-    };
-    suiteData.testMap.set(testName, result);
-  }
+
+    return map;
+  }, [testResults]);
 
   return (
     <div className="traces">
