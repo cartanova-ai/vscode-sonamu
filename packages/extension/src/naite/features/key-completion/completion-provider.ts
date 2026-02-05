@@ -3,6 +3,36 @@ import { NaiteCallPatterns } from "../../lib/tracking/patterns";
 import { NaiteTracker } from "../../lib/tracking/tracker";
 
 /**
+ * 패턴 매칭용 정규식을 캐싱합니다.
+ * NaiteCallPatterns가 정적이므로 정규식을 한 번만 생성합니다.
+ */
+function buildPatternRegexes(): RegExp[] {
+  const allPatterns = NaiteCallPatterns.all();
+  const methodsByObject = new Map<string, string[]>();
+
+  for (const pattern of allPatterns) {
+    const [obj, method] = pattern.split(".");
+    if (!obj || !method) {
+      continue;
+    }
+    if (!methodsByObject.has(obj)) {
+      methodsByObject.set(obj, []);
+    }
+    methodsByObject.get(obj)?.push(method);
+  }
+
+  const regexes: RegExp[] = [];
+  for (const [obj, methods] of methodsByObject) {
+    regexes.push(new RegExp(`${obj}\\.(${methods.join("|")})\\(["'\`]$`));
+  }
+
+  return regexes;
+}
+
+// 모듈 로드 시 한 번만 정규식 생성
+const patternRegexes = buildPatternRegexes();
+
+/**
  * Naite 호출에서 자동완성을 제공합니다
  */
 export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
@@ -12,30 +42,8 @@ export class NaiteCompletionProvider implements vscode.CompletionItemProvider {
   ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
     const linePrefix = document.lineAt(position).text.substring(0, position.character);
 
-    // 설정된 모든 패턴에 대해 체크
-    const allPatterns = NaiteCallPatterns.all();
-
-    // 패턴 매칭 regex 생성 (예: /Naite\.(t|get|safeGet|expect|expectWithSnapshot)\(["']$/)
-    const methodsByObject = new Map<string, string[]>();
-    for (const pattern of allPatterns) {
-      const [obj, method] = pattern.split(".");
-      if (!obj || !method) {
-        continue;
-      }
-      if (!methodsByObject.has(obj)) {
-        methodsByObject.set(obj, []);
-      }
-      methodsByObject.get(obj)?.push(method);
-    }
-
-    let matched = false;
-    for (const [obj, methods] of methodsByObject) {
-      const regex = new RegExp(`${obj}\\.(${methods.join("|")})\\(["'\`]$`);
-      if (regex.test(linePrefix)) {
-        matched = true;
-        break;
-      }
-    }
+    // 캐싱된 정규식으로 패턴 매칭
+    const matched = patternRegexes.some((regex) => regex.test(linePrefix));
 
     if (!matched) {
       return undefined;
