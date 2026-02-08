@@ -22,7 +22,7 @@ let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
   // naite-lsp 서버 경로 (esbuild 번들)
-  const serverModule = context.asAbsolutePath(path.join("out", "naite-lsp-server.js"));
+  const serverModule = context.asAbsolutePath(path.join("out", "naite-lsp-server.mjs"));
 
   const serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },
