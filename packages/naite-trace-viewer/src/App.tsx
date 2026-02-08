@@ -37,7 +37,7 @@
  * - 스타일 → index.css
  */
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Header } from "./components";
 import { SearchView } from "./features/search";
 import { useStickyState } from "./features/sticky-headers";
@@ -46,6 +46,7 @@ import { useKeyCombination, useScrollToHighlight, useTraceViewerState } from "./
 
 export default function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 모든 상태를 관리하는 하나의 엔트리 포인트입니다.
   // 이 친구가 주는 state으로 UI를 그리면 되고, 이벤트는 actions를 통해 전달하면 됩니다.
@@ -61,17 +62,32 @@ export default function App() {
   // 이 훅 호출은 이 타겟이 지정될 때 그 곳으로 스크롤을 수행해줍니다.
   useScrollToHighlight(state.highlightedTest, state.highlightedTraces);
 
-  const openSearch = () => {
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const openSearch = useCallback(() => {
+    // 이전 타이머 정리
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
     actions.setSearchMode(true);
-    setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       searchInputRef.current?.focus();
       searchInputRef.current?.select();
+      searchTimeoutRef.current = null;
     }, 50);
-  };
+  }, [actions]);
 
-  const closeSearch = () => {
+  const closeSearch = useCallback(() => {
     actions.setSearchMode(false);
-  };
+  }, [actions]);
 
   // 전역 리스너를 달아서 "Ctrl + F"가 눌리면 검색창을 열어줍니다(openSearch).
   // 또한 검색 input에서는 "Esc"가 눌리면 검색창을 닫아줍니다(closeSearch).
