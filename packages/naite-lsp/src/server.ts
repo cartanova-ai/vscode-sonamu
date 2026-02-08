@@ -11,15 +11,24 @@ import NaiteExpressionScanner from "./core/expression-scanner.js";
 import { NaiteSocketServer } from "./core/naite-socket-server.js";
 import { TraceStore } from "./core/trace-store.js";
 import { NaiteTracker } from "./core/tracker.js";
+import { EntityStore } from "./entity/entity-store.js";
+import { loadSonamuSchemas } from "./entity/schema-loader.js";
 import { handleCompletion } from "./providers/completion.js";
 import { handleDefinition } from "./providers/definition.js";
 import { computeDiagnostics } from "./providers/diagnostics.js";
+import { handleEntityCompletion } from "./providers/entity-completion.js";
+import { computeEntityDiagnostics } from "./providers/entity-diagnostics.js";
+import { handleEntityHover } from "./providers/entity-hover.js";
 import { handleHover } from "./providers/hover.js";
 import { handleInlayHints } from "./providers/inlay-hints.js";
 import { handleReferences } from "./providers/references.js";
 import { handleDocumentSymbol, handleWorkspaceSymbol } from "./providers/symbols.js";
 import { findConfigPaths } from "./utils/file-scanner.js";
 import { broadcastToViewerClients, startViewerServer } from "./viewer/viewer-server.js";
+
+function isEntityJson(uri: string): boolean {
+  return uri.endsWith(".entity.json");
+}
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -56,6 +65,11 @@ connection.onInitialized(async () => {
   // 워크스페이스 스캔
   await NaiteTracker.scanWorkspace();
 
+  // entity.json 인덱싱 + sonamu 스키마 로드
+  EntityStore.setWorkspaceRoot(workspaceRoot);
+  await EntityStore.scanWorkspace();
+  await loadSonamuSchemas(workspaceRoot);
+
   // 소켓 서버 시작
   const configPaths = await findConfigPaths(workspaceRoot);
   await NaiteSocketServer.startAll(configPaths);
@@ -77,11 +91,17 @@ connection.onInitialized(async () => {
 // LSP Provider 핸들러
 connection.onCompletion((params) => {
   const doc = documents.get(params.textDocument.uri);
+  if (isEntityJson(params.textDocument.uri)) {
+    return handleEntityCompletion(params, doc);
+  }
   return handleCompletion(params, doc);
 });
 
 connection.onHover((params) => {
   const doc = documents.get(params.textDocument.uri);
+  if (isEntityJson(params.textDocument.uri)) {
+    return handleEntityHover(params, doc);
+  }
   return handleHover(params, doc);
 });
 
@@ -128,6 +148,13 @@ function debouncedScanAndUpdate(document: TextDocument): void {
 }
 
 function scanAndUpdate(document: TextDocument): void {
+  if (isEntityJson(document.uri)) {
+    EntityStore.updateFromDocument(document.uri, document.getText());
+    const diagnostics = computeEntityDiagnostics(document);
+    connection.sendDiagnostics({ uri: document.uri, diagnostics });
+    return;
+  }
+
   // 문서 스캔
   NaiteTracker.scanDocument(document);
 
