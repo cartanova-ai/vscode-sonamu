@@ -21,8 +21,8 @@ import { StatusBar } from "./naite/lib/utils/status-bar";
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
-  // naite-lsp 서버 경로 (esbuild 번들)
-  const serverModule = context.asAbsolutePath(path.join("out", "naite-lsp-server.mjs"));
+  // sonamu-lsp 서버 경로 (esbuild 번들)
+  const serverModule = context.asAbsolutePath(path.join("out", "sonamu-lsp-server.mjs"));
 
   const serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },
@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ],
   };
 
-  client = new LanguageClient("naite-lsp", "Naite Language Server", serverOptions, clientOptions);
+  client = new LanguageClient("sonamu-lsp", "Sonamu Language Server", serverOptions, clientOptions);
 
   const traceViewerProvider = registerTraceViewerProvider(context);
   registerCommands(context, traceViewerProvider);

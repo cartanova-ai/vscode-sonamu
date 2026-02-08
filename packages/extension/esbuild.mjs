@@ -98,12 +98,12 @@ async function main() {
     plugins: [traceViewerLoader],
   });
 
-  // 2. naite-lsp 서버 번들 (extension에 포함) — ESM 출력
-  const naiteLspServerPath = path.resolve(import.meta.dirname, "../naite-lsp/src/server.ts");
+  // 2. sonamu-lsp 서버 번들 (extension에 포함) — ESM 출력
+  const sonamuLspServerPath = path.resolve(import.meta.dirname, "../sonamu-lsp/src/server.ts");
   const lspContext = await esbuild.context({
-    entryPoints: [naiteLspServerPath],
+    entryPoints: [sonamuLspServerPath],
     bundle: true,
-    outfile: "out/naite-lsp-server.mjs",
+    outfile: "out/sonamu-lsp-server.mjs",
     format: "esm",
     platform: "node",
     sourcemap: !production,

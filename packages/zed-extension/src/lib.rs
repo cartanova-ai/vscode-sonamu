@@ -1,10 +1,10 @@
 use zed_extension_api::{self as zed, LanguageServerId, Result};
 
-struct NaiteExtension;
+struct SonamuExtension;
 
-impl zed::Extension for NaiteExtension {
+impl zed::Extension for SonamuExtension {
     fn new() -> Self {
-        NaiteExtension
+        SonamuExtension
     }
 
     fn language_server_command(
@@ -16,14 +16,14 @@ impl zed::Extension for NaiteExtension {
             .which("node")
             .ok_or_else(|| "node not found in PATH".to_string())?;
 
-        // naite-lsp 서버 스크립트 경로 탐색
-        // 1. PATH에서 naite-lsp-server 바이너리
+        // sonamu-lsp 서버 스크립트 경로 탐색
+        // 1. PATH에서 sonamu-lsp-server 바이너리
         // 2. 프로젝트 node_modules에서 직접 찾기
         let server_script = worktree
-            .which("naite-lsp-server")
+            .which("sonamu-lsp-server")
             .unwrap_or_else(|| {
                 // node_modules/.bin에 없으면 패키지 경로 직접 참조
-                "node_modules/naite-lsp/out/server.js".to_string()
+                "node_modules/sonamu-lsp/out/server.js".to_string()
             });
 
         Ok(zed::Command {
@@ -34,4 +34,4 @@ impl zed::Extension for NaiteExtension {
     }
 }
 
-zed::register_extension!(NaiteExtension);
+zed::register_extension!(SonamuExtension);

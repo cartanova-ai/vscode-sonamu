@@ -25,7 +25,7 @@
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "pnpm run build",
-    "build": "tsc --noEmit && pnpm --filter naite-lsp build && pnpm --filter naite-trace-viewer build && node esbuild.mjs --production",
+    "build": "tsc --noEmit && pnpm --filter sonamu-lsp build && pnpm --filter naite-trace-viewer build && node esbuild.mjs --production",
     "pretest": "tsc -p ./",
     "test": "vscode-test",
     "install-extension": "rm -f sonamu-*.vsix && pnpm run build && vsce package && code --install-extension sonamu-*.vsix",
@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "naite-types": "workspace:*",
-    "naite-lsp": "workspace:*",
+    "sonamu-lsp": "workspace:*",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.x",
     "@types/vscode": "^1.85.0",
