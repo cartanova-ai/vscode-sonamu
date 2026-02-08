@@ -24,10 +24,11 @@
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "pnpm run build",
-    "build": "tsc --noEmit && pnpm --filter naite-lsp build && pnpm --filter naite-trace-viewer build && node esbuild.js --production",
+    "build": "tsc --noEmit && pnpm --filter naite-lsp build && pnpm --filter naite-trace-viewer build && node esbuild.mjs --production",
     "pretest": "tsc -p ./",
     "test": "vscode-test",
-    "install-extension": "rm -f sonamu-*.vsix && pnpm run build && vsce package && code --install-extension sonamu-*.vsix"
+    "install-extension": "rm -f sonamu-*.vsix && pnpm run build && vsce package && code --install-extension sonamu-*.vsix",
+    "watch": "node esbuild.mjs --watch"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

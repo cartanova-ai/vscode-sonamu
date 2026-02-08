@@ -1,6 +1,6 @@
-const esbuild = require("esbuild");
-const fs = require("fs");
-const path = require("path");
+import esbuild from "esbuild";
+import fs from "fs";
+import path from "path";
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
@@ -20,7 +20,7 @@ const traceViewerLoader = {
     build.onLoad({ filter: /.*/, namespace: "trace-viewer" }, async () => {
       // naite-trace-viewer 빌드 결과물 경로
       const traceViewerDist = path.resolve(
-        __dirname,
+        import.meta.dirname,
         "../naite-trace-viewer/dist",
       );
 
@@ -98,13 +98,13 @@ async function main() {
     plugins: [traceViewerLoader],
   });
 
-  // 2. naite-lsp 서버 번들 (extension에 포함)
-  const naiteLspServerPath = path.resolve(__dirname, "../naite-lsp/src/server.ts");
+  // 2. naite-lsp 서버 번들 (extension에 포함) — ESM 출력
+  const naiteLspServerPath = path.resolve(import.meta.dirname, "../naite-lsp/src/server.ts");
   const lspContext = await esbuild.context({
     entryPoints: [naiteLspServerPath],
     bundle: true,
-    outfile: "out/naite-lsp-server.js",
-    format: "cjs",
+    outfile: "out/naite-lsp-server.mjs",
+    format: "esm",
     platform: "node",
     sourcemap: !production,
     minify: production,
