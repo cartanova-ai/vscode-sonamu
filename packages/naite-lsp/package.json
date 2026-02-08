@@ -1,0 +1,27 @@
+{
+  "name": "naite-lsp",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./out/server.js",
+  "scripts": {
+    "build": "tsc --noEmit && node esbuild.js --production",
+    "build:watch": "node esbuild.js --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "naite-types": "workspace:*",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "glob": "^10.4.0",
+    "typescript": "^5.6.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/ws": "^8.5.0",
+    "esbuild": "^0.27.0",
+    "vitest": "^4.0.16"
+  }
+}
