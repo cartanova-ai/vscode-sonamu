@@ -1,0 +1,12 @@
+[extension]
+id = "naite"
+name = "Naite"
+description = "Naite tracing support for Sonamu projects"
+version = "0.0.1"
+schema_version = 1
+authors = ["Cartanova <https://github.com/cartanova-ai>"]
+repository = "https://github.com/cartanova-ai/vscode-sonamu"
+
+[language_servers.naite]
+name = "Naite"
+languages = ["TypeScript", "TSX"]
