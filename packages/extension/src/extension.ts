@@ -30,7 +30,10 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "typescript" }],
+    documentSelector: [
+      { scheme: "file", language: "typescript" },
+      { scheme: "file", language: "json", pattern: "**/*.entity.json" },
+    ],
   };
 
   client = new LanguageClient("naite-lsp", "Naite Language Server", serverOptions, clientOptions);
