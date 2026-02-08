@@ -43,7 +43,7 @@ Naite.t("result", data);  // → { id: 1, name: "test" }
 ```bash
 cd ~/Projects/vscode-sonamu
 pnpm install && pnpm build
-cd packages/extension && pnpm package
+cd packages/vscode-extension && pnpm package
 code --install-extension sonamu-*.vsix
 ```
 
