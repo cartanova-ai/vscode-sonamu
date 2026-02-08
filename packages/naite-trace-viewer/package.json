@@ -3,6 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "exports": {
+    "./components": "./src/components/index.ts",
+    "./features/search": "./src/features/search/index.ts",
+    "./features/trace-tree": "./src/features/trace-tree/index.ts",
+    "./features/sticky-headers": "./src/features/sticky-headers/index.ts",
+    "./hooks": "./src/hooks/index.ts",
+    "./types": "./src/types/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./index.css": "./src/index.css"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
