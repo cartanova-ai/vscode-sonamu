@@ -8,7 +8,7 @@ async function main() {
     entryPoints: ["src/server.ts"],
     bundle: true,
     outfile: "out/server.js",
-    format: "cjs",
+    format: "esm",
     platform: "node",
     target: "node20",
     sourcemap: !production,

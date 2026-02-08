@@ -20,7 +20,7 @@ export function startViewerServer(): void {
   }
 
   // naite-viewer 빌드 결과물 디렉토리
-  const viewerDistDir = path.resolve(__dirname, "../../naite-viewer/dist");
+  const viewerDistDir = path.resolve(import.meta.dirname, "../../naite-viewer/dist");
 
   httpServer = http.createServer((req, res) => {
     // WebSocket 업그레이드 경로 제외
