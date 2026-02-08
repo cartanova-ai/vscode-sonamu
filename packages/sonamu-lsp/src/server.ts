@@ -65,13 +65,15 @@ connection.onInitialized(async () => {
   // 워크스페이스 스캔
   await NaiteTracker.scanWorkspace();
 
+  // sonamu.config.ts 기반 프로젝트 루트 탐색
+  const configPaths = await findConfigPaths(workspaceRoot);
+
   // entity.json 인덱싱 + sonamu 스키마 로드
   EntityStore.setWorkspaceRoot(workspaceRoot);
   await EntityStore.scanWorkspace();
-  await loadSonamuSchemas(workspaceRoot);
+  await loadSonamuSchemas(workspaceRoot, configPaths);
 
   // 소켓 서버 시작
-  const configPaths = await findConfigPaths(workspaceRoot);
   await NaiteSocketServer.startAll(configPaths);
 
   // Viewer HTTP/WebSocket 서버 시작
