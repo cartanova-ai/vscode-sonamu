@@ -9,4 +9,4 @@ repository = "https://github.com/cartanova-ai/vscode-sonamu"
 
 [language_servers.naite]
 name = "Naite"
-languages = ["TypeScript", "TSX"]
+languages = ["TypeScript", "TSX", "JSON"]
