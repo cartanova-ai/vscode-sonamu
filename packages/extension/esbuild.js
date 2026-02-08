@@ -85,7 +85,8 @@ const traceViewerLoader = {
 };
 
 async function main() {
-  const context = await esbuild.context({
+  // 1. Extension 빌드
+  const extContext = await esbuild.context({
     entryPoints: ["src/extension.ts"],
     bundle: true,
     outfile: "out/extension.js",
@@ -97,12 +98,24 @@ async function main() {
     plugins: [traceViewerLoader],
   });
 
+  // 2. naite-lsp 서버 번들 (extension에 포함)
+  const naiteLspServerPath = path.resolve(__dirname, "../naite-lsp/src/server.ts");
+  const lspContext = await esbuild.context({
+    entryPoints: [naiteLspServerPath],
+    bundle: true,
+    outfile: "out/naite-lsp-server.js",
+    format: "cjs",
+    platform: "node",
+    sourcemap: !production,
+    minify: production,
+  });
+
   if (watch) {
-    await context.watch();
+    await Promise.all([extContext.watch(), lspContext.watch()]);
     console.log("[esbuild] Watching for changes...");
   } else {
-    await context.rebuild();
-    await context.dispose();
+    await Promise.all([extContext.rebuild(), lspContext.rebuild()]);
+    await Promise.all([extContext.dispose(), lspContext.dispose()]);
   }
 }
 

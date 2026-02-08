@@ -1,5 +1,4 @@
 import vscode from "vscode";
-import { NaiteTracker } from "../../lib/tracking/tracker";
 
 let decorationType: vscode.TextEditorDecorationType | null = null;
 let currentStyle: string = "";
@@ -31,7 +30,6 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
     return decorationType;
   }
 
-  // 기존 decoration type 정리
   if (decorationType) {
     decorationType.dispose();
   }
@@ -41,15 +39,15 @@ function ensureDecorationType(): vscode.TextEditorDecorationType {
   return decorationType;
 }
 
+const NAITE_KEY_REGEX = /Naite\.(t|get|del)\s*\(\s*["'`]([^"'`]+)["'`]/g;
+
 export function updateKeyDecorations(editor: vscode.TextEditor) {
   if (editor.document.languageId !== "typescript") {
     return;
   }
 
-  // 설정에서 decoration 활성화 여부 확인
   const config = vscode.workspace.getConfiguration("sonamu.naite");
   if (!config.get<boolean>("decoration.enabled", true)) {
-    // 비활성화된 경우 기존 데코레이션 제거
     if (decorationType) {
       editor.setDecorations(decorationType, []);
     }
@@ -57,40 +55,18 @@ export function updateKeyDecorations(editor: vscode.TextEditor) {
   }
 
   const decType = ensureDecorationType();
-
-  // tracker에서 스캔된 데이터 사용 (주석 자동 제외)
-  const entries = NaiteTracker.getEntriesForFile(editor.document.uri);
+  const text = editor.document.getText();
   const decorations: vscode.DecorationOptions[] = [];
 
-  for (const entry of entries) {
-    // 호출문 텍스트에서 키 위치 찾기
-    const callText = editor.document.getText(entry.location.range);
+  const regex = new RegExp(NAITE_KEY_REGEX.source, "g");
+  for (let match = regex.exec(text); match !== null; match = regex.exec(text)) {
+    const fullMatch = match[0];
+    const key = match[2];
+    const keyStart = match.index + fullMatch.indexOf(key);
+    const keyEnd = keyStart + key.length;
 
-    // 다양한 따옴표 형식 지원 (큰따옴표, 작은따옴표, 백틱)
-    const quotePatterns = [
-      { pattern: `"${entry.key}"`, quoteLength: 1 },
-      { pattern: `'${entry.key}'`, quoteLength: 1 },
-      { pattern: `\`${entry.key}\``, quoteLength: 1 },
-    ];
-
-    let offset = -1;
-    for (const { pattern, quoteLength } of quotePatterns) {
-      const index = callText.indexOf(pattern);
-      if (index !== -1) {
-        offset = index + quoteLength; // 여는 따옴표 건너뛰기
-        break;
-      }
-    }
-
-    if (offset === -1) {
-      continue;
-    }
-
-    const startOffset = editor.document.offsetAt(entry.location.range.start) + offset;
-    const endOffset = startOffset + entry.key.length;
-
-    const startPos = editor.document.positionAt(startOffset);
-    const endPos = editor.document.positionAt(endOffset);
+    const startPos = editor.document.positionAt(keyStart);
+    const endPos = editor.document.positionAt(keyEnd);
     decorations.push({ range: new vscode.Range(startPos, endPos) });
   }
 
