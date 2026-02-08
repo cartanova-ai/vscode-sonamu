@@ -65,7 +65,7 @@ vscode-sonamu/
 extension 빌드 시 sonamu-lsp와 naite-trace-viewer가 먼저 빌드되어야 함:
 ```bash
 # extension의 build 스크립트가 자동으로 처리:
-# "build": "tsc --noEmit && pnpm --filter sonamu-lsp build && pnpm --filter naite-trace-viewer build && node esbuild.mjs --production"
+# "build": "tsc --noEmit && pnpm --filter @sonamu-kit/lsp build && pnpm --filter naite-trace-viewer build && node esbuild.mjs --production"
 cd packages/vscode-extension && pnpm build
 ```
 

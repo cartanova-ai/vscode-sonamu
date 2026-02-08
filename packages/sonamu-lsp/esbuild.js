@@ -7,13 +7,22 @@ async function main() {
   const context = await esbuild.context({
     entryPoints: ["src/server.ts"],
     bundle: true,
-    outfile: "out/server.js",
+    outfile: "out/server.mjs",
     format: "esm",
     platform: "node",
-    target: "node20",
+    mainFields: ["module", "main"],
     sourcemap: !production,
     minify: production,
-    external: [],
+    banner: {
+      js: [
+        'import { createRequire } from "module";',
+        'import { fileURLToPath as __fileURLToPath } from "url";',
+        'import { dirname as __dirname_ } from "path";',
+        'const require = createRequire(import.meta.url);',
+        'const __filename = __fileURLToPath(import.meta.url);',
+        'const __dirname = __dirname_(__filename);',
+      ].join(" "),
+    },
   });
 
   if (watch) {

@@ -1,14 +1,23 @@
 {
-  "name": "sonamu-lsp",
-  "private": true,
+  "name": "@sonamu-kit/lsp",
   "version": "0.0.0",
+  "description": "Language Server Protocol implementation for Sonamu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cartanova-ai/vscode-sonamu",
+    "directory": "packages/sonamu-lsp"
+  },
+  "keywords": ["sonamu", "lsp", "language-server"],
   "type": "module",
-  "main": "./out/server.js",
+  "main": "./out/server.mjs",
+  "files": ["out/"],
   "scripts": {
     "build": "tsc --noEmit && node esbuild.js --production",
     "build:watch": "node esbuild.js --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "naite-types": "workspace:*",
