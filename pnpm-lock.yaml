@@ -60,6 +60,9 @@ importers:
       glob:
         specifier: ^10.4.0
         version: 10.5.0
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       naite-types:
         specifier: workspace:*
         version: link:../naite-types
@@ -152,6 +155,43 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.1(@types/node@20.19.27)
+
+  packages/sonamu-lsp:
+    dependencies:
+      glob:
+        specifier: ^10.4.0
+        version: 10.5.0
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
+      naite-types:
+        specifier: workspace:*
+        version: link:../naite-types
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      vscode-languageserver:
+        specifier: ^9.0.1
+        version: 9.0.1
+      vscode-languageserver-textdocument:
+        specifier: ^1.0.12
+        version: 1.0.12
+      ws:
+        specifier: ^8.18.0
+        version: 8.19.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.x
+        version: 20.19.27
+      '@types/ws':
+        specifier: ^8.5.0
+        version: 8.18.1
+      esbuild:
+        specifier: ^0.27.0
+        version: 0.27.2
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.16(@types/node@20.19.27)
 
 packages:
 
