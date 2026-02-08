@@ -1,10 +1,9 @@
-[extension]
 id = "sonamu"
 name = "Sonamu"
 description = "Sonamu development support for Zed"
 version = "0.0.1"
 schema_version = 1
-authors = ["Cartanova <https://github.com/cartanova-ai>"]
+authors = ["CartaNova <https://github.com/cartanova-ai>"]
 repository = "https://github.com/cartanova-ai/vscode-sonamu"
 
 [language_servers.sonamu]
