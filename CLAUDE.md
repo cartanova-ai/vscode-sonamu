@@ -28,7 +28,7 @@ Sonamu에서 테스트가 끝날 때마다 `Naite.t("key", value)` 형태로 기
 ```
 vscode-sonamu/
 ├── packages/
-│   ├── extension/          # VSCode 익스텐션 (메인)
+│   ├── vscode-extension/   # VSCode 익스텐션 (메인)
 │   ├── naite-trace-viewer/ # 트레이스 뷰어 웹뷰 (React)
 │   └── naite-types/        # 공유 타입 정의
 ├── biome.json              # 린터/포매터 설정
@@ -36,23 +36,23 @@ vscode-sonamu/
 ```
 
 각 패키지별 상세 문서:
-- [packages/extension/CLAUDE.md](packages/extension/CLAUDE.md)
+- [packages/vscode-extension/CLAUDE.md](packages/vscode-extension/CLAUDE.md)
 - [packages/naite-trace-viewer/CLAUDE.md](packages/naite-trace-viewer/CLAUDE.md)
 - [packages/naite-types/CLAUDE.md](packages/naite-types/CLAUDE.md)
 
 > **Claude에게**: 하위 패키지(`packages/*`) 파일을 수정할 때는 반드시 해당 패키지의 CLAUDE.md를 먼저 읽어라.
 
 이렇게 여러 패키지로 분리된 이유와 과정:
-- 처음에는 `extension`이 별도의 이름도 없이 단일 패키지로 존재했습니다.
+- 처음에는 `vscode-extension`이 별도의 이름도 없이 단일 패키지로 존재했습니다.
 - 그런데 Naite Trace Viewer가 점점 커지면서 이 부분을 React로 개발하고 싶어, 별도로 분리하였습니다.
-- 이로서 기존의 익스텐션이 패키지화된 `extension`과 새로 분리된 React 프로젝트인 `naite-trace-viewer`가 존재하게 되었습니다.
+- 이로서 기존의 익스텐션이 패키지화된 `vscode-extension`과 새로 분리된 React 프로젝트인 `naite-trace-viewer`가 존재하게 되었습니다.
 - 이 두 패키지 사이에서 동일한 TypeScript 타입을 공유해야 했습니다. 이를 위해 별도의 공유용 패키지를 만들었습니다: `naite-types`
 
 ## 빌드 및 패키징
 
 ### 의존성 관계
-- `extension` → `naite-trace-viewer` (빌드 결과물을 인라인으로 포함)
-- `extension` → `naite-types`
+- `vscode-extension` → `naite-trace-viewer` (빌드 결과물을 인라인으로 포함)
+- `vscode-extension` → `naite-types`
 - `naite-trace-viewer` → `naite-types`
 
 ### 빌드 순서 (중요!)
@@ -60,12 +60,12 @@ extension 빌드 시 naite-trace-viewer가 먼저 빌드되어야 함:
 ```bash
 # extension의 build 스크립트가 자동으로 처리:
 # "build": "tsc --noEmit && pnpm --filter naite-trace-viewer build && node esbuild.js --production"
-cd packages/extension && pnpm build
+cd packages/vscode-extension && pnpm build
 ```
 
 ### 익스텐션 설치/테스트
 ```bash
-cd packages/extension && pnpm install-extension
+cd packages/vscode-extension && pnpm install-extension
 # → 빌드 → .vsix 패키징 → VSCode에 설치
 ```
 
@@ -124,7 +124,7 @@ cd packages/naite-trace-viewer && pnpm lint
 - 한글 커밋 메시지 사용
 
 ## 버전 관리
-- 익스텐션 버전: `packages/extension/package.json`의 `version`
+- 익스텐션 버전: `packages/vscode-extension/package.json`의 `version`
 - 마켓플레이스 배포 전 버전 업 필요
 
 ---
