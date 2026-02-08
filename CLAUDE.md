@@ -1,6 +1,6 @@
 # vscode-sonamu 프로젝트
 
-Sonamu 프레임워크 개발을 위한 VSCode 익스텐션 모노레포.
+Sonamu 프레임워크 개발을 위한 에디터 확장 모노레포.
 
 > **주의**: 이 문서와 각 패키지의 CLAUDE.md는 부정확할 수 있습니다.
 > 코드 작업 시 명시된 기능/구조가 실제 코드와 일치하는지 확인하고,
@@ -8,9 +8,9 @@ Sonamu 프레임워크 개발을 위한 VSCode 익스텐션 모노레포.
 
 ## 이것은 무슨 프로젝트인가?
 
-Sonamu라는 TypeScript 웹 프레임워크의 개발을 지원하는 VSCode/Cursor 확장입니다.
+Sonamu라는 TypeScript 웹 프레임워크의 개발을 지원하는 에디터 확장입니다. VSCode/Cursor와 Zed 에디터를 지원합니다.
 
-현재 Sonamu의 기능 중 Naite라는 시스템을 더욱 편하게 사용할 수 있게 초점을 두고 있습니다.
+현재 Sonamu의 기능 중 Naite라는 시스템과 entity.json 편집을 더욱 편하게 사용할 수 있게 초점을 두고 있습니다.
 
 ### Naite란 무엇인가?
 
@@ -28,38 +28,44 @@ Sonamu에서 테스트가 끝날 때마다 `Naite.t("key", value)` 형태로 기
 ```
 vscode-sonamu/
 ├── packages/
-│   ├── vscode-extension/   # VSCode 익스텐션 (메인)
+│   ├── vscode-extension/   # VSCode 익스텐션 (LanguageClient 기반)
+│   ├── sonamu-lsp/         # LSP 서버 (Naite + entity.json)
 │   ├── naite-trace-viewer/ # 트레이스 뷰어 웹뷰 (React)
-│   └── naite-types/        # 공유 타입 정의
+│   ├── naite-viewer/       # 독립 웹 기반 Trace Viewer (React SPA)
+│   ├── naite-types/        # 공유 타입 정의
+│   └── zed-extension/      # Zed 에디터 확장 (Rust/WASM, pnpm 워크스페이스 제외)
 ├── biome.json              # 린터/포매터 설정
 └── pnpm-workspace.yaml     # pnpm 워크스페이스 설정
 ```
 
 각 패키지별 상세 문서:
 - [packages/vscode-extension/CLAUDE.md](packages/vscode-extension/CLAUDE.md)
-- [packages/naite-trace-viewer/CLAUDE.md](packages/naite-trace-viewer/CLAUDE.md)
-- [packages/naite-types/CLAUDE.md](packages/naite-types/CLAUDE.md)
 
 > **Claude에게**: 하위 패키지(`packages/*`) 파일을 수정할 때는 반드시 해당 패키지의 CLAUDE.md를 먼저 읽어라.
 
 이렇게 여러 패키지로 분리된 이유와 과정:
 - 처음에는 `vscode-extension`이 별도의 이름도 없이 단일 패키지로 존재했습니다.
-- 그런데 Naite Trace Viewer가 점점 커지면서 이 부분을 React로 개발하고 싶어, 별도로 분리하였습니다.
-- 이로서 기존의 익스텐션이 패키지화된 `vscode-extension`과 새로 분리된 React 프로젝트인 `naite-trace-viewer`가 존재하게 되었습니다.
-- 이 두 패키지 사이에서 동일한 TypeScript 타입을 공유해야 했습니다. 이를 위해 별도의 공유용 패키지를 만들었습니다: `naite-types`
+- Naite Trace Viewer가 점점 커지면서 React로 별도 분리하였습니다: `naite-trace-viewer`
+- 두 패키지 사이에서 동일한 TypeScript 타입을 공유하기 위해 `naite-types`를 만들었습니다.
+- language provider 로직을 에디터 독립적인 LSP 서버로 추출하였습니다: `sonamu-lsp`
+- `sonamu-lsp`의 viewer-server와 WebSocket으로 통신하는 독립 웹 Trace Viewer를 만들었습니다: `naite-viewer`
+- Zed 에디터에서도 `sonamu-lsp`를 사용할 수 있도록 Zed 확장을 만들었습니다: `zed-extension`
 
 ## 빌드 및 패키징
 
 ### 의존성 관계
+- `vscode-extension` → `sonamu-lsp` (esbuild로 서버를 함께 번들링)
 - `vscode-extension` → `naite-trace-viewer` (빌드 결과물을 인라인으로 포함)
 - `vscode-extension` → `naite-types`
+- `sonamu-lsp` → `naite-types`
 - `naite-trace-viewer` → `naite-types`
+- `naite-viewer` → `naite-trace-viewer`, `naite-types`
 
 ### 빌드 순서 (중요!)
-extension 빌드 시 naite-trace-viewer가 먼저 빌드되어야 함:
+extension 빌드 시 sonamu-lsp와 naite-trace-viewer가 먼저 빌드되어야 함:
 ```bash
 # extension의 build 스크립트가 자동으로 처리:
-# "build": "tsc --noEmit && pnpm --filter naite-trace-viewer build && node esbuild.js --production"
+# "build": "tsc --noEmit && pnpm --filter sonamu-lsp build && pnpm --filter naite-trace-viewer build && node esbuild.mjs --production"
 cd packages/vscode-extension && pnpm build
 ```
 
@@ -72,7 +78,7 @@ cd packages/vscode-extension && pnpm install-extension
 ### 빌드 실패 시 체크리스트
 1. `naite-trace-viewer/dist/` 폴더가 있는가?
 2. `dist/assets/main.js`, `dist/assets/index.css` 파일이 있는가?
-3. esbuild.js가 이 파일들을 인라인해서 HTML을 생성함
+3. esbuild.mjs가 이 파일들을 인라인해서 HTML을 생성함
 
 ## 개발 모드
 
@@ -97,16 +103,30 @@ cd packages/naite-trace-viewer && pnpm lint
 - `useExhaustiveDependencies: off` (의도적 deps 제어)
 - `noArrayIndexKey: off` (정적 리스트에서 사용)
 
+## 아키텍처
+
+### LSP 기반 구조
+language provider 로직은 모두 `sonamu-lsp` 패키지에 구현되어 있고, `vscode-extension`과 `zed-extension`은 이 LSP 서버의 클라이언트 역할만 한다.
+
+- `vscode-extension`: esbuild.mjs에서 sonamu-lsp 서버를 `out/sonamu-lsp-server.mjs`로 번들링하여 LanguageClient로 연결
+- `zed-extension`: Rust/WASM에서 node를 통해 sonamu-lsp 서버를 실행
+
 ## 주요 기능
 
 ### Naite 트레이스 시스템
-- 테스트 실행 시 `naite.trace()` 호출을 수집
-- 소켓 서버로 실시간 수신 → 웹뷰에 표시
+- 테스트 실행 시 `Naite.t()` 호출을 수집
+- Unix domain socket 서버로 실시간 수신 → 웹뷰에 표시
 - 키 클릭 시 해당 코드 위치로 점프
+- 독립 웹 뷰어(`naite-viewer`)로도 확인 가능 (sonamu-lsp의 viewer-server가 HTTP/WebSocket 서빙)
 
-### 키 하이라이팅/네비게이션
-- `naite.trace("key", ...)` 형태의 키를 파싱
-- 정의/참조 이동, 심볼 검색, 자동완성 지원
+### 키 하이라이팅/네비게이션 (sonamu-lsp)
+- `Naite.t("key", ...)` 형태의 키를 파싱
+- 정의/참조 이동, 심볼 검색, 자동완성, 호버 정보, 인라인 값 표시, 미정의 키 경고
+
+### entity.json 지원 (sonamu-lsp)
+- `*.entity.json` 파일에 대한 자동완성 (prop 타입, relation, index, subset 등)
+- Zod validation 기반 diagnostics
+- relation의 with 값에 대상 entity 정보 hover 표시
 
 ## 자주 발생하는 문제
 
