@@ -9,7 +9,7 @@ language provider 로직(자동완성, 정의 이동, 호버 등)은 모두 `son
 ```bash
 pnpm build
 # 1. tsc --noEmit (타입 체크만)
-# 2. pnpm --filter sonamu-lsp build (LSP 서버 빌드)
+# 2. pnpm --filter @sonamu-kit/lsp build (LSP 서버 빌드)
 # 3. pnpm --filter naite-trace-viewer build (웹뷰 빌드)
 # 4. node esbuild.mjs --production (익스텐션 번들링)
 ```

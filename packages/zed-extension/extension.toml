@@ -9,3 +9,7 @@ repository = "https://github.com/cartanova-ai/vscode-sonamu"
 [language_servers.sonamu]
 name = "Sonamu"
 languages = ["TypeScript", "TSX", "JSON"]
+
+[[capabilities]]
+kind = "npm:install"
+package = "@sonamu-kit/lsp"

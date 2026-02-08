@@ -36,7 +36,12 @@ export async function activate(context: vscode.ExtensionContext) {
     ],
   };
 
-  client = new LanguageClient("sonamu-lsp", "Sonamu Language Server", serverOptions, clientOptions);
+  client = new LanguageClient(
+    "@sonamu-kit/lsp",
+    "Sonamu Language Server",
+    serverOptions,
+    clientOptions,
+  );
 
   const traceViewerProvider = registerTraceViewerProvider(context);
   registerCommands(context, traceViewerProvider);
