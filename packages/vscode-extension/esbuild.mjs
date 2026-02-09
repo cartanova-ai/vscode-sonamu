@@ -106,8 +106,19 @@ async function main() {
     outfile: "out/sonamu-lsp-server.mjs",
     format: "esm",
     platform: "node",
+    mainFields: ["module", "main"],
     sourcemap: !production,
     minify: production,
+    banner: {
+      js: [
+        'import { createRequire } from "module";',
+        'import { fileURLToPath as __fileURLToPath } from "url";',
+        'import { dirname as __dirname_ } from "path";',
+        'const require = createRequire(import.meta.url);',
+        'const __filename = __fileURLToPath(import.meta.url);',
+        'const __dirname = __dirname_(__filename);',
+      ].join(" "),
+    },
   });
 
   if (watch) {
