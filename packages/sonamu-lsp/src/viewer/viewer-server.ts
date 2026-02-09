@@ -83,6 +83,20 @@ export function startViewerServer(): void {
     });
   });
 
+  httpServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.log(
+        `[Viewer Server] Port ${VIEWER_PORT} already in use. Another instance is likely serving the viewer.`,
+      );
+      // 이미 다른 인스턴스가 서빙 중이므로 정리하고 종료
+      wss?.close();
+      wss = null;
+      httpServer = null;
+      return;
+    }
+    console.error("[Viewer Server] Server error:", err);
+  });
+
   httpServer.listen(VIEWER_PORT, () => {
     console.log(`[Viewer Server] Listening on http://localhost:${VIEWER_PORT}`);
   });
