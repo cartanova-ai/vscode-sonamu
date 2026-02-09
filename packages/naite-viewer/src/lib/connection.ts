@@ -40,6 +40,10 @@ function connect() {
   ws.onclose = () => {
     console.log("[naite-viewer] WebSocket disconnected, reconnecting...");
     ws = null;
+    // 기존 타이머가 있으면 정리 후 새 타이머 설정 (중복 실행 방지)
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+    }
     reconnectTimer = setTimeout(connect, 2000);
   };
 
