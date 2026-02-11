@@ -2,7 +2,7 @@ import type { NaiteMessagingTypes } from "naite-types";
 
 import { ExpandArrow } from "../../components";
 import { goToLocation } from "../../hooks";
-import { createTestKey } from "../../utils";
+import { createTestKey, getFileName } from "../../utils";
 import { handleStickyToggle } from "../sticky-headers";
 import { TestItem } from "./TestItem";
 
@@ -33,7 +33,7 @@ export function SuiteItem({
   onToggleTest,
   onToggleTrace,
 }: SuiteItemProps) {
-  const testFileName = suiteFilePath ? suiteFilePath.split("/").pop() : null;
+  const testFileName = suiteFilePath ? getFileName(suiteFilePath) : null;
 
   // 통계 계산
   const suiteTestCount = testMap.size;
