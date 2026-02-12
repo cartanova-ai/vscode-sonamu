@@ -143,8 +143,11 @@ function debouncedScanAndUpdate(document: TextDocument): void {
   scanDebounceMap.set(
     key,
     setTimeout(() => {
-      scanAndUpdate(document);
-      scanDebounceMap.delete(key);
+      try {
+        scanAndUpdate(document);
+      } finally {
+        scanDebounceMap.delete(key);
+      }
     }, 200),
   );
 }
