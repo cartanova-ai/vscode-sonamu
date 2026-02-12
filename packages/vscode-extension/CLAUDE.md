@@ -34,7 +34,12 @@ src/
     ├── features/
     │   ├── trace-viewer/         # 웹뷰 프로바이더 (trace-viewer-provider.ts)
     │   ├── key-highlighting/     # 키 데코레이션 (key-decorator.ts, 자체 정규식 기반)
-    │   └── inline-value-display/ # 인라인 값 표시 (value-decorator.ts, LSP inlay hints 활용)
+    │   ├── inline-value-display/ # 인라인 값 표시 (value-decorator.ts, LSP inlay hints 활용)
+    │   ├── key-completion/       # README만 존재 (실제 구현은 sonamu-lsp)
+    │   ├── key-hover-info-box/   # README만 존재 (실제 구현은 sonamu-lsp)
+    │   ├── key-navigation/       # README만 존재 (실제 구현은 sonamu-lsp)
+    │   ├── key-symbol-search/    # README만 존재 (실제 구현은 sonamu-lsp)
+    │   └── key-undefined-warning/# README만 존재 (실제 구현은 sonamu-lsp)
     └── lib/
         └── utils/
             ├── editor-navigation.ts  # 에디터 파일 열기/이동
