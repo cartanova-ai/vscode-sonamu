@@ -96,7 +96,24 @@ export function getExistingArrayValues(text: string, arrayPath: (string | number
     return [];
   }
 
-  return node.children
-    .filter((child) => child.type === "string")
-    .map((child) => child.value as string);
+  return node.children.flatMap((child) => {
+    if (child.type === "string") {
+      return [child.value as string];
+    }
+
+    if (child.type !== "object" || !child.children) {
+      return [];
+    }
+
+    const fieldProperty = child.children.find(
+      (prop) => prop.type === "property" && prop.children?.[0]?.value === "field",
+    );
+    const fieldValueNode = fieldProperty?.children?.[1];
+
+    if (fieldValueNode?.type === "string" && typeof fieldValueNode.value === "string") {
+      return [fieldValueNode.value];
+    }
+
+    return [];
+  });
 }

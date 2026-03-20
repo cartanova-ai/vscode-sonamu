@@ -130,6 +130,22 @@ describe("json-utils", () => {
       expect(values).toContain("email");
     });
 
+    it("subset fields 배열의 객체형 field 값도 반환한다", () => {
+      const content = `{
+  "subsets": {
+    "A": {
+      "fields": [
+        "username",
+        { "field": "email", "internal": true }
+      ]
+    }
+  }
+}`;
+      const values = getExistingArrayValues(content, ["subsets", "A", "fields"]);
+      expect(values).toContain("username");
+      expect(values).toContain("email");
+    });
+
     it("존재하지 않는 경로는 빈 배열을 반환한다", () => {
       const values = getExistingArrayValues(SAMPLE_ENTITY, ["subsets", "nonexistent"]);
       expect(values).toEqual([]);
@@ -172,6 +188,7 @@ describe("entity-completion", async () => {
     expect(labels).toContain("integer");
     expect(labels).toContain("relation");
     expect(labels).toContain("enum");
+    expect(labels).toContain("searchText");
   });
 
   it("props[n].relationType 위치에서 관계 타입을 제안한다", () => {
@@ -211,6 +228,59 @@ describe("entity-completion", async () => {
     expect(labels).toContain("hnsw");
   });
 
+  it("props[n] property key에서 searchText용 필드를 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "props": [
+    {
+      "name": "search_text",
+      "type": "searchText",
+      ""
+    }
+  ]
+}`;
+    const items = getCompletionAt(content, '      ""\n    }', 7);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("sourceColumns");
+    expect(labels).toContain("cone");
+  });
+
+  it("props[n].zodFormat 위치에서 최신 포맷 목록을 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "props": [
+    {
+      "name": "email",
+      "type": "string",
+      "zodFormat": ""
+    }
+  ]
+}`;
+    const items = getCompletionAt(content, '"zodFormat": "', 14);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("isoDatetime");
+    expect(labels).toContain("hashSha256");
+  });
+
+  it("searchText sourceColumns[n].name 위치에서 prop 이름을 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "props": [
+    { "name": "title", "type": "string" },
+    { "name": "tags", "type": "string[]" },
+    {
+      "name": "search_text",
+      "type": "searchText",
+      "sourceColumns": [{ "name": "" }]
+    }
+  ]
+}`;
+    const items = getCompletionAt(content, '{ "name": "" }', 12);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("title");
+    expect(labels).toContain("tags");
+  });
+
   it("루트 레벨 property key에서 기존 키를 제외한 목록을 제안한다", () => {
     // 마지막 속성 뒤에 새 키를 입력하는 상황
     const content = `{
@@ -226,6 +296,107 @@ describe("entity-completion", async () => {
       expect(labels).toContain("props");
       expect(labels).toContain("title");
     }
+  });
+
+  it("indexes[n].columns[m] property key에서 opclass를 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "indexes": [
+    {
+      "type": "index",
+      "columns": [
+        {
+          "name": "search_text",
+          ""
+        }
+      ]
+    }
+  ]
+}`;
+    const items = getCompletionAt(content, '          ""\n        }', 11);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("opclass");
+  });
+
+  it("indexes[n].columns[m].opclass 위치에서 opclass 후보를 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "indexes": [
+    {
+      "type": "index",
+      "columns": [
+        {
+          "name": "search_text",
+          "opclass": ""
+        }
+      ]
+    }
+  ]
+}`;
+    const items = getCompletionAt(content, '"opclass": "', 12);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("gin_trgm_ops");
+    expect(labels).toContain("vector_cosine_ops");
+  });
+
+  it("subsets.<name> 객체에서 fields와 cone 키를 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "subsets": {
+    "A": {
+      ""
+    }
+  }
+}`;
+    const items = getCompletionAt(content, '      ""\n    }', 7);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("fields");
+    expect(labels).toContain("cone");
+  });
+
+  it("subsets.<name>.fields[n] 객체에서 field와 internal 키를 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "props": [{ "name": "username", "type": "string" }],
+  "subsets": {
+    "A": {
+      "fields": [
+        {
+          ""
+        }
+      ]
+    }
+  }
+}`;
+    const items = getCompletionAt(content, '          ""\n        }', 11);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("field");
+    expect(labels).toContain("internal");
+  });
+
+  it("subsets.<name>.fields[n].field 위치에서 기존 field를 제외한 prop 이름을 제안한다", () => {
+    const content = `{
+  "id": "Test",
+  "props": [
+    { "name": "username", "type": "string" },
+    { "name": "email", "type": "string" },
+    { "name": "role", "type": "enum", "id": "UserRole" }
+  ],
+  "subsets": {
+    "A": {
+      "fields": [
+        "username",
+        { "field": "email", "internal": true },
+        { "field": "" }
+      ]
+    }
+  }
+}`;
+    const items = getCompletionAt(content, '{ "field": "" }', 12);
+    const labels = items?.map((i) => i.label);
+    expect(labels).toContain("role");
+    expect(labels).not.toContain("username");
+    expect(labels).not.toContain("email");
   });
 });
 

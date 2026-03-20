@@ -1,3 +1,4 @@
+import { parse } from "jsonc-parser";
 import type { CompletionItem, CompletionParams } from "vscode-languageserver";
 import { CompletionItemKind } from "vscode-languageserver";
 import type { TextDocument } from "vscode-languageserver-textdocument";
@@ -10,6 +11,7 @@ const ROOT_KEYS = [
   "title",
   "table",
   "parentId",
+  "cone",
   "postIt",
   "props",
   "indexes",
@@ -26,6 +28,7 @@ const BASE_PROP_KEYS = [
   "toFilter",
   "dbDefault",
   "generated",
+  "cone",
   "postIt",
 ];
 
@@ -42,6 +45,7 @@ const TYPE_EXTRA_KEYS: Record<string, string[]> = {
   date: ["precision"],
   "date[]": ["precision"],
   json: ["id"],
+  searchText: ["sourceColumns"],
   virtual: ["id", "virtualType"],
   vector: ["dimensions"],
   "vector[]": ["dimensions"],
@@ -77,6 +81,7 @@ const PROP_TYPES = [
   "uuid",
   "uuid[]",
   "json",
+  "searchText",
   "virtual",
   "vector",
   "vector[]",
@@ -107,10 +112,14 @@ const ZOD_FORMATS = [
   "mac",
   "cidrv4",
   "cidrv6",
-  "date",
-  "time",
-  "datetime",
-  "duration",
+  "hashMd5",
+  "hashSha1",
+  "hashSha256",
+  "hashSha384",
+  "hashSha512",
+  "isoDate",
+  "isoTime",
+  "isoDatetime",
   "isoDuration",
 ];
 
@@ -120,6 +129,19 @@ const INDEX_TYPES = ["index", "unique", "hnsw", "ivfflat"];
 const INDEX_USING = ["btree", "hash", "gin", "gist", "pgroonga"];
 const SORT_ORDERS = ["ASC", "DESC"];
 const VECTOR_OPS = ["vector_cosine_ops", "vector_ip_ops", "vector_l2_ops"];
+const OPCLASS_VALUES = [
+  "gin_trgm_ops",
+  "gist_trgm_ops",
+  "gin_bigm_ops",
+  "vector_cosine_ops",
+  "vector_ip_ops",
+  "vector_l2_ops",
+  "pgroonga_varchar_full_text_search_ops_v2",
+  "pgroonga_jsonb_full_text_search_ops_v2",
+];
+const SEARCH_TEXT_SOURCE_KEYS = ["name", "caseInsensitive"];
+const SUBSET_DEF_KEYS = ["fields", "cone"];
+const SUBSET_FIELD_KEYS = ["field", "internal"];
 
 function toCompletionItems(values: string[], kind: CompletionItemKind): CompletionItem[] {
   return values.map((v, i) => ({
@@ -129,28 +151,27 @@ function toCompletionItems(values: string[], kind: CompletionItemKind): Completi
   }));
 }
 
+function parseJsonLenient(text: string): unknown {
+  return parse(text, [], {
+    allowTrailingComma: true,
+    disallowComments: false,
+  });
+}
+
 /**
  * 현재 prop의 type 값을 파싱된 JSON에서 가져옵니다.
  */
 function getPropType(text: string, propIndex: number): string | undefined {
-  try {
-    const parsed = JSON.parse(text);
-    return parsed?.props?.[propIndex]?.type;
-  } catch {
-    return undefined;
-  }
+  const parsed = parseJsonLenient(text) as { props?: Array<{ type?: string }> };
+  return parsed?.props?.[propIndex]?.type;
 }
 
 /**
  * 현재 prop의 relationType 값을 파싱된 JSON에서 가져옵니다.
  */
 function getPropRelationType(text: string, propIndex: number): string | undefined {
-  try {
-    const parsed = JSON.parse(text);
-    return parsed?.props?.[propIndex]?.relationType;
-  } catch {
-    return undefined;
-  }
+  const parsed = parseJsonLenient(text) as { props?: Array<{ relationType?: string }> };
+  return parsed?.props?.[propIndex]?.relationType;
 }
 
 export function handleEntityCompletion(
@@ -193,6 +214,25 @@ export function handleEntityCompletion(
     }
 
     const available = keys.filter((k) => !existing.includes(k));
+    return toCompletionItems(available, CompletionItemKind.Property);
+  }
+
+  // props[n].sourceColumns[m] property key
+  if (
+    path.length === 5 &&
+    path[0] === "props" &&
+    typeof path[1] === "number" &&
+    path[2] === "sourceColumns" &&
+    typeof path[3] === "number" &&
+    isAtPropertyKey
+  ) {
+    const existing = getExistingKeys(text, [
+      "props",
+      path[1] as number,
+      "sourceColumns",
+      path[3] as number,
+    ]);
+    const available = SEARCH_TEXT_SOURCE_KEYS.filter((k) => !existing.includes(k));
     return toCompletionItems(available, CompletionItemKind.Property);
   }
 
@@ -251,6 +291,19 @@ export function handleEntityCompletion(
     return toCompletionItems(ZOD_FORMATS, CompletionItemKind.EnumMember);
   }
 
+  // props[n].sourceColumns[m].name value
+  if (
+    path.length === 5 &&
+    path[0] === "props" &&
+    typeof path[1] === "number" &&
+    path[2] === "sourceColumns" &&
+    typeof path[3] === "number" &&
+    path[4] === "name" &&
+    !isAtPropertyKey
+  ) {
+    return getPropNamesFromText(text, document.uri);
+  }
+
   // props[n].numberType value
   if (
     path.length === 3 &&
@@ -285,13 +338,18 @@ export function handleEntityCompletion(
     const propType = getPropType(text, propIndex);
     if (propType === "enum" || propType === "enum[]") {
       // 같은 파일의 enums 키 목록
-      try {
-        const parsed = JSON.parse(text);
-        if (parsed?.enums && typeof parsed.enums === "object") {
-          return toCompletionItems(Object.keys(parsed.enums), CompletionItemKind.EnumMember);
-        }
-      } catch {
-        // ignore
+      const parsed = parseJsonLenient(text);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "enums" in parsed &&
+        parsed.enums &&
+        typeof parsed.enums === "object"
+      ) {
+        return toCompletionItems(
+          Object.keys(parsed.enums as Record<string, unknown>),
+          CompletionItemKind.EnumMember,
+        );
       }
     }
     return null;
@@ -351,6 +409,7 @@ export function handleEntityCompletion(
     isAtPropertyKey
   ) {
     const colKeys = ["name", "sortOrder", "nullsFirst", "vectorOps"];
+    colKeys.push("opclass");
     const existing = getExistingKeys(text, [
       "indexes",
       path[1] as number,
@@ -400,6 +459,44 @@ export function handleEntityCompletion(
     return toCompletionItems(VECTOR_OPS, CompletionItemKind.EnumMember);
   }
 
+  // indexes[n].columns[m].opclass value
+  if (
+    path.length === 5 &&
+    path[0] === "indexes" &&
+    typeof path[1] === "number" &&
+    path[2] === "columns" &&
+    typeof path[3] === "number" &&
+    path[4] === "opclass" &&
+    !isAtPropertyKey
+  ) {
+    return toCompletionItems(OPCLASS_VALUES, CompletionItemKind.EnumMember);
+  }
+
+  // subsets.<name> property key (객체형 subset 정의)
+  if (
+    path.length === 3 &&
+    path[0] === "subsets" &&
+    typeof path[1] === "string" &&
+    isAtPropertyKey
+  ) {
+    const existing = getExistingKeys(text, ["subsets", path[1]]);
+    const available = SUBSET_DEF_KEYS.filter((k) => !existing.includes(k));
+    return toCompletionItems(available, CompletionItemKind.Property);
+  }
+
+  // subsets.<name>[n] property key (배열형 subset의 객체 필드)
+  if (
+    path.length === 4 &&
+    path[0] === "subsets" &&
+    typeof path[1] === "string" &&
+    typeof path[2] === "number" &&
+    isAtPropertyKey
+  ) {
+    const existing = getExistingKeys(text, ["subsets", path[1], path[2] as number]);
+    const available = SUBSET_FIELD_KEYS.filter((k) => !existing.includes(k));
+    return toCompletionItems(available, CompletionItemKind.Property);
+  }
+
   // subsets.<name> 배열 내 값 — prop 이름
   if (
     path.length === 3 &&
@@ -411,6 +508,32 @@ export function handleEntityCompletion(
     return getPropNamesFromText(text, document.uri, ["subsets", path[1]]);
   }
 
+  // subsets.<name>[n].field value — prop 이름
+  if (
+    path.length === 4 &&
+    path[0] === "subsets" &&
+    typeof path[1] === "string" &&
+    typeof path[2] === "number" &&
+    path[3] === "field" &&
+    !isAtPropertyKey
+  ) {
+    return getPropNamesFromText(text, document.uri, ["subsets", path[1]]);
+  }
+
+  // subsets.<name>.fields[n] property key
+  if (
+    path.length === 5 &&
+    path[0] === "subsets" &&
+    typeof path[1] === "string" &&
+    path[2] === "fields" &&
+    typeof path[3] === "number" &&
+    isAtPropertyKey
+  ) {
+    const existing = getExistingKeys(text, ["subsets", path[1], "fields", path[3] as number]);
+    const available = SUBSET_FIELD_KEYS.filter((k) => !existing.includes(k));
+    return toCompletionItems(available, CompletionItemKind.Property);
+  }
+
   // subsets.<name>.fields 배열 내 값 — prop 이름
   if (
     path.length === 4 &&
@@ -418,6 +541,19 @@ export function handleEntityCompletion(
     typeof path[1] === "string" &&
     path[2] === "fields" &&
     typeof path[3] === "number" &&
+    !isAtPropertyKey
+  ) {
+    return getPropNamesFromText(text, document.uri, ["subsets", path[1], "fields"]);
+  }
+
+  // subsets.<name>.fields[n].field value — prop 이름
+  if (
+    path.length === 5 &&
+    path[0] === "subsets" &&
+    typeof path[1] === "string" &&
+    path[2] === "fields" &&
+    typeof path[3] === "number" &&
+    path[4] === "field" &&
     !isAtPropertyKey
   ) {
     return getPropNamesFromText(text, document.uri, ["subsets", path[1], "fields"]);
@@ -449,18 +585,20 @@ function getPropNamesFromText(
 }
 
 function getPropNamesFromParsed(text: string): string[] {
-  try {
-    const parsed = JSON.parse(text);
-    if (!Array.isArray(parsed?.props)) {
-      return [];
-    }
-    return parsed.props
-      .filter(
-        (p: unknown) =>
-          p && typeof p === "object" && typeof (p as Record<string, unknown>).name === "string",
-      )
-      .map((p: Record<string, unknown>) => p.name as string);
-  } catch {
+  const parsed = parseJsonLenient(text);
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !("props" in parsed) ||
+    !Array.isArray(parsed.props)
+  ) {
     return [];
   }
+
+  return parsed.props
+    .filter(
+      (p: unknown) =>
+        p && typeof p === "object" && typeof (p as Record<string, unknown>).name === "string",
+    )
+    .map((p: Record<string, unknown>) => p.name as string);
 }
