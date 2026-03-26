@@ -11,6 +11,8 @@ export class NaiteTraceViewerProvider {
   private _panel: vscode.WebviewPanel | null = null;
   private _disposables: vscode.Disposable[] = [];
   private _followEnabled: boolean = true;
+  private _focusKeyTimeout: ReturnType<typeof setTimeout> | null = null;
+  private _focusTestTimeout: ReturnType<typeof setTimeout> | null = null;
 
   isFollowEnabled(): boolean {
     return this._followEnabled;
@@ -50,6 +52,9 @@ export class NaiteTraceViewerProvider {
   }
 
   private _setupPanel(panel: vscode.WebviewPanel): void {
+    // 기존 리스너 정리 (restorePanel 시 중복 등록 방지)
+    this._clearDisposables();
+
     panel.webview.html = traceViewerHtml;
 
     panel.onDidDispose(() => {
@@ -93,11 +98,17 @@ export class NaiteTraceViewerProvider {
       return;
     }
 
-    setTimeout(() => {
+    // 이전 타이머 정리 (빠른 연속 호출 시 마지막 것만 실행)
+    if (this._focusKeyTimeout) {
+      clearTimeout(this._focusKeyTimeout);
+    }
+
+    this._focusKeyTimeout = setTimeout(() => {
       this._panel?.webview.postMessage({
         type: "focusKey",
         key,
       });
+      this._focusKeyTimeout = null;
     }, 100);
   }
 
@@ -106,12 +117,18 @@ export class NaiteTraceViewerProvider {
       return;
     }
 
-    setTimeout(() => {
+    // 이전 타이머 정리 (빠른 연속 호출 시 마지막 것만 실행)
+    if (this._focusTestTimeout) {
+      clearTimeout(this._focusTestTimeout);
+    }
+
+    this._focusTestTimeout = setTimeout(() => {
       this._panel?.webview.postMessage({
         type: "focusTest",
         suiteName,
         testName,
       });
+      this._focusTestTimeout = null;
     }, 100);
   }
 
@@ -124,13 +141,36 @@ export class NaiteTraceViewerProvider {
     );
   }
 
+  /**
+   * disposables 배열 정리 (리스너 중복 등록 방지용)
+   */
+  private _clearDisposables(): void {
+    for (const d of this._disposables) {
+      d.dispose();
+    }
+    this._disposables = [];
+  }
+
+  /**
+   * 타이머 정리
+   */
+  private _clearTimeouts(): void {
+    if (this._focusKeyTimeout) {
+      clearTimeout(this._focusKeyTimeout);
+      this._focusKeyTimeout = null;
+    }
+    if (this._focusTestTimeout) {
+      clearTimeout(this._focusTestTimeout);
+      this._focusTestTimeout = null;
+    }
+  }
+
   dispose(): void {
+    this._clearTimeouts();
+    this._clearDisposables();
     if (this._panel) {
       this._panel.dispose();
       this._panel = null;
-    }
-    for (const d of this._disposables) {
-      d.dispose();
     }
   }
 }
