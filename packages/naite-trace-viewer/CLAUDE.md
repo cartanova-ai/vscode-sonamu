@@ -65,7 +65,7 @@ Suite > Test > Trace 계층 구조 렌더링
 - fuzzyMatch.ts - 퍼지 매칭 알고리즘
 - HighlightedText.tsx - 매칭 문자 하이라이트
 
-> **참고**: 디바운싱은 `hooks/useTraceViewerState.ts`에서 처리됨
+> **참고**: 검색어 입력 디바운싱(100ms)은 `hooks/useTraceViewerState.ts`에서 처리됨. 실제 필터링 로직은 `features/search/filterBySearchQuery.ts`에 있음
 
 ### features/sticky-headers/
 3단계 스티키 헤더 시스템:

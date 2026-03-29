@@ -9,6 +9,9 @@ import { useEffect } from "react";
  * - passive listener로 스크롤 성능 저하 방지
  *
  * CSS 변수와 동기화:
+ * - --test-header-height: test-header의 높이 (일반 뷰에서 사용)
+ * - --suite-header-height: suite-header의 높이 (.suite-content에 정의, 일반 뷰에서 사용)
+ * - --breadcrumb-height: breadcrumb의 높이 (.search-result-traces에 정의, 검색 결과 뷰에서 사용)
  * - --sticky-offset-base: suite-header, breadcrumb의 top 오프셋
  * - --sticky-offset-trace: trace-header가 test-header 아래 떨어진 거리
  */
