@@ -53,7 +53,13 @@ export function startViewerServer(): void {
     };
 
     res.writeHead(200, { "Content-Type": mimeTypes[ext] || "application/octet-stream" });
-    fs.createReadStream(filePath).pipe(res);
+    const stream = fs.createReadStream(filePath);
+    stream.on("error", (err) => {
+      console.error("[Viewer Server] File stream error:", err);
+      // 헤더가 이미 전송되었으므로 연결만 종료
+      res.end();
+    });
+    stream.pipe(res);
   });
 
   // WebSocket 서버
