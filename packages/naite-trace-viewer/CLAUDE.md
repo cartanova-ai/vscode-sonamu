@@ -77,7 +77,12 @@ Suite > Test > Trace 계층 구조 렌더링
 - useStickyState.ts - .stuck 클래스 토글, CSS 변수에서 오프셋 읽음
 - useStickyToggle.ts - 접을 때 스크롤 보정
 
-**⚠️ CSS top 값은 CSS 변수(`--test-header-height`, `--sticky-offset-base`, `--sticky-offset-trace`)로 관리됨. index.css 수정 시 useStickyState.ts에서 올바르게 읽히는지 확인 필요**
+**⚠️ CSS top 값은 CSS 변수로 관리됨. index.css 수정 시 useStickyState.ts에서 올바르게 읽히는지 확인 필요:**
+- `--test-header-height`: test-header의 높이 (34px)
+- `--suite-header-height`: suite-header의 높이 (32px)
+- `--sticky-offset-base`: suite-header, breadcrumb의 top 오프셋 (7px)
+- `--sticky-offset-trace`: trace-header가 test-header 아래 떨어진 거리 (6px)
+- `--breadcrumb-height`: 검색 결과 뷰에서 breadcrumb의 높이 (28px)
 
 ### hooks/ (VSCode 동기화 포함)
 앱 전반 훅들:

@@ -4,7 +4,10 @@
  * - null/undefined: json-null
  * - string: json-string
  * - number: json-number
+ * - bigint: json-number (n 접미사 포함)
  * - boolean: json-boolean
+ * - symbol: json-special
+ * - function: json-special
  * - array: 재귀적 렌더링
  * - object: 재귀적 렌더링
  */
@@ -29,8 +32,20 @@ export function JsonValue({ value }: JsonValueProps): JSX.Element {
     return <span className="json-number">{value}</span>;
   }
 
+  if (typeof value === "bigint") {
+    return <span className="json-number">{String(value)}n</span>;
+  }
+
   if (typeof value === "boolean") {
     return <span className="json-boolean">{String(value)}</span>;
+  }
+
+  if (typeof value === "symbol") {
+    return <span className="json-special">{String(value)}</span>;
+  }
+
+  if (typeof value === "function") {
+    return <span className="json-special">[Function: {value.name || "anonymous"}]</span>;
   }
 
   if (Array.isArray(value)) {

@@ -494,6 +494,7 @@ body {
 .json-number { color: #b5cea8; }
 .json-boolean { color: #569cd6; }
 .json-null { color: #569cd6; }
+.json-special { color: #dcdcaa; font-style: italic; } /* symbol, function 등 특수 타입 */
 .json-bracket { color: var(--fg); }
 .json-object, .json-array { margin-left: 16px; }
 .json-item { display: block; }
